@@ -24,34 +24,53 @@ if (!isset($_SESSION)) session_start();
     <h4 class="text-white">TuLook Admin</h4>
     <hr style="border-color: rgba(255,255,255,0.08);">
     <ul class="nav flex-column">
-      <li class="nav-item mb-1">
-        <a class="nav-link <?php echo ($_GET['a'] ?? 'index') === 'index' ? 'active' : ''; ?>" 
-           href="<?php echo BASE_URL; ?>?c=Admin&a=index">
-          <i class="fa fa-chart-pie me-2"></i> Dashboard
-        </a>
-      </li>
-      <li class="nav-item mb-1">
-        <a class="nav-link <?php echo ($_GET['a'] ?? '')==='productos' ? 'active':''; ?>" 
-           href="<?php echo BASE_URL; ?>?c=Admin&a=productos">
-          <i class="fa fa-box-open me-2"></i> Productos Base
-        </a>
-      </li>
-      <li class="nav-item mb-1">
-        <a class="nav-link <?php echo ($_GET['a'] ?? '')==='variantes' ? 'active':''; ?>" 
-           href="<?php echo BASE_URL; ?>?c=Admin&a=variantes">
-          <i class="fa fa-palette me-2"></i> Variantes / Imágenes
-        </a>
-      </li>
-      <li class="nav-item mb-1">
-        <a class="nav-link" href="<?php echo BASE_URL; ?>">
-          <i class="fa fa-home me-2"></i> Volver a la tienda
-        </a>
-      </li>
-      <li class="nav-item mt-3">
-        <form method="GET" action="<?php echo BASE_URL; ?>?c=Usuario&a=logout">
-          <button class="btn btn-sm btn-danger w-100">Cerrar sesión</button>
-        </form>
-      </li>
+        <li class="nav-item mb-1">
+            <a class="nav-link <?php echo (($_GET['c'] ?? 'Admin') === 'Admin' && ($_GET['a'] ?? 'index') === 'index') ? 'active' : ''; ?>" 
+              href="<?php echo BASE_URL; ?>?c=Admin&a=index">
+                <i class="fa fa-chart-pie me-2"></i> Dashboard
+            </a>
+        </li>
+        <li class="nav-item mb-1">
+            <a class="nav-link <?php echo (($_GET['c'] ?? '') === 'Admin' && ($_GET['a'] ?? '') === 'productos') ? 'active' : ''; ?>" 
+              href="<?php echo BASE_URL; ?>?c=Admin&a=productos">
+                <i class="fa fa-box-open me-2"></i> Productos Base
+            </a>
+        </li>
+        <li class="nav-item mb-1">
+            <a class="nav-link <?php echo (($_GET['c'] ?? '') === 'Admin' && ($_GET['a'] ?? '') === 'variantes') ? 'active' : ''; ?>" 
+              href="<?php echo BASE_URL; ?>?c=Admin&a=variantes">
+                <i class="fa fa-palette me-2"></i> Variantes / Imágenes
+            </a>
+        </li>
+        <li class="nav-item mb-1">
+            <a class="nav-link <?php echo ($_GET['c'] ?? '') === 'Tallas' ? 'active' : ''; ?>" 
+              href="<?php echo BASE_URL; ?>?c=Tallas&a=index">
+                <i class="fa fa-ruler me-2"></i> Gestión de Tallas
+            </a>
+        </li>
+        <li class="nav-item mb-1">
+            <a class="nav-link <?php echo ($_GET['c'] ?? '') === 'Precio' ? 'active' : ''; ?>" 
+              href="<?php echo BASE_URL; ?>?c=Precio&a=index">
+                <i class="fa fa-tags me-2"></i> Gestión de Precios
+            </a>
+        </li>
+        <li class="nav-item mb-1">
+            <a class="nav-link <?php echo ($_GET['c'] ?? '') === 'UsuarioAdmin' ? 'active' : ''; ?>" 
+              href="<?php echo BASE_URL; ?>?c=UsuarioAdmin&a=index">
+                <i class="fa fa-users me-2"></i> Gestión de Usuarios
+            </a>
+        </li>
+        <li class="nav-item mb-1">
+            <a class="nav-link" href="<?php echo BASE_URL; ?>">
+                <i class="fa fa-home me-2"></i> Volver a la tienda
+            </a>
+        <li class="nav-item mt-3">
+    <form method="POST" action="<?php echo BASE_URL; ?>?c=Usuario&a=logout">
+        <button type="submit" class="btn btn-sm btn-danger w-100">
+            <i class="fas fa-sign-out-alt"></i> Cerrar sesión
+        </button>
+    </form>
+</li>
     </ul>
   </div>
 
@@ -65,34 +84,80 @@ if (!isset($_SESSION)) session_start();
       </div>
     </div>
     <div class="p-3">
-      <?php 
-      $action = $_GET['a'] ?? 'index';
-      
-      $viewMap = [
-          'index' => 'dashboard.php',
-          'productos' => 'productos.php', 
-          'productoForm' => 'producto_form.php',
-          'detalleProducto' => 'detalle_producto.php',
-          'saveProducto' => 'productos.php',
-          'agregarVariante' => 'detalle_producto.php',
-          'editarVariante' => 'detalle_producto.php',
-          'eliminarVariante' => 'detalle_producto.php',
-          'variantes' => 'variantes.php' // NUEVO: Página para gestionar variantes
-      ];
-      
-      $viewFile = "views/admin/" . ($viewMap[$action] ?? $action . '.php');
-      
-      if (file_exists($viewFile)) {
-          include $viewFile;
-      } else {
-          echo '<div class="alert alert-warning">';
-          echo '<h5>Vista no encontrada</h5>';
-          echo '<p>El sistema intentó cargar: <code>' . htmlspecialchars($viewFile) . '</code></p>';
-          echo '<p>Acción: <code>' . htmlspecialchars($action) . '</code></p>';
-          echo '<a href="' . BASE_URL . '?c=Admin&a=productos" class="btn btn-primary">Volver a Productos</a>';
-          echo '</div>';
-      }
-      ?>
+        <?php 
+        $controller = $_GET['c'] ?? 'Admin';
+        $action = $_GET['a'] ?? 'index';
+        
+        // Mapeo de vistas por controlador y acción
+        $viewMap = [
+            'Admin' => [
+                'index' => 'dashboard.php',
+                'productos' => 'productos.php', 
+                'productoForm' => 'producto_form.php',
+                'detalleProducto' => 'detalle_producto.php',
+                'saveProducto' => 'productos.php',
+                'agregarVariante' => 'detalle_producto.php',
+                'editarVariante' => 'detalle_producto.php',
+                'eliminarVariante' => 'detalle_producto.php',
+                'variantes' => 'variantes.php'
+            ],
+            'Tallas' => [
+                'index' => 'talla/index.php',
+                'crear' => 'talla/form.php',
+                'editar' => 'talla/form.php',
+                'guardar' => 'talla/index.php',
+                'actualizar' => 'talla/index.php',
+                'cambiarEstado' => 'talla/index.php'
+            ],
+            'Precio' => [
+              'index' => 'precio/index.php',
+              'crear' => 'precio/form.php',
+              'editar' => 'precio/form.php',
+              'guardar' => 'precio/index.php',
+              'actualizar' => 'precio/index.php',
+              'cambiarEstado' => 'precio/index.php',
+              'limpiarDuplicados' => 'precio/index.php',
+              'duplicados' => 'precio/duplicados.php'
+            ],
+            'UsuarioAdmin' => [
+              'index' => 'usuario/index.php',
+              'crear' => 'usuario/form.php',
+              'guardar' => 'usuario/index.php',
+              'cambiarEstado' => 'usuario/index.php',
+              'cambiarRol' => 'usuario/index.php'
+          ]
+        ];
+        
+        // Determinar el archivo de vista
+        $viewFile = "views/admin/";
+        
+        if (isset($viewMap[$controller][$action])) {
+            $viewFile .= $viewMap[$controller][$action];
+        } else {
+            // Intento alternativo: buscar por acción solamente
+            $viewFile .= $action . '.php';
+        }
+        
+        if (file_exists($viewFile)) {
+            include $viewFile;
+        } else {
+            echo '<div class="alert alert-warning">';
+            echo '<h5>Vista no encontrada</h5>';
+            echo '<p>El sistema intentó cargar: <code>' . htmlspecialchars($viewFile) . '</code></p>';
+            echo '<p>Controlador: <code>' . htmlspecialchars($controller) . '</code></p>';
+            echo '<p>Acción: <code>' . htmlspecialchars($action) . '</code></p>';
+            echo '<a href="' . BASE_URL . '?c=Admin&a=index" class="btn btn-primary me-2">Ir al Dashboard</a>';
+            echo '<a href="' . BASE_URL . '?c=Precio&a=index" class="btn btn-secondary">Ir a Precios</a>';
+            echo '</div>';
+            
+            // Debug información
+            echo '<div class="mt-3 p-3 bg-light rounded">';
+            echo '<h6>Información de Debug:</h6>';
+            echo '<pre>GET: ' . print_r($_GET, true) . '</pre>';
+            echo '<pre>View Map: ' . print_r($viewMap, true) . '</pre>';
+            echo '</div>';
+        }
+        ?>
     </div>
   </div>
 

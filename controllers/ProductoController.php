@@ -1,6 +1,7 @@
 <?php
 // ==========================================
-// CONTROLADOR PRODUCTO - TuLook MVC (Versión Final Corregida)
+// CONTROLADOR PRODUCTO - TuLook MVC
+// Versión corregida con tallas disponibles (base + variantes)
 // ==========================================
 
 require_once "models/Producto.php";
@@ -18,10 +19,29 @@ class ProductoController {
     }
 
     // =======================================================
-    // 🏠 INDEX
+    // 🏠 INDEX - Catálogo principal
     // =======================================================
     public function index() {
-        $stmt = $this->producto->read();
+        $sql = "SELECT 
+                    a.ID_Articulo,
+                    a.N_Articulo,
+                    COALESCE(MIN(aci.Foto), a.Foto) AS Foto,
+                    c.N_Categoria,
+                    g.N_Genero,
+                    pr.Valor AS Precio,
+                    (COALESCE(a.Cantidad, 0) + COALESCE(SUM(p.Cantidad), 0)) AS Stock
+                FROM articulo a
+                LEFT JOIN producto p ON p.ID_Articulo = a.ID_Articulo
+                LEFT JOIN articulo_color_imagen aci ON aci.ID_Articulo = a.ID_Articulo
+                LEFT JOIN precio pr ON pr.ID_Precio = a.ID_Precio
+                LEFT JOIN categoria c ON c.ID_Categoria = a.ID_Categoria
+                LEFT JOIN genero g ON g.ID_Genero = a.ID_Genero
+                WHERE a.Activo = 1
+                GROUP BY a.ID_Articulo, a.N_Articulo, a.Foto, c.N_Categoria, g.N_Genero, pr.Valor, a.Cantidad
+                ORDER BY a.N_Articulo ASC";
+
+        $stmt = $this->db->prepare($sql);
+        $stmt->execute();
         $productos = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
         $categorias = $this->getMenuCategorias();
@@ -29,7 +49,7 @@ class ProductoController {
     }
 
     // =======================================================
-    // 🔍 FILTRAR PRODUCTOS
+    // 🔍 FILTRAR PRODUCTOS POR CATEGORÍA / GÉNERO / BÚSQUEDA
     // =======================================================
     public function filtrar() {
         $idCategoria = $_GET['id_categoria'] ?? null;
@@ -44,7 +64,7 @@ class ProductoController {
                     c.N_Categoria, 
                     g.N_Genero, 
                     pr.Valor AS Precio, 
-                    SUM(p.Cantidad) AS Stock
+                    COALESCE(SUM(p.Cantidad), 0) AS Stock
                 FROM articulo a
                 LEFT JOIN producto p ON p.ID_Articulo = a.ID_Articulo
                 LEFT JOIN articulo_color_imagen aci ON aci.ID_Articulo = a.ID_Articulo
@@ -85,7 +105,7 @@ class ProductoController {
 
         $idArticulo = (int)$_GET['id'];
 
-        // 🔸 Obtener datos base
+        // 🔸 Datos base del artículo
         $stmt = $this->db->prepare("SELECT 
                                         a.*, 
                                         pr.Valor AS Precio, 
@@ -105,7 +125,7 @@ class ProductoController {
             return;
         }
 
-        // 🔸 Construir objeto base
+        // 🔸 Construcción del objeto principal
         $producto = (object)[
             'ID_Articulo'  => (int)$art['ID_Articulo'],
             'N_Articulo'   => $art['N_Articulo'],
@@ -121,29 +141,34 @@ class ProductoController {
             'Cantidad'     => isset($art['Cantidad']) ? (int)$art['Cantidad'] : 0
         ];
 
-        // 🔸 Variantes
+        // 🔸 Variantes del producto (colores y tallas)
         $variantes = $this->producto->getVariantesByArticulo($idArticulo);
 
-        // 🔸 Talla base (aunque no haya variantes)
-        $baseTallas = [];
-        if ($producto->ID_Talla) {
-            $baseTallas[] = [
-                'ID_Talla'  => $producto->ID_Talla,
-                'N_Talla'   => $producto->N_Talla,
-                'Cantidad'  => $producto->Cantidad,
-                'ID_Producto' => null
-            ];
-        }
+        // 🔸 Tallas disponibles (artículo base + variantes)
+        $baseTallas = $this->getTallasDisponiblesByArticulo($idArticulo);
 
-        // 🔸 Si no hay variantes, crear una virtual
+        // 🔸 Si no hay variantes, crear una por defecto del artículo base CON COLOR REAL
         if (empty($variantes)) {
+            // Obtener el color real si existe
+            $color_real = 'Sin color';
+            $codigo_hex_real = null;
+            if ($producto->ID_Color && $producto->ID_Color !== 'base') {
+                $stmt_color = $this->db->prepare("SELECT N_Color, CodigoHex FROM color WHERE ID_Color = ?");
+                $stmt_color->execute([$producto->ID_Color]);
+                $color_data = $stmt_color->fetch(PDO::FETCH_ASSOC);
+                if ($color_data) {
+                    $color_real = $color_data['N_Color'];
+                    $codigo_hex_real = $color_data['CodigoHex'];
+                }
+            }
+            
             $variantes[] = [
                 'ID_Producto'     => null,
                 'ID_Articulo'     => $producto->ID_Articulo,
                 'Nombre_Producto' => $producto->N_Articulo,
                 'ID_Color'        => $producto->ID_Color,
-                'N_Color'         => $producto->N_Color,
-                'CodigoHex'       => $producto->CodigoHex,
+                'N_Color'         => $color_real,  // USAR EL COLOR REAL, NO EL PLACEHOLDER
+                'CodigoHex'       => $codigo_hex_real ?: $producto->CodigoHex,
                 'ID_Talla'        => $producto->ID_Talla,
                 'N_Talla'         => $producto->N_Talla,
                 'Foto'            => $producto->Foto,
@@ -151,6 +176,17 @@ class ProductoController {
                 'Cantidad'        => $producto->Cantidad,
                 'Precio_Base'     => $producto->Precio,
                 'Precio_Final'    => $producto->Precio
+            ];
+        }
+
+        // 🔸 Si no hay tallas en la base de datos pero el artículo base tiene talla, agregarla
+        if (empty($baseTallas) && $producto->ID_Talla) {
+            $baseTallas[] = [
+                'ID_Talla' => $producto->ID_Talla,
+                'N_Talla' => $producto->N_Talla,
+                'Cantidad' => $producto->Cantidad,
+                'Tipo' => 'base',
+                'ID_Producto' => $producto->ID_Articulo
             ];
         }
 
@@ -163,7 +199,7 @@ class ProductoController {
         }
         unset($v);
 
-        // 🔸 Favorito
+        // 🔸 Comprobar si es favorito
         $esFavorito = false;
         if (isset($_SESSION['ID_Usuario'])) {
             $favModel = new Favorito($this->db);
@@ -175,8 +211,6 @@ class ProductoController {
         }
 
         $categorias = $this->getMenuCategorias();
-
-        // ✅ Pasar también $baseTallas
         include "views/productos/ver.php";
     }
 
@@ -227,16 +261,48 @@ class ProductoController {
         $stmt = $this->db->query($sql);
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
     }
+
+    // =======================================================
+    // 👕 TALLAS DISPONIBLES POR ARTÍCULO (BASE + VARIANTES)
+    // =======================================================
+    private function getTallasDisponiblesByArticulo($idArticulo) {
+        $tallas = [];
+        
+        // 🔸 Tallas del artículo base
+        $sqlBase = "SELECT 
+                        a.ID_Talla,
+                        t.N_Talla,
+                        a.Cantidad,
+                        'base' AS Tipo,
+                        a.ID_Articulo AS ID_Producto
+                    FROM articulo a
+                    LEFT JOIN talla t ON t.ID_Talla = a.ID_Talla
+                    WHERE a.ID_Articulo = ? AND a.ID_Talla IS NOT NULL";
+        
+        $stmtBase = $this->db->prepare($sqlBase);
+        $stmtBase->execute([$idArticulo]);
+        $tallasBase = $stmtBase->fetchAll(PDO::FETCH_ASSOC);
+        
+        // 🔸 Tallas de las variantes (productos)
+        $sqlVariantes = "SELECT 
+                            p.ID_Talla,
+                            t.N_Talla,
+                            p.Cantidad,
+                            'variante' AS Tipo,
+                            p.ID_Producto
+                        FROM producto p
+                        INNER JOIN talla t ON t.ID_Talla = p.ID_Talla
+                        WHERE p.ID_Articulo = ?
+                        ORDER BY t.N_Talla ASC";
+        
+        $stmtVariantes = $this->db->prepare($sqlVariantes);
+        $stmtVariantes->execute([$idArticulo]);
+        $tallasVariantes = $stmtVariantes->fetchAll(PDO::FETCH_ASSOC);
+        
+        // Combinar ambas fuentes
+        $tallas = array_merge($tallasBase, $tallasVariantes);
+        
+        return $tallas;
+    }
 }
 ?>
-
-
-
-
-
-
-
-
-
-
-

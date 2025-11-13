@@ -10,6 +10,8 @@ if (!isset($categorias)) $categorias = [];
   <title>TuLook - Catálogo</title>
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+  <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
   <style>
     :root{--accent:#e63946}
     body{padding-top:70px;background:#f7f7f7}
@@ -17,9 +19,11 @@ if (!isset($categorias)) $categorias = [];
     .product-card:hover{transform:translateY(-6px); box-shadow:0 8px 30px rgba(0,0,0,.07)}
     .product-image{height:220px; object-fit:cover}
     .price{color:var(--accent); font-weight:700}
+    .variant-list small{font-size: 0.9rem;}
   </style>
 </head>
 <body>
+<!-- NAVBAR INCLUIDO -->
 <?php include "views/layout/nav.php"; ?>
 
 <div class="container mt-4">
@@ -39,18 +43,16 @@ if (!isset($categorias)) $categorias = [];
       </div>
     <?php else: ?>
       <?php foreach ($productos as $p): 
-        // $p debe venir de Producto::read() -> ID_Articulo, N_Articulo, Foto, Precio, Stock
         $idArt = (int)($p['ID_Articulo'] ?? 0);
         $nombre = htmlspecialchars($p['N_Articulo'] ?? 'Sin nombre');
         $foto   = !empty($p['Foto']) ? $p['Foto'] : 'assets/img/placeholder.png';
-        // si la ruta viene sin prefijo, asumir relativa
         if (!preg_match('/^https?:\\/\\//i', $foto) && !str_starts_with($foto, 'ImgProducto/') && !str_starts_with($foto, 'assets/')) {
             $foto = 'ImgProducto/' . ltrim($foto, '/');
         }
         $fotoUrl = (strpos($foto, 'http') === 0) ? $foto : rtrim(BASE_URL, '/') . '/' . ltrim($foto, '/');
-
         $precio = isset($p['Precio']) ? (float)$p['Precio'] : 0;
         $stock  = isset($p['Stock']) ? (int)$p['Stock'] : 0;
+        $variantes = $p['Variantes'] ?? [];
       ?>
         <div class="col-md-4 mb-4">
           <div class="card product-card h-100">
@@ -58,10 +60,28 @@ if (!isset($categorias)) $categorias = [];
             <div class="card-body text-center">
               <h5 class="card-title"><?php echo $nombre; ?></h5>
               <p class="price">$<?php echo number_format($precio, 0, ',', '.'); ?></p>
+
+              <!-- Stock del producto base -->
               <?php if ($stock > 0): ?>
-                <p class="text-success mb-0">Disponible (<?php echo $stock; ?>)</p>
+                <p class="text-success mb-2">Disponible: <?php echo $stock; ?></p>
               <?php else: ?>
-                <p class="text-danger mb-0">Agotado</p>
+                <p class="text-danger mb-2">Agotado</p>
+              <?php endif; ?>
+
+              <!-- Variantes disponibles -->
+              <?php if (!empty($variantes)): ?>
+                <div class="variant-list text-muted mt-2">
+                  <small><strong>Variantes disponibles:</strong></small><br>
+                  <?php foreach ($variantes as $v): ?>
+                    <small>
+                      - <?php echo htmlspecialchars($v['N_Talla'] ?? ''); ?>
+                      <?php if (!empty($v['N_Color'])): ?>
+                        (<?php echo htmlspecialchars($v['N_Color']); ?>)
+                      <?php endif; ?>
+                      : <?php echo (int)($v['Cantidad'] ?? 0); ?> und
+                    </small><br>
+                  <?php endforeach; ?>
+                </div>
               <?php endif; ?>
             </div>
             <div class="card-footer bg-white text-center">
@@ -84,7 +104,6 @@ if (!isset($categorias)) $categorias = [];
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 </body>
 </html>
-
 
 
 

@@ -1,63 +1,92 @@
 <?php
-// models/Favorito.php
 class Favorito {
     private $conn;
-    private $table_name = "favorito";
+    private $table = "favorito";
 
     public $ID_Favorito;
     public $ID_Usuario;
     public $ID_Producto;
+    public $ID_Articulo;
 
     public function __construct($db) {
         $this->conn = $db;
     }
 
-    // Verificar si un producto ya está en favoritos
-    public function exists() {
-        $sql = "SELECT COUNT(*) FROM " . $this->table_name . " WHERE ID_Usuario = :usuario AND ID_Producto = :producto";
+    // Existe favorito para este usuario + (producto o articulo)
+    public function existsFor($idUsuario, $idProducto = null, $idArticulo = null) {
+        $sql = "SELECT COUNT(*) FROM {$this->table}
+                WHERE ID_Usuario = :usuario
+                  AND ((ID_Producto IS NOT NULL AND ID_Producto = :producto) OR (ID_Articulo IS NOT NULL AND ID_Articulo = :articulo))";
         $stmt = $this->conn->prepare($sql);
-        $stmt->bindParam(":usuario", $this->ID_Usuario);
-        $stmt->bindParam(":producto", $this->ID_Producto);
+        $stmt->bindValue(':usuario', $idUsuario, PDO::PARAM_INT);
+        $stmt->bindValue(':producto', $idProducto, PDO::PARAM_INT);
+        $stmt->bindValue(':articulo', $idArticulo, PDO::PARAM_INT);
         $stmt->execute();
-        return $stmt->fetchColumn() > 0;
+        return (int)$stmt->fetchColumn() > 0;
     }
 
-    // Agregar a favoritos
-    public function add() {
-        if ($this->exists()) return false;
-        $sql = "INSERT INTO " . $this->table_name . " (ID_Usuario, ID_Producto) VALUES (:usuario, :producto)";
+    // Añadir favorito (acepta nulos)
+    public function add($idUsuario, $idProducto = null, $idArticulo = null) {
+        $sql = "INSERT INTO {$this->table} (ID_Usuario, ID_Producto, ID_Articulo) VALUES (:usuario, :producto, :articulo)";
         $stmt = $this->conn->prepare($sql);
-        $stmt->bindParam(":usuario", $this->ID_Usuario);
-        $stmt->bindParam(":producto", $this->ID_Producto);
+        $stmt->bindValue(':usuario', $idUsuario, PDO::PARAM_INT);
+        
+        if ($idProducto === null) $stmt->bindValue(':producto', null, PDO::PARAM_NULL);
+        else $stmt->bindValue(':producto', $idProducto, PDO::PARAM_INT);
+
+        if ($idArticulo === null) $stmt->bindValue(':articulo', null, PDO::PARAM_NULL);
+        else $stmt->bindValue(':articulo', $idArticulo, PDO::PARAM_INT);
+
         return $stmt->execute();
     }
 
-    // Quitar de favoritos
-    public function remove() {
-        $sql = "DELETE FROM " . $this->table_name . " WHERE ID_Usuario = :usuario AND ID_Producto = :producto";
+    // Remove favorito (por usuario + (producto o articulo))
+    public function remove($idUsuario, $idProducto = null, $idArticulo = null) {
+        $sql = "DELETE FROM {$this->table}
+                WHERE ID_Usuario = :usuario
+                  AND ((ID_Producto IS NOT NULL AND ID_Producto = :producto) OR (ID_Articulo IS NOT NULL AND ID_Articulo = :articulo))";
         $stmt = $this->conn->prepare($sql);
-        $stmt->bindParam(":usuario", $this->ID_Usuario);
-        $stmt->bindParam(":producto", $this->ID_Producto);
+        $stmt->bindValue(':usuario', $idUsuario, PDO::PARAM_INT);
+        if ($idProducto === null) $stmt->bindValue(':producto', null, PDO::PARAM_NULL);
+        else $stmt->bindValue(':producto', $idProducto, PDO::PARAM_INT);
+
+        if ($idArticulo === null) $stmt->bindValue(':articulo', null, PDO::PARAM_NULL);
+        else $stmt->bindValue(':articulo', $idArticulo, PDO::PARAM_INT);
+
         return $stmt->execute();
     }
 
-    // Obtener todos los favoritos de un usuario
-    public function getByUser($id_usuario) {
-        $sql = "SELECT p.ID_Producto, a.N_Articulo, a.Foto, g.N_Genero,
-                       MIN(pr.Valor + COALESCE(s.Sobrecosto,0)) AS Precio_Final
+    // Obtener favoritos de un usuario (CORREGIDO)
+    public function getByUser($idUsuario) {
+        $sql = "SELECT 
+                    f.ID_Favorito,
+                    f.ID_Producto,
+                    f.ID_Articulo,
+                    -- Campos del artículo
+                    a.N_Articulo,
+                    a.Foto as FotoArticulo,
+                    -- Campos del producto
+                    p.Nombre_Producto,
+                    p.Foto as FotoProducto,
+                    -- Campos calculados
+                    COALESCE(p.Nombre_Producto, a.N_Articulo) AS Nombre,
+                    COALESCE(p.Foto, a.Foto) AS Foto,
+                    COALESCE(pr.Valor, 0) AS Precio_Base,
+                    COALESCE(p.Porcentaje, 0) AS Porcentaje,
+                    (COALESCE(pr.Valor,0) + (COALESCE(pr.Valor,0) * (COALESCE(p.Porcentaje,0) / 100))) AS Precio_Final,
+                    g.N_Genero
                 FROM favorito f
-                INNER JOIN producto p ON f.ID_Producto = p.ID_Producto
-                INNER JOIN articulo a ON p.ID_Articulo = a.ID_Articulo
-                INNER JOIN genero g ON a.ID_Genero = g.ID_Genero
-                INNER JOIN precio pr ON p.Porcentaje = Porcentaje
-                LEFT JOIN sobrecosto_talla s ON p.ID_Talla = s.ID_Talla
+                LEFT JOIN producto p ON f.ID_Producto = p.ID_Producto
+                LEFT JOIN articulo a ON f.ID_Articulo = a.ID_Articulo
+                LEFT JOIN precio pr ON COALESCE(a.ID_Precio, 0) = pr.ID_Precio
+                LEFT JOIN genero g ON COALESCE(a.ID_Genero, 0) = g.ID_Genero
                 WHERE f.ID_Usuario = :usuario
-                GROUP BY p.ID_Producto, a.N_Articulo, a.Foto, g.N_Genero
                 ORDER BY f.ID_Favorito DESC";
+        
         $stmt = $this->conn->prepare($sql);
-        $stmt->bindParam(":usuario", $id_usuario);
+        $stmt->bindValue(':usuario', $idUsuario, PDO::PARAM_INT);
         $stmt->execute();
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
     }
 }
-
+?>
