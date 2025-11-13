@@ -1,0 +1,277 @@
+body {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+    text-decoration: none;
+    font-family: 'Roboto', sans-serif;
+
+    /* Fondo degradado animado */
+    background: linear-gradient(270deg,
+        #ffffff,
+        #b388eb,
+        #0077ff,
+        #000000,
+        #b388eb,
+        #ffffff
+    );
+    background-size: 1400% 1400%;
+    animation: fondoAnimado 20s ease infinite;
+}
+
+main {
+    width: 100%;
+    padding: 20px;
+    margin: auto;
+    margin-top: 125px;
+}
+
+.contenedor__todo {
+    width: 100%;
+    max-width: 800px;
+    margin: auto;
+    position: relative;
+}
+
+.caja__trasera {
+    width: 100%;
+    padding: 10px 20px;
+    display: flex;
+    justify-content: center;
+    backdrop-filter: blur(10px);
+    background-color: rgba(7, 1, 7, 0.5);
+}
+
+.caja__trasera div {
+    margin: 100px 40px;
+    color: white;
+    transition: all 500ms;
+}
+
+.caja__trasera div p,
+.caja__trasera div button {
+    margin-top: 30px;
+}
+
+.caja__trasera div h3 {
+    font-weight: 400;
+    font-size: 26px;
+}
+
+.caja__trasera button {
+    padding: 10px 40px;
+    border: 2px solid #fff;
+    background-color: transparent;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    color: white;
+    outline: none;
+    transition: all 300ms;
+}
+
+.caja__trasera button:hover {
+    background-color: #fff;
+    color: #fd46fa;
+    border: 2px solid transparent;
+}
+
+/* FORMULARIO */
+.contenedor__login_register {
+    display: flex;
+    align-items: center;
+    width: 100%;
+    max-width: 380px;
+    position: relative;
+    top: -200px;
+    left: -25px;
+    transition: left 500ms cubic-bezier(0.175, 0.885, 0.320, 1.27);
+}
+
+.contenedor__login_register form {
+    width: 100%;
+    max-width: 420px;
+    padding: 40px 30px; 
+    background: #fff;
+    position: absolute;
+    border-radius: 20px;
+    border: 3px solid #8bb9ef;
+    box-shadow: 0 8px 32px 0 rgba(0, 119, 255, 0.15);
+}
+
+.contenedor__login_register form h2 {
+    font-size: 30px;
+    text-align: center;
+    margin-bottom: 20px;
+    margin-top: 10; /* Quita el espacio arriba del título */
+    color: #fd46db;
+}
+
+.contenedor__login_register form input {
+    width: 185px;
+    margin-top: 16px;        /* Antes: 30px. Ahora menos espacio entre inputs */
+    padding: 5px;
+    border: none;
+    background: #f2f2f2;
+    font-size: 16px;
+    outline: none;
+}
+
+.contenedor__login_register form button {
+    padding: 10px 40px;
+    display: block;
+    margin-top: 40px;
+    border: none;
+    font-size: 14px;
+    background: #eb46fd;
+    color: white;
+    cursor: pointer;
+    outline: none;
+}
+
+.formulario__login {
+    opacity: 1;
+    display: block;
+}
+
+.formulario__register {
+    display: none;
+}
+
+/* Estilos para párrafos */
+p {
+    color: #555;
+    font-size: 16px;
+    margin-bottom: 8px;
+    margin-top: 20px;
+}
+
+/* Estilos para select */
+.form-select {
+    width: 100%;
+    padding: 12px 15px;
+    border: 2px solid #8bb9ef;
+    border-radius: 8px;
+    background: #f2f2f2;
+    font-size: 16px;
+    color: #333;
+    outline: none;
+    appearance: none;
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    cursor: pointer;
+    transition: all 300ms ease;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' fill='%23eb46fd' viewBox='0 0 16 16'%3E%3Cpath d='M7.247 11.14 2.451 5.658C1.885 5.013 2.345 4 3.204 4h9.592a1 1 0 0 1 .753 1.659l-4.796 5.48a1 1 0 0 1-1.506 0z'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 15px center;
+    background-size: 12px;
+    margin-top: 10px;
+}
+
+.form-select:focus {
+    border-color: #eb46fd;
+    background-color: #fff;
+    box-shadow: 0 0 8px rgba(235, 70, 253, 0.3);
+}
+
+.form-select option {
+    padding: 10px;
+    background: #fff;
+    color: #333;
+}
+
+.form-select option:disabled {
+    color: #888;
+}
+
+.form-select option:hover {
+    background-color: #eb46fd;
+    color: white;
+}
+
+/* Trabajando en el diseño responsive */
+@media screen and (max-width: 850px) {
+    main {
+        margin-top: 50px;
+    }
+
+    .caja__trasera {
+        background-color: rgba(0, 0, 0, 0.4); /* en lugar de morado fuerte */
+        backdrop-filter: blur(10px);
+    }
+
+    .caja__trasera div {
+        margin: 0;
+        position: absolute;
+    }
+
+    /* FORMULARIO */
+    .contenedor__login_register form {
+        background: rgba(255, 255, 255, 0.15); /* antes era #fff */
+        color: #fff;
+        backdrop-filter: blur(12px);
+    }
+
+    .contenedor__login_register form {
+        position: relative;
+    }
+    
+    /* Ajustes para select en móvil */
+    .form-select {
+        padding: 10px 12px;
+        font-size: 14px;
+    }
+}
+
+@keyframes fondoAnimado {
+    0% {
+        background-position: 0% 50%;
+    }
+    50% {
+        background-position: 100% 50%;
+    }
+    100% {
+        background-position: 0% 50%;
+    }
+}
+
+.error-message {
+    color: red;
+    font-size: 12px;
+    margin-top: 5px;
+}
+
+.password-container {
+    position: relative;
+    margin-top: 30px; /* Asegura espacio arriba */
+    width: 100%; /* Ocupa todo el ancho disponible */
+}
+
+.password-icon {
+    position: absolute;
+    right: 10px; /* Ajustado para mejor posicionamiento */
+    top: 75%;
+    right: 40%;
+    transform: translateY(-50%);
+    cursor: pointer;
+    width: 20px;
+    height: 20px;
+    opacity: 0.7;
+    transition: opacity 0.3s ease;
+}
+
+.password-icon:hover {
+    opacity: 1;
+}
+
+/* Estilo para el enlace de olvidé contraseña */
+.olvido-contra {
+    color: #555;
+    text-decoration: none;
+    transition: color 0.3s ease;
+}
+
+.olvido-contra:hover {
+    color: #eb46fd;
+    text-decoration: underline;
+}

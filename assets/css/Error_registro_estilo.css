@@ -1,0 +1,77 @@
+/* Fondo animado con paleta: blanco, morado claro, azul brillante, negro */
+body {
+    margin: 0;
+    padding: 0;
+    font-family: Arial, sans-serif;
+    text-align: center;
+    min-height: 100vh;
+    background: linear-gradient(270deg,
+        #ffffff,
+        #b388eb,
+        #0077ff,
+        #000000,
+        #b388eb,
+        #ffffff
+    );
+    background-size: 1400% 1400%;
+    animation: fondoAnimado 25s ease infinite;
+}
+
+/* Animación suave para el fondo */
+@keyframes fondoAnimado {
+    0% { background-position: 0% 50%; }
+    50% { background-position: 100% 50%; }
+    100% { background-position: 0% 50%; }
+}
+
+/* Estilo del contenedor de error */
+.Contenedor_error {
+    max-width: 600px;
+    margin: 50px auto;
+    background: rgba(255, 255, 255, 0.1); /* translúcido para ver fondo */
+    backdrop-filter: blur(10px);
+    border-radius: 10px;
+    padding: 20px;
+    box-shadow: 0 0 15px rgba(0, 0, 0, 0.3);
+    color: #ffffff;
+}
+
+/* Botón con color llamativo */
+.boton1 {
+    padding: 10px 20px;
+    font-size: 1em;
+    margin: 10px;
+    cursor: pointer;
+    border: none;
+    border-radius: 5px;
+    background-color: rgba(202, 22, 238, 0.968); /* Morado fuerte */
+    color: #ffffff;
+    font-weight: bold;
+    transition: background-color 0.3s ease;
+}
+
+.boton1:hover {
+    background-color: rgba(212, 140, 226, 0.968); /* Morado claro al hover */
+}
+
+/* Texto de error */
+.error {
+    color: #ff4d4d;
+    font-weight: bold;
+}
+
+/* Listado alineado a la izquierda */
+ul {
+    text-align: left;
+}
+
+/* Enlaces */
+a {
+    color: #00f2ff;
+    text-decoration: none;
+}
+
+a:hover {
+    text-decoration: underline;
+}
+    
