@@ -1,17 +1,15 @@
 <?php
 require_once "models/Favorito.php";
-require_once "controllers/ProductoController.php";
+require_once "models/Database.php";
 
 class FavoritoController {
     private $db;
     private $model;
-    private $productoController;
 
-    public function __construct($db) {
+    public function __construct($db = null) {
         if (session_status() === PHP_SESSION_NONE) session_start();
-        $this->db = $db;
-        $this->model = new Favorito($db); // ← Asegúrate de pasar $db aquí
-        // No instanciar ProductoController si no es necesario
+        $this->db = $db ?: (new Database())->getConnection();
+        $this->model = new Favorito($this->db);
     }
 
     // Lista de favoritos
@@ -46,6 +44,47 @@ class FavoritoController {
         }
     }
 
+    // ✅ NUEVO: Método para verificar estado del favorito (AJAX)
+    public function verificarEstado() {
+        if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+            http_response_code(405);
+            echo json_encode(['success' => false, 'error' => 'Método no permitido']);
+            exit;
+        }
+
+        if (!isset($_SESSION['ID_Usuario'])) {
+            http_response_code(401);
+            echo json_encode(['success' => false, 'error' => 'Usuario no autenticado']);
+            exit;
+        }
+
+        try {
+            $idUsuario = (int)$_SESSION['ID_Usuario'];
+            $idProducto = $_POST['id_producto'] ?? null;
+            $idArticulo = $_POST['id_articulo'] ?? null;
+
+            if (!$idProducto && !$idArticulo) {
+                echo json_encode(['success' => false, 'error' => 'Datos incompletos']);
+                exit;
+            }
+
+            $esFavorito = $this->model->existsFor($idUsuario, $idProducto, $idArticulo);
+
+            echo json_encode([
+                'success' => true,
+                'esFavorito' => $esFavorito
+            ]);
+
+        } catch (Exception $e) {
+            error_log("Error en verificarEstado: " . $e->getMessage());
+            echo json_encode([
+                'success' => false, 
+                'error' => 'Error al verificar favorito'
+            ]);
+        }
+        exit;
+    }
+
     // toggle con AJAX - VERSIÓN CORREGIDA
     public function toggleAjax() {
         if (!isset($_SESSION['ID_Usuario'])) {
@@ -77,7 +116,8 @@ class FavoritoController {
                 echo json_encode([
                     'success' => $result, 
                     'action' => 'removed',
-                    'message' => 'Eliminado de favoritos'
+                    'message' => 'Eliminado de favoritos',
+                    'esFavorito' => false
                 ]);
             } else {
                 // Agregar a favoritos
@@ -85,7 +125,8 @@ class FavoritoController {
                 echo json_encode([
                     'success' => $result, 
                     'action' => 'added',
-                    'message' => 'Agregado a favoritos'
+                    'message' => 'Agregado a favoritos',
+                    'esFavorito' => true
                 ]);
             }
         } catch (Exception $e) {

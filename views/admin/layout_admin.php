@@ -48,6 +48,12 @@ if (!isset($_SESSION)) session_start();
                 <i class="fa fa-ruler me-2"></i> Gestión de Tallas
             </a>
         </li>
+ <li class="nav-item mb-1">
+    <a class="nav-link <?php echo ($_GET['c'] ?? '') === 'Descuento' ? 'active' : ''; ?>" 
+      href="<?php echo BASE_URL; ?>?c=Descuento&a=index">
+        <i class="fas fa-tag me-2"></i> Descuentos
+    </a>
+</li>
         <li class="nav-item mb-1">
             <a class="nav-link <?php echo ($_GET['c'] ?? '') === 'Precio' ? 'active' : ''; ?>" 
               href="<?php echo BASE_URL; ?>?c=Precio&a=index">
@@ -87,47 +93,55 @@ if (!isset($_SESSION)) session_start();
         <?php 
         $controller = $_GET['c'] ?? 'Admin';
         $action = $_GET['a'] ?? 'index';
-        
+
         // Mapeo de vistas por controlador y acción
-        $viewMap = [
-            'Admin' => [
-                'index' => 'dashboard.php',
-                'productos' => 'productos.php', 
-                'productoForm' => 'producto_form.php',
-                'detalleProducto' => 'detalle_producto.php',
-                'saveProducto' => 'productos.php',
-                'agregarVariante' => 'detalle_producto.php',
-                'editarVariante' => 'detalle_producto.php',
-                'eliminarVariante' => 'detalle_producto.php',
-                'variantes' => 'variantes.php'
-            ],
-            'Tallas' => [
-                'index' => 'talla/index.php',
-                'crear' => 'talla/form.php',
-                'editar' => 'talla/form.php',
-                'guardar' => 'talla/index.php',
-                'actualizar' => 'talla/index.php',
-                'cambiarEstado' => 'talla/index.php'
-            ],
-            'Precio' => [
-              'index' => 'precio/index.php',
-              'crear' => 'precio/form.php',
-              'editar' => 'precio/form.php',
-              'guardar' => 'precio/index.php',
-              'actualizar' => 'precio/index.php',
-              'cambiarEstado' => 'precio/index.php',
-              'limpiarDuplicados' => 'precio/index.php',
-              'duplicados' => 'precio/duplicados.php'
-            ],
-            'UsuarioAdmin' => [
-              'index' => 'usuario/index.php',
-              'crear' => 'usuario/form.php',
-              'guardar' => 'usuario/index.php',
-              'cambiarEstado' => 'usuario/index.php',
-              'cambiarRol' => 'usuario/index.php'
-          ]
-        ];
-        
+$viewMap = [
+    'Admin' => [
+        'index' => 'dashboard.php',
+        'productos' => 'productos.php', 
+        'productoForm' => 'producto_form.php',
+        'detalleProducto' => 'detalle_producto.php',
+        'saveProducto' => 'productos.php',
+        'agregarVariante' => 'detalle_producto.php',
+        'editarVariante' => 'detalle_producto.php',
+        'eliminarVariante' => 'detalle_producto.php',
+        'variantes' => 'variantes.php'
+    ],
+    'Tallas' => [
+        'index' => 'talla/index.php',
+        'crear' => 'talla/form.php',
+        'editar' => 'talla/form.php',
+        'guardar' => 'talla/index.php',
+        'actualizar' => 'talla/index.php',
+        'cambiarEstado' => 'talla/index.php'
+    ],
+    'Precio' => [
+        'index' => 'precio/index.php',
+        'crear' => 'precio/form.php',
+        'editar' => 'precio/form.php',
+        'guardar' => 'precio/index.php',
+        'actualizar' => 'precio/index.php',
+        'cambiarEstado' => 'precio/index.php',
+        'limpiarDuplicados' => 'precio/index.php',
+        'duplicados' => 'precio/duplicados.php'
+    ],
+    'Descuento' => [
+        'index' => 'descuentos/index.php',
+        'crear' => 'descuentos/crear.php',
+        'editar' => 'descuentos/editar.php',
+        'ver' => 'descuentos/ver.php',
+        'guardar' => 'descuentos/index.php',
+        'actualizar' => 'descuentos/index.php',
+        'eliminar' => 'descuentos/index.php'
+    ],
+    'UsuarioAdmin' => [
+        'index' => 'usuario/index.php',
+        'crear' => 'usuario/form.php',
+        'guardar' => 'usuario/index.php',
+        'cambiarEstado' => 'usuario/index.php',
+        'cambiarRol' => 'usuario/index.php'
+    ]
+];
         // Determinar el archivo de vista
         $viewFile = "views/admin/";
         

@@ -1,8 +1,9 @@
 <?php
-// Vista del carrito
+// Vista del carrito - ACTUALIZADA CON DESCUENTOS
 if (!isset($carrito) || !is_array($carrito)) $carrito = [];
 if (!isset($categorias)) $categorias = [];
 $total = 0;
+$total_descuentos = 0;
 ?>
 <!DOCTYPE html>
 <html lang="es">
@@ -47,6 +48,18 @@ $total = 0;
       height: 16px;
       border-radius: 50%;
       border: 1px solid #aaa;
+    }
+    .precio-original {
+      text-decoration: line-through;
+      color: #6c757d;
+      font-size: 0.9rem;
+    }
+    .badge-descuento {
+      background: #dc3545;
+      color: white;
+      padding: 4px 8px;
+      border-radius: 6px;
+      font-size: 0.75rem;
     }
   </style>
 </head>
@@ -99,13 +112,23 @@ $total = 0;
           </thead>
           <tbody>
           <?php foreach ($carrito as $index => $item): 
-              $subtotal = $item['Precio'] * $item['Cantidad'];
+              $precio_original = $item['Precio_Original'] ?? $item['Precio'];
+              $precio_final = $item['Precio'];
+              $subtotal = $precio_final * $item['Cantidad'];
+              $subtotal_original = $precio_original * $item['Cantidad'];
+              $ahorro_item = $subtotal_original - $subtotal;
+              
               $total += $subtotal;
+              $total_descuentos += $ahorro_item;
               
               // Determinar tipo y badge
               $tipo = $item['Tipo'] ?? 'base';
               $badge_class = $tipo === 'variante' ? 'bg-info' : 'bg-secondary';
               $tipo_text = $tipo === 'variante' ? 'Variante' : 'Base';
+              
+              // Verificar si tiene descuento
+              $tiene_descuento = isset($item['Descuento']) && !empty($item['Descuento']['Codigo']);
+              $porcentaje_descuento = $tiene_descuento ? (($precio_original - $precio_final) / $precio_original * 100) : 0;
               
               // Determinar URL para ver detalles
               if ($tipo === 'variante' && !empty($item['ID_Producto'])) {
@@ -130,6 +153,13 @@ $total = 0;
               </td>
               <td class="text-start">
                 <?php echo htmlspecialchars($item['N_Articulo']); ?>
+                <?php if ($tiene_descuento): ?>
+                  <br>
+                  <small class="text-success">
+                    <i class="fas fa-tag"></i> 
+                    <?php echo htmlspecialchars($item['Descuento']['Codigo']); ?>
+                  </small>
+                <?php endif; ?>
               </td>
               <td>
                 <span class="badge <?php echo $badge_class; ?> badge-tipo"><?php echo $tipo_text; ?></span>
@@ -149,7 +179,17 @@ $total = 0;
                 <?php endif; ?>
               </td>
               <td>
-                <strong>$<?php echo number_format($item['Precio'], 0, ',', '.'); ?></strong>
+                <?php if ($tiene_descuento && $precio_original > $precio_final): ?>
+                  <div>
+                    <span class="precio-original">$<?php echo number_format($precio_original, 0, ',', '.'); ?></span>
+                    <br>
+                    <strong class="text-danger">$<?php echo number_format($precio_final, 0, ',', '.'); ?></strong>
+                    <br>
+                    <span class="badge-descuento">-<?php echo number_format($porcentaje_descuento, 1); ?>%</span>
+                  </div>
+                <?php else: ?>
+                  <strong>$<?php echo number_format($precio_final, 0, ',', '.'); ?></strong>
+                <?php endif; ?>
               </td>
               <td>
                 <div class="d-flex align-items-center justify-content-center gap-2">
@@ -168,7 +208,17 @@ $total = 0;
                 </div>
               </td>
               <td>
-                <strong class="text-success">$<?php echo number_format($subtotal, 0, ',', '.'); ?></strong>
+                <?php if ($tiene_descuento && $ahorro_item > 0): ?>
+                  <div>
+                    <span class="precio-original">$<?php echo number_format($subtotal_original, 0, ',', '.'); ?></span>
+                    <br>
+                    <strong class="text-success">$<?php echo number_format($subtotal, 0, ',', '.'); ?></strong>
+                    <br>
+                    <small class="text-success">Ahorras: $<?php echo number_format($ahorro_item, 0, ',', '.'); ?></small>
+                  </div>
+                <?php else: ?>
+                  <strong class="text-success">$<?php echo number_format($subtotal, 0, ',', '.'); ?></strong>
+                <?php endif; ?>
               </td>
               <td>
                 <div class="d-flex justify-content-center gap-2">
@@ -189,21 +239,51 @@ $total = 0;
         </table>
       </div>
 
-      <div class="mt-4 d-flex flex-column flex-md-row justify-content-between align-items-center">
-        <h3 class="text-success mb-3 mb-md-0">
-          TOTAL: <strong>$<?php echo number_format($total, 0, ',', '.'); ?></strong>
-        </h3>
-        <div class="d-flex gap-3">
-          <button id="vaciarCarrito" class="btn btn-warning">
-            <i class="fas fa-trash-alt"></i> Vaciar Carrito
-          </button>
-
-          <!-- ✅ Formulario para confirmar compra -->
-          <form id="formCompra" action="<?php echo BASE_URL . '?c=Carrito&a=confirmarCompra'; ?>" method="POST">
-            <button type="submit" class="btn btn-success btn-lg">
-              <i class="fas fa-credit-card"></i> Finalizar Compra
+      <!-- RESUMEN DE COMPRA -->
+      <div class="row mt-4">
+        <div class="col-md-6">
+          <div class="card bg-light">
+            <div class="card-body">
+              <h5 class="card-title"><i class="fas fa-receipt"></i> Resumen de Compra</h5>
+              <div class="d-flex justify-content-between">
+                <span>Subtotal:</span>
+                <span>$<?php echo number_format($total + $total_descuentos, 0, ',', '.'); ?></span>
+              </div>
+              <?php if ($total_descuentos > 0): ?>
+              <div class="d-flex justify-content-between text-success">
+                <span>Descuentos:</span>
+                <span>-$<?php echo number_format($total_descuentos, 0, ',', '.'); ?></span>
+              </div>
+              <?php endif; ?>
+              <hr>
+              <div class="d-flex justify-content-between fw-bold fs-5">
+                <span>TOTAL:</span>
+                <span class="text-success">$<?php echo number_format($total, 0, ',', '.'); ?></span>
+              </div>
+              <?php if ($total_descuentos > 0): ?>
+              <div class="text-center mt-2">
+                <small class="text-success">
+                  <i class="fas fa-piggy-bank"></i> 
+                  Estás ahorrando $<?php echo number_format($total_descuentos, 0, ',', '.'); ?> en esta compra
+                </small>
+              </div>
+              <?php endif; ?>
+            </div>
+          </div>
+        </div>
+        <div class="col-md-6 d-flex align-items-center justify-content-end">
+          <div class="d-flex gap-3">
+            <button id="vaciarCarrito" class="btn btn-warning">
+              <i class="fas fa-trash-alt"></i> Vaciar Carrito
             </button>
-          </form>
+
+            <!-- ✅ Formulario para proceder al checkout -->
+            <form id="formCompra" action="<?php echo BASE_URL . '?c=Checkout&a=index'; ?>" method="POST">
+              <button type="submit" class="btn btn-success btn-lg">
+                <i class="fas fa-credit-card"></i> Proceder al Pago
+              </button>
+            </form>
+          </div>
         </div>
       </div>
 
@@ -269,20 +349,20 @@ if (vaciar) {
   });
 }
 
-// Confirmación al finalizar compra
+// Confirmación al proceder al pago
 const formCompra = document.getElementById('formCompra');
 if (formCompra) {
   formCompra.addEventListener('submit', function(e) {
     e.preventDefault();
     
     Swal.fire({
-      title: '¿Finalizar compra?',
+      title: '¿Proceder al pago?',
       html: `Estás a punto de finalizar tu compra por un total de <strong>$<?php echo number_format($total, 0, ',', '.'); ?></strong>`,
       icon: 'question',
       showCancelButton: true,
       confirmButtonColor: '#28a745',
       cancelButtonColor: '#6c757d',
-      confirmButtonText: 'Sí, comprar',
+      confirmButtonText: 'Sí, continuar',
       cancelButtonText: 'Seguir comprando'
     }).then(result => {
       if (result.isConfirmed) {
@@ -295,7 +375,6 @@ if (formCompra) {
 
 </body>
 </html>
-
 
 
 
