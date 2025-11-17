@@ -15,10 +15,12 @@ require_once "controllers/CarritoController.php";
 require_once "controllers/UsuarioController.php";
 require_once "controllers/PedidoController.php";
 require_once "controllers/AdminController.php";
-require_once "controllers/FavoritoController.php"; // ✅ AGREGADO
+require_once "controllers/FavoritoController.php";
 require_once "controllers/TallasController.php";
 require_once "controllers/PrecioController.php";
 require_once "controllers/UsuarioAdminController.php";
+require_once "controllers/FavoritoStatsController.php";
+require_once "controllers/ChatbotController.php";
 
 // 🔹 Determinar controlador y acción por URL (GET)
 $controlador = $_GET['c'] ?? 'Producto';
@@ -42,8 +44,8 @@ switch ($controlador) {
         $controller = new AdminController(); // Admin no usa conexión
         break;
     case 'Favorito':
-    case 'MeGusta': // ✅ Alias soportado
-        $controller = new FavoritoController($db); // ✅ CORREGIDO
+    case 'MeGusta':
+        $controller = new FavoritoController($db); 
         break;
     case 'Tallas':
         $controller = new TallasController($db);
@@ -53,6 +55,12 @@ switch ($controlador) {
         break;
     case 'UsuarioAdmin':
         $controller = new UsuarioAdminController($db);
+        break;
+    case 'FavoritoStats':
+        $controller = new FavoritoStatsController($db);
+        break;
+    case 'Chatbot':
+        $controller = new ChatbotController($db);
         break;
     default:
         $controller = new ProductoController($db);
@@ -72,7 +80,3 @@ try {
     echo "<h2 style='color:red;text-align:center;margin-top:50px;'>⚠️ Error interno del servidor</h2>";
     echo "<pre style='color:#222;text-align:center;'>" . $e->getMessage() . "</pre>";
 }
-
-
-
-

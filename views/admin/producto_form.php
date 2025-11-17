@@ -1,328 +1,911 @@
 <div class="container mt-4">
-    <h2><?= isset($articulo) ? 'Editar Producto Base' : 'Nuevo Producto Base' ?></h2>
+    <h2 class="fw-bold text-primary mb-4">
+        <i class="fas <?= isset($articulo) ? 'fa-edit' : 'fa-plus-circle' ?>"></i> 
+        <?= isset($articulo) ? 'Editar Producto Base' : 'Nuevo Producto Base' ?>
+    </h2>
 
-    <form action="<?= BASE_URL ?>?c=Admin&a=saveProducto" method="post" enctype="multipart/form-data">
-        <?php if (!empty($articulo['ID_Articulo'])): ?>
+    <!-- Mensajes de sesión -->
+    <?php if (isset($_SESSION['msg'])): ?>
+        <div class="alert alert-<?= $_SESSION['msg_type'] ?? 'info' ?> alert-dismissible fade show shadow-sm">
+            <i class="fas <?= $_SESSION['msg_type'] === 'success' ? 'fa-check-circle' : 'fa-info-circle' ?>"></i>
+            <?= $_SESSION['msg'] ?>
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+        <?php unset($_SESSION['msg'], $_SESSION['msg_type']); ?>
+    <?php endif; ?>
+
+    <!-- Contenedor de mensajes en tiempo real -->
+    <div id="msgContainer"></div>
+
+    <form id="formProducto" action="<?= BASE_URL ?>?c=Admin&a=saveProducto" method="post" enctype="multipart/form-data" class="shadow-sm p-4 rounded border bg-light">
+        <?php if (isset($articulo['ID_Articulo'])): ?>
             <input type="hidden" name="ID_Articulo" value="<?= $articulo['ID_Articulo'] ?>">
+            <input type="hidden" name="foto_actual" value="<?= htmlspecialchars($articulo['Foto'] ?? '') ?>">
         <?php endif; ?>
 
-        <div class="mb-3">
-            <label for="N_Articulo" class="form-label">Nombre del Producto</label>
-            <input type="text" name="N_Articulo" id="N_Articulo" class="form-control" required
-                value="<?= htmlspecialchars($articulo['N_Articulo'] ?? '') ?>">
+        <!-- Información Básica -->
+        <div class="row mb-4">
+            <div class="col-md-12">
+                <div class="card shadow-sm">
+                    <div class="card-header bg-primary text-white">
+                        <i class="fas fa-info-circle"></i> Información Básica del Producto
+                    </div>
+                    <div class="card-body">
+                        <div class="mb-3">
+                            <label for="N_Articulo" class="form-label fw-bold">Nombre del Producto *</label>
+                            <input type="text" name="N_Articulo" id="N_Articulo" class="form-control" required
+                                value="<?= htmlspecialchars($articulo['N_Articulo'] ?? '') ?>" 
+                                placeholder="Ej: Camiseta Básica, Jeans Clásico...">
+                        </div>
+
+                        <div class="row">
+                            <!-- Categoría -->
+                            <div class="col-md-4 mb-3">
+                                <label class="form-label fw-bold">Categoría *</label>
+                                <select name="ID_Categoria" class="form-select" required id="ID_Categoria">
+                                    <option value="" disabled selected>Seleccionar...</option>
+                                    <?php foreach ($categorias as $cat): ?>
+                                        <option value="<?= $cat['ID_Categoria'] ?>" 
+                                            <?= (isset($articulo['ID_Categoria']) && $articulo['ID_Categoria'] == $cat['ID_Categoria']) ? 'selected' : '' ?>>
+                                            <?= htmlspecialchars($cat['N_Categoria']) ?>
+                                        </option>
+                                    <?php endforeach; ?>
+                                </select>
+                            </div>
+
+                            <!-- Género -->
+                            <div class="col-md-4 mb-3">
+                                <label class="form-label fw-bold">Género *</label>
+                                <select name="ID_Genero" class="form-select" required id="ID_Genero">
+                                    <option value="" disabled selected>Seleccionar...</option>
+                                    <?php foreach ($generos as $g): ?>
+                                        <option value="<?= $g['ID_Genero'] ?>" 
+                                            <?= (isset($articulo['ID_Genero']) && $articulo['ID_Genero'] == $g['ID_Genero']) ? 'selected' : '' ?>>
+                                            <?= htmlspecialchars($g['N_Genero']) ?>
+                                        </option>
+                                    <?php endforeach; ?>
+                                </select>
+                            </div>
+
+                            <!-- Subcategoría -->
+                            <div class="col-md-4 mb-3">
+                                <label class="form-label fw-bold">Subcategoría *</label>
+                                <select name="ID_SubCategoria" class="form-select" required id="ID_SubCategoria" disabled>
+                                    <option value="" disabled selected>Primero selecciona categoría y género</option>
+                                    <?php if (isset($articulo['ID_SubCategoria'])): ?>
+                                        <?php foreach ($subcats as $sub): ?>
+                                            <option value="<?= $sub['ID_SubCategoria'] ?>" 
+                                                <?= ($articulo['ID_SubCategoria'] == $sub['ID_SubCategoria']) ? 'selected' : '' ?>>
+                                                <?= htmlspecialchars($sub['SubCategoria']) ?>
+                                            </option>
+                                        <?php endforeach; ?>
+                                    <?php endif; ?>
+                                </select>
+                                <div id="loadingSubcategorias" class="spinner-border spinner-border-sm text-primary d-none mt-1" role="status">
+                                    <span class="visually-hidden">Cargando...</span>
+                                </div>
+                                <small class="form-text text-muted" id="subcategoriaInfo">
+                                    Selecciona categoría y género para ver las subcategorías disponibles
+                                </small>
+                            </div>
+                        </div>
+
+                        <div class="row">
+                            <div class="col-md-4 mb-3">
+                                <label class="form-label fw-bold">Precio Base *</label>
+                                <select name="ID_Precio" class="form-select" required>
+                                    <option value="" disabled selected>Seleccionar...</option>
+                                    <?php foreach ($precios as $p): ?>
+                                        <option value="<?= $p['ID_precio'] ?>" 
+                                            <?= (isset($articulo['ID_Precio']) && $articulo['ID_Precio'] == $p['ID_precio']) ? 'selected' : '' ?>>
+                                            <?= $p['ID_precio'] ?> - $<?= number_format($p['Valor'], 2) ?>
+                                        </option>
+                                    <?php endforeach; ?>
+                                </select>
+                            </div>
+
+                            <div class="col-md-4 mb-3">
+                                <label class="form-label fw-bold">Color Base *</label>
+                                <select name="ID_Color" class="form-select" required>
+                                    <option value="" disabled selected>Seleccionar...</option>
+                                    <?php foreach ($colors as $c): ?>
+                                        <option value="<?= $c['ID_Color'] ?>" 
+                                            <?= (isset($articulo['ID_Color']) && $articulo['ID_Color'] == $c['ID_Color']) ? 'selected' : '' ?>>
+                                            <?= htmlspecialchars($c['N_Color']) ?>
+                                        </option>
+                                    <?php endforeach; ?>
+                                </select>
+                            </div>
+
+                            <div class="col-md-4 mb-3">
+                                <label class="form-label fw-bold">Talla Base *</label>
+                                <select name="ID_Talla" class="form-select" required>
+                                    <option value="" disabled selected>Seleccionar...</option>
+                                    <?php foreach ($tallas as $t): ?>
+                                        <option value="<?= $t['ID_Talla'] ?>" 
+                                            <?= (isset($articulo['ID_Talla']) && $articulo['ID_Talla'] == $t['ID_Talla']) ? 'selected' : '' ?>>
+                                            <?= htmlspecialchars($t['N_Talla']) ?>
+                                        </option>
+                                    <?php endforeach; ?>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label fw-bold">Cantidad en Stock *</label>
+                                <input type="number" name="Cantidad" class="form-control" min="0" required
+                                    value="<?= htmlspecialchars($articulo['Cantidad'] ?? '0') ?>" 
+                                    placeholder="Ej: 20">
+                            </div>
+
+                            <div class="col-md-6 mb-3">
+                                <div class="form-check mt-4">
+                                    <input type="checkbox" name="Activo" class="form-check-input" id="activo"
+                                        <?= (isset($articulo['Activo']) && $articulo['Activo'] == 1) ? 'checked' : '' ?>>
+                                    <label class="form-check-label fw-bold" for="activo">Producto Activo</label>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
         </div>
 
-        <div class="row">
-            <div class="col-md-3 mb-3">
-                <label class="form-label">Categoría</label>
-                <select name="ID_Categoria" class="form-select" required>
-                    <option value="">Seleccionar...</option>
-                    <?php foreach ($categorias as $cat): ?>
-                        <option value="<?= $cat['ID_Categoria'] ?>" 
-                            <?= ($articulo['ID_Categoria'] ?? '') == $cat['ID_Categoria'] ? 'selected' : '' ?>>
-                            <?= htmlspecialchars($cat['N_Categoria']) ?>
-                        </option>
-                    <?php endforeach; ?>
-                </select>
-            </div>
-
-            <div class="col-md-3 mb-3">
-                <label class="form-label">Subcategoría</label>
-                <select name="ID_SubCategoria" class="form-select">
-                    <option value="">Seleccionar...</option>
-                    <?php foreach ($subcats as $sub): ?>
-                        <option value="<?= $sub['ID_SubCategoria'] ?>" 
-                            <?= ($articulo['ID_SubCategoria'] ?? '') == $sub['ID_SubCategoria'] ? 'selected' : '' ?>>
-                            <?= htmlspecialchars($sub['SubCategoria']) ?>
-                        </option>
-                    <?php endforeach; ?>
-                </select>
-            </div>
-
-            <div class="col-md-3 mb-3">
-                <label class="form-label">Género</label>
-                <select name="ID_Genero" class="form-select">
-                    <option value="">Seleccionar...</option>
-                    <?php foreach ($generos as $g): ?>
-                        <option value="<?= $g['ID_Genero'] ?>" 
-                            <?= ($articulo['ID_Genero'] ?? '') == $g['ID_Genero'] ? 'selected' : '' ?>>
-                            <?= htmlspecialchars($g['N_Genero']) ?>
-                        </option>
-                    <?php endforeach; ?>
-                </select>
-            </div>
-
-            <div class="col-md-3 mb-3">
-                <label class="form-label">Precio Base</label>
-                <select name="ID_Precio" class="form-select" required>
-                    <option value="">Seleccionar...</option>
-                    <?php foreach ($precios as $p): ?>
-                        <option value="<?= $p['ID_precio'] ?>" 
-                            <?= ($articulo['ID_Precio'] ?? '') == $p['ID_precio'] ? 'selected' : '' ?>>
-                            <?= $p['ID_precio'] ?> - $<?= number_format($p['Valor'], 2) ?>
-                        </option>
-                    <?php endforeach; ?>
-                </select>
-            </div>
-        </div>
-
-        <div class="row">
-            <div class="col-md-4 mb-3">
-                <label class="form-label">Color Base</label>
-                <select name="ID_Color" class="form-select">
-                    <option value="">Seleccionar...</option>
-                    <?php foreach ($colors as $c): ?>
-                        <option value="<?= $c['ID_Color'] ?>" 
-                            <?= ($articulo['ID_Color'] ?? '') == $c['ID_Color'] ? 'selected' : '' ?>>
-                            <?= htmlspecialchars($c['N_Color']) ?>
-                        </option>
-                    <?php endforeach; ?>
-                </select>
-            </div>
-
-            <div class="col-md-4 mb-3">
-                <label class="form-label">Talla Base</label>
-                <select name="ID_Talla" class="form-select">
-                    <option value="">Seleccionar...</option>
-                    <?php foreach ($tallas as $t): ?>
-                        <option value="<?= $t['ID_Talla'] ?>" 
-                            <?= ($articulo['ID_Talla'] ?? '') == $t['ID_Talla'] ? 'selected' : '' ?>>
-                            <?= htmlspecialchars($t['N_Talla']) ?>
-                        </option>
-                    <?php endforeach; ?>
-                </select>
-            </div>
-
-            <div class="col-md-4 mb-3">
-                <label class="form-label">Cantidad en Stock</label>
-                <input type="number" name="Cantidad" class="form-control" min="0"
-                    value="<?= htmlspecialchars($articulo['Cantidad'] ?? '') ?>" placeholder="Ej: 20">
-            </div>
-        </div>
-
-        <!-- Imagen actual -->
-        <?php if (!empty($articulo['Foto'])): ?>
-            <div class="mb-3">
-                <label class="form-label">Imagen actual:</label><br>
-                <img src="<?= BASE_URL . htmlspecialchars($articulo['Foto']); ?>" 
-                     alt="Imagen actual"
-                     style="width:150px; border-radius:8px; margin-bottom:8px;">
-                <input type="hidden" name="foto_actual" value="<?= htmlspecialchars($articulo['Foto']); ?>">
-            </div>
-        <?php endif; ?>
-
-        <!-- NUEVO: Sistema de selección de rutas -->
-        <div class="card mb-3">
-            <div class="card-header bg-primary text-white">
-                <i class="fas fa-folder"></i> Selección de Ruta de Imagen
+        <!-- SISTEMA DE SUBIDA DE IMAGEN MEJORADO -->
+        <div class="card mb-4 shadow-sm">
+            <div class="card-header bg-success text-white">
+                <i class="fas fa-upload"></i> Gestión de Imagen del Producto
             </div>
             <div class="card-body">
-                <div class="row">
-                    <div class="col-md-3 mb-3">
-                        <label class="form-label">Categoría *</label>
-                        <select name="categoria_ruta" class="form-control" id="categoria_ruta" required>
-                            <option value="">Seleccionar categoría</option>
-                            <option value="Ropa">Ropa</option>
-                            <option value="Calzado">Calzado</option>
-                            <option value="Accesorios">Accesorios</option>
-                        </select>
+                <div class="row mb-4">
+                    <div class="col-md-3">
+                        <div class="border rounded p-3 text-center bg-light h-100">
+                            <strong class="d-block">Categoría</strong>
+                            <span class="badge bg-primary mt-2" id="badgeCategoria">-</span>
+                        </div>
                     </div>
-                    
-                    <div class="col-md-3 mb-3">
-                        <label class="form-label">Género *</label>
-                        <select name="genero_ruta" class="form-control" id="genero_ruta" required>
-                            <option value="">Seleccionar género</option>
-                            <option value="Hombre">Hombre</option>
-                            <option value="Mujer">Mujer</option>
-                            <option value="Niños">Niños</option>
-                        </select>
+                    <div class="col-md-3">
+                        <div class="border rounded p-3 text-center bg-light h-100">
+                            <strong class="d-block">Género</strong>
+                            <span class="badge bg-info mt-2" id="badgeGenero">-</span>
+                        </div>
                     </div>
-                    
-                    <div class="col-md-3 mb-3">
-                        <label class="form-label">Subcategoría *</label>
-                        <select name="subcategoria_ruta" class="form-control" id="subcategoria_ruta" required>
-                            <option value="">Seleccionar subcategoría</option>
-                            <!-- Las opciones se cargarán dinámicamente -->
-                        </select>
+                    <div class="col-md-3">
+                        <div class="border rounded p-3 text-center bg-light h-100">
+                            <strong class="d-block">Subcategoría</strong>
+                            <span class="badge bg-warning text-dark mt-2" id="badgeSubcategoria">-</span>
+                        </div>
                     </div>
-
-                    <div class="col-md-3 mb-3">
-                        <label class="form-label">Nombre del archivo *</label>
-                        <input type="text" name="nombre_archivo" class="form-control" id="nombre_archivo" 
-                               placeholder="Ejemplo: camisa_azul.jpg" required>
-                        <small class="form-text text-muted">Incluye la extensión (.jpg, .png, etc.)</small>
+                    <div class="col-md-3">
+                        <div class="border rounded p-3 text-center bg-light h-100">
+                            <strong class="d-block">Estado Ruta</strong>
+                            <span class="badge bg-secondary mt-2" id="badgeEstado">Incompleto</span>
+                        </div>
                     </div>
                 </div>
 
                 <div class="row">
-                    <div class="col-md-12">
-                        <label class="form-label">Ruta generada automáticamente</label>
-                        <input type="text" name="Ruta_Imagen" class="form-control bg-light" id="ruta_generada" 
-                               value="<?= htmlspecialchars($articulo['Foto'] ?? '') ?>" readonly>
-                        <small class="form-text text-muted">Esta ruta se usará para guardar la imagen</small>
+                    <!-- Columna para subir imagen -->
+                    <div class="col-md-6">
+                        <div class="mb-3">
+                            <label class="form-label fw-bold">Seleccionar imagen <?= !isset($articulo) ? '*' : '' ?></label>
+                            <input type="file" name="foto" class="form-control" id="imagenProducto" 
+                                   accept=".jpg,.jpeg,.png,.gif" 
+                                   onchange="procesarSubidaImagen()"
+                                   <?= !isset($articulo) ? 'required' : '' ?>>
+                            <small class="form-text text-muted">
+                                Formatos permitidos: JPG, JPEG, PNG, GIF. Tamaño máximo: 2MB
+                                <?php if (isset($articulo)): ?>
+                                    <br><strong>Deja vacío para mantener la imagen actual</strong>
+                                <?php endif; ?>
+                            </small>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label fw-bold">Nombre del archivo *</label>
+                            <input type="text" class="form-control" id="nombreArchivo" required
+                                   placeholder="Ej: camiseta_basica_negra.jpg"
+                                   oninput="generarRutaCompleta()"
+                                   value="<?= isset($articulo['Foto']) ? basename($articulo['Foto']) : '' ?>">
+                            <small class="form-text text-muted">
+                                Incluye la extensión (.jpg, .png, etc.)
+                            </small>
+                        </div>
+
+                        <!-- Ruta generada automáticamente -->
+                        <div class="mb-3">
+                            <label class="form-label fw-bold">Ruta generada automáticamente</label>
+                            <div class="input-group">
+                                <span class="input-group-text bg-light">ImgProducto/</span>
+                                <input type="text" class="form-control bg-light" id="rutaGenerada" readonly>
+                            </div>
+                            <input type="hidden" name="Foto" id="fotoFinal" value="<?= htmlspecialchars($articulo['Foto'] ?? '') ?>">
+                            <small class="form-text text-muted">
+                                Esta ruta se completará automáticamente al seleccionar categoría, género, subcategoría y nombre del archivo
+                            </small>
+                        </div>
+                    </div>
+
+                    <!-- Columna para previsualización -->
+                    <div class="col-md-6">
+                        <label class="form-label fw-bold">Vista previa de la imagen</label>
+                        <div class="border rounded p-3 text-center bg-light h-100" style="min-height: 200px;">
+                            <?php 
+                            $rutaImagenActual = '';
+                            if (isset($articulo['Foto'])) {
+                                $rutaImagenActual = trim($articulo['Foto'] ?? '');
+                                if ($rutaImagenActual !== '') {
+                                    if (!preg_match('/^https?:/i', $rutaImagenActual) && !str_starts_with($rutaImagenActual, 'ImgProducto/')) {
+                                        $rutaImagenActual = 'ImgProducto/' . ltrim($rutaImagenActual, '/');
+                                    }
+                                    $rutaImagenActual = BASE_URL . ltrim($rutaImagenActual, '/');
+                                } else {
+                                    $rutaImagenActual = BASE_URL . 'assets/img/sin_imagen.png';
+                                }
+                            } else {
+                                $rutaImagenActual = BASE_URL . 'assets/img/sin_imagen.png';
+                            }
+                            ?>
+                            <img id="vistaPreviaImg" src="<?= htmlspecialchars($rutaImagenActual); ?>" 
+                                 alt="Vista previa" 
+                                 class="img-fluid rounded"
+                                 style="max-height: 180px; max-width: 100%; object-fit: contain;">
+                            <div class="mt-2">
+                                <small class="text-muted" id="infoArchivo">
+                                    <?= isset($articulo['Foto']) ? 'Imagen actual del producto' : 'Selecciona una imagen para previsualizar' ?>
+                                </small>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
         </div>
 
-        <div class="mb-3">
-            <label class="form-label">O subir nueva imagen</label>
-            <input type="file" name="foto" class="form-control">
-            <small class="form-text text-muted">Si subes una imagen, se guardará en la ruta generada arriba</small>
+        <!-- Botones de acción -->
+        <div class="d-flex justify-content-between align-items-center mt-4 p-3 bg-white rounded border">
+            <div>
+                <button type="submit" class="btn btn-success btn-lg shadow">
+                    <i class="fas fa-save"></i> <?= isset($articulo) ? 'Actualizar Producto' : 'Guardar Producto' ?>
+                </button>
+                <a href="<?= BASE_URL ?>?c=Admin&a=productos" class="btn btn-outline-secondary btn-lg">
+                    <i class="fas fa-times"></i> Cancelar
+                </a>
+            </div>
+            
+            <?php if (isset($articulo['ID_Articulo'])): ?>
+                <a href="<?= BASE_URL ?>?c=Admin&a=detalleProducto&id=<?= $articulo['ID_Articulo'] ?>" 
+                   class="btn btn-primary">
+                    <i class="fas fa-eye"></i> Ver Detalles y Variantes
+                </a>
+            <?php endif; ?>
         </div>
-
-        <div class="form-check mb-3">
-            <input type="checkbox" name="Activo" class="form-check-input" id="activo"
-                <?= !empty($articulo['Activo']) ? 'checked' : '' ?>>
-            <label class="form-check-label" for="activo">Activo</label>
-        </div>
-
-        <button type="submit" class="btn btn-primary">Guardar</button>
-        <a href="<?= BASE_URL ?>?c=Admin&a=productos" class="btn btn-secondary">Cancelar</a>
     </form>
 </div>
 
-<!-- JavaScript para el sistema de rutas -->
+<style>
+.mini-alerta {
+    font-size: 0.75rem;
+    padding: 0.25rem 0.5rem;
+    margin-bottom: 0;
+    border-radius: 0.25rem;
+}
+
+.mini-alerta .btn-close {
+    padding: 0.5rem;
+    font-size: 0.7rem;
+}
+
+.btn-close-sm {
+    padding: 0.25rem !important;
+    font-size: 0.6rem !important;
+}
+
+/* Estilo para opciones deshabilitadas en selects */
+select option:disabled {
+    color: #6c757d;
+    background-color: #f8f9fa;
+}
+
+/* Estilo para selects cuando tienen valor válido */
+select:valid {
+    border-color: #198754;
+}
+
+select:invalid {
+    border-color: #dc3545;
+}
+
+/* Estilo para la opción seleccionada por defecto */
+select option[disabled][selected] {
+    color: #6c757d;
+    font-style: italic;
+}
+
+/* Indicador de campo obligatorio */
+.form-label.fw-bold::after {
+    content: " *";
+    color: #dc3545;
+}
+</style>
+
+<!-- SCRIPT DE VALIDACIÓN Y SISTEMA DE SUBIDA DE IMÁGENES -->
 <script>
-document.addEventListener('DOMContentLoaded', function() {
-    const categoriaSelect = document.getElementById('categoria_ruta');
-    const generoSelect = document.getElementById('genero_ruta');
-    const subcategoriaSelect = document.getElementById('subcategoria_ruta');
-    const nombreArchivoInput = document.getElementById('nombre_archivo');
-    const rutaGeneradaInput = document.getElementById('ruta_generada');
+// ===== FUNCIONES PARA VALIDACIÓN EN TIEMPO REAL =====
+function validarCampoEnTiempoReal(campo, mensaje) {
+    const valor = campo.value.trim();
+    const formGroup = campo.closest('.mb-3') || campo.closest('.form-select');
     
-    // Definir las subcategorías por categoría
-    const subcategorias = {
-        'Ropa': {
-            'Hombre': ['Boxer', 'Camisa', 'Camiseta', 'Chaqueta', 'Jeans', 'Pantaloneta', 'Sudadera'],
-            'Mujer': ['Camisa', 'Camiseta', 'Chaqueta', 'Jeans', 'Lenceria', 'Sudadera'],
-            'Niños': ['Camisa', 'Camiseta', 'Jeans', 'Sudadera']
-        },
-        'Calzado': {
-            'Hombre': ['Botas', 'Chanclas', 'Crocs', 'Sandalias', 'Tenis', 'Zapatos'],
-            'Mujer': ['Botas', 'Chanclas', 'Crocs', 'Sandalias', 'Tenis', 'Zapatos'],
-            'Niños': ['Botas', 'Chanclas', 'Crocs', 'Sandalias', 'Tenis', 'Zapatos']
-        },
-        'Accesorios': {
-            'Hombre': ['Billeteras', 'Cinturon', 'Gafas', 'Gorras', 'Llaveros', 'Morrales', 'Perfumes', 'Relojes', 'Sombreros'],
-            'Mujer': ['Billeteras', 'Cinturon', 'Gafas', 'Gorras', 'Llaveros', 'Morrales', 'Perfumes', 'Relojes', 'Sombreros'],
-            'Niños': ['Billeteras', 'Cinturon', 'Gafas', 'Gorras', 'Llaveros', 'Morrales', 'Perfumes', 'Relojes', 'Sombreros']
+    // Remover alertas anteriores
+    const alertaAnterior = formGroup.querySelector('.mini-alerta');
+    if (alertaAnterior) {
+        alertaAnterior.remove();
+    }
+    
+    // Si el campo tiene valor, mostrar mini alerta
+    if (valor && valor !== '') {
+        const miniAlerta = document.createElement('div');
+        miniAlerta.className = 'mini-alerta alert alert-success alert-dismissible fade show mt-1 py-1';
+        miniAlerta.innerHTML = `
+            <i class="fas fa-check-circle me-1"></i>
+            ${mensaje}
+            <button type="button" class="btn-close btn-close-sm" data-bs-dismiss="alert"></button>
+        `;
+        formGroup.appendChild(miniAlerta);
+        
+        // Auto-ocultar después de 3 segundos
+        setTimeout(() => {
+            if (miniAlerta.parentNode) {
+                miniAlerta.remove();
+            }
+        }, 3000);
+    }
+}
+
+// ===== FUNCIONES PARA MANEJO DE SELECTS =====
+function configurarSelects() {
+    // Configurar todos los selects para deshabilitar y seleccionar la opción "Seleccionar..."
+    const selects = document.querySelectorAll('select');
+    selects.forEach(select => {
+        // Agregar evento change para validación
+        select.addEventListener('change', function() {
+            if (this.value && this.value !== '') {
+                const fieldName = this.name;
+                let message = '';
+                
+                switch(fieldName) {
+                    case 'ID_Categoria':
+                        message = 'Categoría seleccionada correctamente';
+                        break;
+                    case 'ID_Genero':
+                        message = 'Género seleccionado correctamente';
+                        break;
+                    case 'ID_SubCategoria':
+                        message = 'Subcategoría seleccionada correctamente';
+                        break;
+                    case 'ID_Precio':
+                        message = 'Precio base seleccionado correctamente';
+                        break;
+                    case 'ID_Color':
+                        message = 'Color base seleccionado correctamente';
+                        break;
+                    case 'ID_Talla':
+                        message = 'Talla base seleccionada correctamente';
+                        break;
+                    default:
+                        message = 'Opción seleccionada correctamente';
+                }
+                
+                validarCampoEnTiempoReal(this, message);
+            }
+        });
+    });
+    
+    // Configurar validación para campo de texto
+    const nombreInput = document.getElementById('N_Articulo');
+    nombreInput.addEventListener('input', function() {
+        if (this.value.trim()) {
+            validarCampoEnTiempoReal(this, 'Nombre del producto válido');
         }
+    });
+    
+    // Configurar validación para cantidad
+    const cantidadInput = document.querySelector('input[name="Cantidad"]');
+    cantidadInput.addEventListener('input', function() {
+        if (this.value && this.value > 0) {
+            validarCampoEnTiempoReal(this, 'Cantidad establecida');
+        }
+    });
+    
+    // Configurar validación para nombre de archivo
+    const nombreArchivoInput = document.getElementById('nombreArchivo');
+    nombreArchivoInput.addEventListener('input', function() {
+        if (this.value.trim()) {
+            validarCampoEnTiempoReal(this, 'Nombre de archivo válido');
+        }
+    });
+}
+
+// ===== FUNCIONES PARA CARGA DINÁMICA DE SUBCATEGORÍAS =====
+function verificarYCargarSubcategorias() {
+    const categoria = document.getElementById('ID_Categoria').value;
+    const genero = document.getElementById('ID_Genero').value;
+    
+    if (categoria && genero) {
+        console.log('Cargando subcategorías para:', { categoria, genero });
+        cargarSubcategorias(categoria, genero);
+    } else {
+        // Si falta categoría o género, deshabilitar subcategoría
+        const subcategoriaSelect = document.getElementById('ID_SubCategoria');
+        subcategoriaSelect.innerHTML = '<option value="" disabled selected>Selecciona categoría y género primero</option>';
+        subcategoriaSelect.disabled = true;
+        document.getElementById('subcategoriaInfo').textContent = 'Selecciona categoría y género para ver las subcategorías disponibles';
+        
+        actualizarBadges();
+        generarRutaCompleta();
+    }
+}
+
+function cargarSubcategorias(idCategoria, idGenero) {
+    const subcategoriaSelect = document.getElementById('ID_SubCategoria');
+    const loadingElement = document.getElementById('loadingSubcategorias');
+    const infoElement = document.getElementById('subcategoriaInfo');
+    
+    console.log('Cargando subcategorías para categoría:', idCategoria, 'y género:', idGenero);
+    
+    // Mostrar loading
+    loadingElement.classList.remove('d-none');
+    subcategoriaSelect.disabled = true;
+    infoElement.textContent = 'Cargando subcategorías disponibles...';
+    
+    // Realizar petición AJAX
+    fetch(`<?= BASE_URL ?>?c=Admin&a=getSubcategoriasByCategoria&id_categoria=${idCategoria}&id_genero=${idGenero}`)
+        .then(response => {
+            console.log('Respuesta recibida:', response.status);
+            if (!response.ok) {
+                throw new Error(`Error HTTP: ${response.status}`);
+            }
+            return response.json();
+        })
+        .then(data => {
+            console.log('Subcategorías recibidas:', data);
+            
+            // Limpiar select y agregar opción por defecto
+            subcategoriaSelect.innerHTML = '<option value="" disabled selected>Seleccionar subcategoría...</option>';
+            
+            // Llenar con nuevas opciones
+            if (data.length > 0) {
+                data.forEach(subcategoria => {
+                    const option = document.createElement('option');
+                    option.value = subcategoria.ID_SubCategoria;
+                    option.textContent = subcategoria.SubCategoria;
+                    
+                    // Mantener selección actual si existe
+                    const currentSubcat = '<?= $articulo['ID_SubCategoria'] ?? '' ?>';
+                    if (currentSubcat && currentSubcat == subcategoria.ID_SubCategoria) {
+                        option.selected = true;
+                    }
+                    
+                    subcategoriaSelect.appendChild(option);
+                });
+                
+                infoElement.textContent = `${data.length} subcategoría(s) disponible(s)`;
+                subcategoriaSelect.disabled = false;
+                
+                // Si hay una selección actual, mostrar mini alerta
+                if (subcategoriaSelect.value) {
+                    setTimeout(() => {
+                        validarCampoEnTiempoReal(subcategoriaSelect, 'Subcategoría seleccionada correctamente');
+                    }, 100);
+                }
+            } else {
+                const option = document.createElement('option');
+                option.value = '';
+                option.disabled = true;
+                option.selected = true;
+                option.textContent = 'No hay subcategorías disponibles para esta combinación';
+                subcategoriaSelect.appendChild(option);
+                infoElement.textContent = 'No hay subcategorías disponibles para esta combinación de categoría y género';
+            }
+            
+            // Actualizar interfaz
+            actualizarBadges();
+            generarRutaCompleta();
+        })
+        .catch(error => {
+            console.error('Error al cargar subcategorías:', error);
+            mostrarMensaje('danger', '❌ Error al cargar las subcategorías. Intenta nuevamente.');
+            infoElement.textContent = 'Error al cargar subcategorías';
+            
+            // Restaurar opción por defecto
+            subcategoriaSelect.innerHTML = '<option value="" disabled selected>Error al cargar subcategorías</option>';
+        })
+        .finally(() => {
+            // Ocultar loading
+            loadingElement.classList.add('d-none');
+        });
+}
+
+// ===== FUNCIONES PARA GENERAR RUTAS AUTOMÁTICAS =====
+function generarRutaCompleta() {
+    const categoria = document.getElementById('badgeCategoria').textContent;
+    const genero = document.getElementById('badgeGenero').textContent;
+    const subcategoria = document.getElementById('badgeSubcategoria').textContent;
+    const nombreArchivo = document.getElementById('nombreArchivo').value.trim();
+    
+    console.log('Generando ruta:', { categoria, genero, subcategoria, nombreArchivo });
+    
+    // Verificar si todos los campos están completos
+    const rutaCompleta = categoria !== '-' && genero !== '-' && subcategoria !== '-' && subcategoria !== 'Selecciona categoría y género primero' && nombreArchivo !== '';
+    
+    if (rutaCompleta) {
+        const ruta = `${categoria}/${genero}/${subcategoria}/${nombreArchivo}`;
+        document.getElementById('rutaGenerada').value = ruta;
+        document.getElementById('fotoFinal').value = `ImgProducto/${ruta}`;
+        document.getElementById('badgeEstado').textContent = 'Completo';
+        document.getElementById('badgeEstado').className = 'badge bg-success mt-2';
+        console.log('✅ Ruta generada:', ruta);
+    } else {
+        document.getElementById('rutaGenerada').value = '';
+        document.getElementById('fotoFinal').value = '';
+        document.getElementById('badgeEstado').textContent = 'Incompleto';
+        document.getElementById('badgeEstado').className = 'badge bg-secondary mt-2';
+        console.log('❌ Ruta incompleta');
+    }
+}
+
+// ===== FUNCIONES PARA ACTUALIZAR BADGES =====
+function actualizarBadges() {
+    const categoriaSelect = document.getElementById('ID_Categoria');
+    const generoSelect = document.getElementById('ID_Genero');
+    const subcategoriaSelect = document.getElementById('ID_SubCategoria');
+    
+    // Mapeo de IDs a nombres para categorías
+    const categoriasMap = {
+        <?php foreach ($categorias as $cat): ?>
+            '<?= $cat['ID_Categoria'] ?>': '<?= htmlspecialchars($cat['N_Categoria']) ?>',
+        <?php endforeach; ?>
     };
     
-    // Función para actualizar las subcategorías
-    function actualizarSubcategorias() {
-        const categoria = categoriaSelect.value;
-        const genero = generoSelect.value;
+    // Mapeo de IDs a nombres para géneros
+    const generosMap = {
+        <?php foreach ($generos as $gen): ?>
+            '<?= $gen['ID_Genero'] ?>': '<?= htmlspecialchars($gen['N_Genero']) ?>',
+        <?php endforeach; ?>
+    };
+    
+    // Obtener nombre de subcategoría seleccionada
+    let subcategoriaNombre = '-';
+    if (subcategoriaSelect.value && subcategoriaSelect.options[subcategoriaSelect.selectedIndex]) {
+        subcategoriaNombre = subcategoriaSelect.options[subcategoriaSelect.selectedIndex].textContent;
+    }
+    
+    // Actualizar badges
+    const categoriaNombre = categoriasMap[categoriaSelect.value] || '-';
+    const generoNombre = generosMap[generoSelect.value] || '-';
+    
+    document.getElementById('badgeCategoria').textContent = categoriaNombre;
+    document.getElementById('badgeGenero').textContent = generoNombre;
+    document.getElementById('badgeSubcategoria').textContent = subcategoriaNombre;
+    
+    console.log('Badges actualizados:', { categoriaNombre, generoNombre, subcategoriaNombre });
+}
+
+// ===== FUNCIONES PARA SUBIDA DE IMÁGENES =====
+function procesarSubidaImagen() {
+    const fileInput = document.getElementById('imagenProducto');
+    const nombreArchivoInput = document.getElementById('nombreArchivo');
+    const vistaPreviaImg = document.getElementById('vistaPreviaImg');
+    const infoArchivo = document.getElementById('infoArchivo');
+    
+    console.log('Procesando subida de imagen...');
+    
+    if (fileInput.files && fileInput.files[0]) {
+        const file = fileInput.files[0];
+        console.log('Archivo seleccionado:', file.name, file.size, file.type);
         
-        // Limpiar subcategorías
-        subcategoriaSelect.innerHTML = '<option value="">Seleccionar subcategoría</option>';
-        
-        if (categoria && genero && subcategorias[categoria] && subcategorias[categoria][genero]) {
-            subcategorias[categoria][genero].forEach(subcat => {
-                const option = document.createElement('option');
-                option.value = subcat;
-                option.textContent = subcat;
-                subcategoriaSelect.appendChild(option);
-            });
+        // Validar tipo de archivo
+        const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif'];
+        if (!allowedTypes.includes(file.type)) {
+            mostrarMensaje('danger', '❌ Error: Solo se permiten archivos JPG, JPEG, PNG o GIF.');
+            fileInput.value = '';
+            return;
         }
         
-        generarRuta();
-    }
-    
-    // Función para generar la ruta automáticamente
-    function generarRuta() {
-        const categoria = categoriaSelect.value;
-        const genero = generoSelect.value;
-        const subcategoria = subcategoriaSelect.value;
-        const nombreArchivo = nombreArchivoInput.value;
-        
-        if (categoria && genero && subcategoria && nombreArchivo) {
-            const ruta = `ImgProducto/${categoria}/${genero}/${subcategoria}/${nombreArchivo}`;
-            rutaGeneradaInput.value = ruta;
-        } else {
-            rutaGeneradaInput.value = '';
+        // Validar tamaño (2MB máximo)
+        if (file.size > 2 * 1024 * 1024) {
+            mostrarMensaje('danger', '❌ Error: La imagen no puede ser mayor a 2MB.');
+            fileInput.value = '';
+            return;
         }
-    }
-    
-    // Event listeners
-    categoriaSelect.addEventListener('change', actualizarSubcategorias);
-    generoSelect.addEventListener('change', actualizarSubcategorias);
-    subcategoriaSelect.addEventListener('change', generarRuta);
-    nombreArchivoInput.addEventListener('input', generarRuta);
-    
-    // Si hay una ruta existente, intentar pre-cargar los valores
-    const rutaExistente = "<?= htmlspecialchars($articulo['Foto'] ?? '') ?>";
-    if (rutaExistente) {
-        preCargarRutaExistente(rutaExistente);
-    }
-    
-    function preCargarRutaExistente(ruta) {
-        const partes = ruta.split('/');
-        if (partes.length >= 4) {
-            // Asignar valores a los selects
-            categoriaSelect.value = partes[1] || '';
-            generoSelect.value = partes[2] || '';
+        
+        // Auto-completar el nombre del archivo si está vacío
+        if (!nombreArchivoInput.value.trim()) {
+            const nombreBase = file.name.replace(/\.[^/.]+$/, "");
+            const extension = file.name.split('.').pop().toLowerCase();
+            nombreArchivoInput.value = `${nombreBase}.${extension}`;
+            console.log('Nombre auto-completado:', nombreArchivoInput.value);
+        }
+        
+        // Mostrar vista previa
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            console.log('✅ Imagen cargada para previsualización');
+            vistaPreviaImg.src = e.target.result;
+            infoArchivo.textContent = `Archivo: ${file.name} (${(file.size/1024).toFixed(1)} KB)`;
+            infoArchivo.className = 'text-success';
             
-            // Actualizar subcategorías y luego asignar valor
-            actualizarSubcategorias();
-            setTimeout(() => {
-                subcategoriaSelect.value = partes[3] || '';
-                nombreArchivoInput.value = partes.slice(4).join('/') || '';
-                generarRuta();
-            }, 100);
-        }
+            // Forzar redibujado de la imagen
+            vistaPreviaImg.style.display = 'none';
+            vistaPreviaImg.offsetHeight; // Trigger reflow
+            vistaPreviaImg.style.display = 'block';
+        };
+        
+        reader.onerror = function(error) {
+            console.error('❌ Error al leer archivo:', error);
+            mostrarMensaje('danger', '❌ Error al cargar la imagen para previsualización.');
+        };
+        
+        reader.readAsDataURL(file);
+        
+        // Generar ruta automáticamente
+        generarRutaCompleta();
+        
+        mostrarMensaje('success', '✅ Imagen cargada correctamente. Verifica la ruta generada.');
+    } else {
+        console.log('❌ No se seleccionó archivo');
+        // Restaurar imagen por defecto si no hay archivo
+        vistaPreviaImg.src = '<?= BASE_URL ?>assets/img/sin_imagen.png';
+        infoArchivo.textContent = 'Selecciona una imagen para previsualizar';
+        infoArchivo.className = 'text-muted';
     }
+}
 
-    // Inicializar si hay valores en los selects de categoría y género
-    const categoriaForm = document.querySelector('select[name="ID_Categoria"]');
-    const generoForm = document.querySelector('select[name="ID_Genero"]');
+function mostrarMensaje(tipo, texto) {
+    const contenedor = document.getElementById('msgContainer');
+    contenedor.innerHTML = `
+        <div class="alert alert-${tipo} alert-dismissible fade show mt-2 shadow-sm">
+            <i class="fas ${tipo === 'success' ? 'fa-check-circle' : 'fa-exclamation-triangle'}"></i>
+            ${texto}
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>`;
+    console.log('Mensaje:', texto);
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+    console.log('✅ Script cargado correctamente');
     
-    if (categoriaForm && generoForm) {
-        // Sincronizar con los selects principales si es posible
-        categoriaForm.addEventListener('change', function() {
-            const mapping = {
-                '1': 'Ropa',
-                '2': 'Accesorios', 
-                '3': 'Calzado'
-            };
-            categoriaSelect.value = mapping[this.value] || '';
-            actualizarSubcategorias();
-        });
-        
-        generoForm.addEventListener('change', function() {
-            const mapping = {
-                '1': 'Hombre',
-                '2': 'Mujer',
-                '3': 'Niños'
-            };
-            generoSelect.value = mapping[this.value] || '';
-            actualizarSubcategorias();
-        });
-        
-        // Intentar sincronizar valores iniciales
-        if (categoriaForm.value) {
-            const mappingCat = {
-                '1': 'Ropa',
-                '2': 'Accesorios',
-                '3': 'Calzado'
-            };
-            categoriaSelect.value = mappingCat[categoriaForm.value] || '';
-        }
-        
-        if (generoForm.value) {
-            const mappingGen = {
-                '1': 'Hombre',
-                '2': 'Mujer', 
-                '3': 'Niños'
-            };
-            generoSelect.value = mappingGen[generoForm.value] || '';
-        }
-        
-        actualizarSubcategorias();
+    // Cargar datos iniciales si estamos editando
+    <?php if (isset($articulo)): ?>
+    console.log('📦 Cargando datos del producto para edición');
+    
+    // Forzar la carga de subcategorías si ya tenemos categoría y género
+    const categoriaInicial = document.getElementById('ID_Categoria').value;
+    const generoInicial = document.getElementById('ID_Genero').value;
+    
+    if (categoriaInicial && generoInicial) {
+        console.log('🔄 Cargando subcategorías iniciales...');
+        setTimeout(() => {
+            cargarSubcategorias(categoriaInicial, generoInicial);
+        }, 500);
     }
+    <?php endif; ?>
+    
+    // Configurar selects
+    configurarSelects();
+    
+    // Inicializar badges y previsualizaciones con valores actuales
+    actualizarBadges();
+    generarRutaCompleta();
+    
+    // Escuchar cambios en categoría y género para cargar subcategorías
+    document.getElementById('ID_Categoria').addEventListener('change', function() {
+        console.log('Categoría cambiada:', this.value);
+        verificarYCargarSubcategorias();
+        
+        // Validación en tiempo real
+        if (this.value) {
+            validarCampoEnTiempoReal(this, 'Categoría seleccionada correctamente');
+        }
+    });
+    
+    document.getElementById('ID_Genero').addEventListener('change', function() {
+        console.log('Género cambiado:', this.value);
+        verificarYCargarSubcategorias();
+        
+        // Validación en tiempo real
+        if (this.value) {
+            validarCampoEnTiempoReal(this, 'Género seleccionado correctamente');
+        }
+    });
+    
+    document.getElementById('ID_SubCategoria').addEventListener('change', function() {
+        console.log('Subcategoría cambiada:', this.value);
+        actualizarBadges();
+        generarRutaCompleta();
+        
+        // Validación en tiempo real
+        if (this.value) {
+            validarCampoEnTiempoReal(this, 'Subcategoría seleccionada correctamente');
+        }
+    });
+    
+    // Escuchar cambios en otros selects importantes
+    document.querySelector('select[name="ID_Precio"]').addEventListener('change', function() {
+        if (this.value) {
+            validarCampoEnTiempoReal(this, 'Precio base seleccionado correctamente');
+        }
+    });
+    
+    document.querySelector('select[name="ID_Color"]').addEventListener('change', function() {
+        if (this.value) {
+            validarCampoEnTiempoReal(this, 'Color base seleccionado correctamente');
+        }
+    });
+    
+    document.querySelector('select[name="ID_Talla"]').addEventListener('change', function() {
+        if (this.value) {
+            validarCampoEnTiempoReal(this, 'Talla base seleccionada correctamente');
+        }
+    });
+    
+    // Escuchar cambios en el nombre del archivo
+    document.getElementById('nombreArchivo').addEventListener('input', function() {
+        console.log('Nombre archivo cambiado:', this.value);
+        generarRutaCompleta();
+    });
+
+    // Escuchar cambios en el input de archivo
+    document.getElementById('imagenProducto').addEventListener('change', function() {
+        console.log('Archivo seleccionado:', this.files[0]?.name);
+        procesarSubidaImagen();
+    });
+    
+    // Mostrar mini alertas para valores ya seleccionados al cargar la página
+    setTimeout(() => {
+        const selects = document.querySelectorAll('select');
+        selects.forEach(select => {
+            if (select.value && select.value !== '') {
+                let message = '';
+                switch(select.name) {
+                    case 'ID_Categoria':
+                        message = 'Categoría seleccionada correctamente';
+                        break;
+                    case 'ID_Genero':
+                        message = 'Género seleccionado correctamente';
+                        break;
+                    case 'ID_SubCategoria':
+                        message = 'Subcategoría seleccionada correctamente';
+                        break;
+                    case 'ID_Precio':
+                        message = 'Precio base seleccionado correctamente';
+                        break;
+                    case 'ID_Color':
+                        message = 'Color base seleccionado correctamente';
+                        break;
+                    case 'ID_Talla':
+                        message = 'Talla base seleccionada correctamente';
+                        break;
+                }
+                if (message) {
+                    validarCampoEnTiempoReal(select, message);
+                }
+            }
+        });
+        
+        // Validar nombre si ya existe
+        const nombreInput = document.getElementById('N_Articulo');
+        if (nombreInput.value.trim()) {
+            validarCampoEnTiempoReal(nombreInput, 'Nombre del producto válido');
+        }
+        
+        // Validar cantidad si ya existe
+        const cantidadInput = document.querySelector('input[name="Cantidad"]');
+        if (cantidadInput.value && cantidadInput.value > 0) {
+            validarCampoEnTiempoReal(cantidadInput, 'Cantidad establecida');
+        }
+        
+        // Validar nombre de archivo si ya existe
+        const nombreArchivoInput = document.getElementById('nombreArchivo');
+        if (nombreArchivoInput.value.trim()) {
+            validarCampoEnTiempoReal(nombreArchivoInput, 'Nombre de archivo válido');
+        }
+    }, 500);
 });
+
+// Validación del formulario
+document.getElementById('formProducto').onsubmit = function(e) {
+    const categoria = document.getElementById('ID_Categoria').value;
+    const genero = document.getElementById('ID_Genero').value;
+    const subcategoria = document.getElementById('ID_SubCategoria').value;
+    const precio = document.querySelector('select[name="ID_Precio"]').value;
+    const color = document.querySelector('select[name="ID_Color"]').value;
+    const talla = document.querySelector('select[name="ID_Talla"]').value;
+    const cantidad = document.querySelector('input[name="Cantidad"]').value;
+    const nombre = document.getElementById('N_Articulo').value;
+    const imagenInput = document.getElementById('imagenProducto');
+    const fotoFinal = document.getElementById('fotoFinal').value;
+    const nombreArchivo = document.getElementById('nombreArchivo').value;
+    
+    console.log('Validando formulario...', { 
+        categoria, genero, subcategoria, precio, color, talla, cantidad, 
+        nombre, fotoFinal, nombreArchivo 
+    });
+    
+    // Limpiar mensajes anteriores
+    document.getElementById('msgContainer').innerHTML = '';
+    
+    // Validaciones básicas
+    if (!categoria) {
+        mostrarMensaje('danger', '⚠️ Debes seleccionar una categoría.');
+        e.preventDefault();
+        return false;
+    }
+    
+    if (!genero) {
+        mostrarMensaje('danger', '⚠️ Debes seleccionar un género.');
+        e.preventDefault();
+        return false;
+    }
+    
+    if (!subcategoria) {
+        mostrarMensaje('danger', '⚠️ Debes seleccionar una subcategoría.');
+        e.preventDefault();
+        return false;
+    }
+    
+    if (!precio) {
+        mostrarMensaje('danger', '⚠️ Debes seleccionar un precio base.');
+        e.preventDefault();
+        return false;
+    }
+    
+    if (!color) {
+        mostrarMensaje('danger', '⚠️ Debes seleccionar un color base.');
+        e.preventDefault();
+        return false;
+    }
+    
+    if (!talla) {
+        mostrarMensaje('danger', '⚠️ Debes seleccionar una talla base.');
+        e.preventDefault();
+        return false;
+    }
+    
+    if (!cantidad || cantidad < 0) {
+        mostrarMensaje('danger', '⚠️ La cantidad en stock es obligatoria y debe ser mayor o igual a 0.');
+        e.preventDefault();
+        return false;
+    }
+    
+    if (!nombre.trim()) {
+        mostrarMensaje('danger', '⚠️ El nombre del producto es obligatorio.');
+        e.preventDefault();
+        return false;
+    }
+    
+    if (!nombreArchivo.trim()) {
+        mostrarMensaje('danger', '⚠️ El nombre del archivo es obligatorio.');
+        e.preventDefault();
+        return false;
+    }
+    
+    // Validar que la ruta esté completa
+    if (!fotoFinal) {
+        mostrarMensaje('danger', '⚠️ Completa la categoría, género, subcategoría y nombre del archivo para generar la ruta de la imagen.');
+        e.preventDefault();
+        return false;
+    }
+    
+    // Validar imagen (solo para productos nuevos)
+    const esProductoNuevo = <?= empty($articulo['ID_Articulo']) ? 'true' : 'false' ?>;
+    if (esProductoNuevo && (!imagenInput.files || imagenInput.files.length === 0)) {
+        mostrarMensaje('danger', '⚠️ Debes seleccionar una imagen para el producto.');
+        e.preventDefault();
+        return false;
+    }
+    
+    mostrarMensaje('success', '✅ Validación exitosa. Guardando producto...');
+    return true;
+};
 </script>
-
-
-

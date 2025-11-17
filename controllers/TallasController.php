@@ -21,19 +21,16 @@ class TallasController {
     }
 
     private function verificarPermisos() {
-        // Iniciar sesión si no está iniciada
         if (session_status() === PHP_SESSION_NONE) {
             session_start();
         }
         
-        // Si no hay usuario logueado, redirigir al login
         if (!isset($_SESSION['ID_Usuario']) && !isset($_SESSION['id_usuario'])) {
             $_SESSION['redirect_url'] = $_SERVER['REQUEST_URI'];
             header('Location: ' . BASE_URL . '?c=Usuario&a=login');
             exit();
         }
         
-        // Verificar si es administrador - probar diferentes nombres de variable de sesión
         $rol = null;
         
         if (isset($_SESSION['ID_Rol'])) {
@@ -44,8 +41,8 @@ class TallasController {
             $rol = $_SESSION['id_rol'];
         }
         
-        // Si no es administrador (rol 1), redirigir
-        if ($rol != 1) {
+        // Permitir rol 1 (Administrador) y rol 2 (Editor)
+        if ($rol != 1 && $rol != 2) {
             $_SESSION['mensaje'] = 'No tienes permisos de administrador para acceder a esta sección';
             $_SESSION['mensaje_tipo'] = 'danger';
             header('Location: ' . BASE_URL);

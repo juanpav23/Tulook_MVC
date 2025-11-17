@@ -16,7 +16,7 @@ class UsuarioAdminController {
     }
 
     private function ensureAdmin() {
-        if (!isset($_SESSION['rol']) || $_SESSION['rol'] != 1) {
+        if (!isset($_SESSION['rol']) || $_SESSION['rol'] != 1) { // Solo rol 1
             header("Location: " . BASE_URL . "?c=Usuario&a=login");
             exit;
         }

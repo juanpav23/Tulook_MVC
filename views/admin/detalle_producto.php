@@ -173,7 +173,7 @@ $subcategoriaAuto = $infoProducto['subcategoria'] ?? '';
         <div class="col-md-3">
             <label class="form-label fw-bold">Color</label>
             <select name="ID_Color" class="form-select" required>
-                <option value="">Seleccionar...</option>
+                <option value="" disabled selected>Seleccionar...</option>
                 <?php foreach ($colors as $c): ?>
                     <option value="<?= $c['ID_Color']; ?>"><?= htmlspecialchars($c['N_Color']); ?></option>
                 <?php endforeach; ?>
@@ -183,7 +183,7 @@ $subcategoriaAuto = $infoProducto['subcategoria'] ?? '';
         <div class="col-md-2">
             <label class="form-label fw-bold">Talla</label>
             <select name="ID_Talla" class="form-select" required>
-                <option value="">Seleccionar...</option>
+                <option value="" disabled selected>Seleccionar...</option>
                 <?php foreach ($tallas as $t): ?>
                     <option value="<?= $t['ID_Talla']; ?>"><?= htmlspecialchars($t['N_Talla']); ?></option>
                 <?php endforeach; ?>
@@ -197,7 +197,7 @@ $subcategoriaAuto = $infoProducto['subcategoria'] ?? '';
 
         <div class="col-md-2">
             <label class="form-label fw-bold">Cantidad</label>
-            <input type="number" name="Cantidad" class="form-control" placeholder="Ej: 50" min="0" max="100" required>
+            <input type="number" name="Cantidad" class="form-control" placeholder="Ej: 50" required>
         </div>
 
         <!-- NUEVO: Sistema automático de subida de imagen -->
@@ -437,6 +437,24 @@ document.addEventListener('DOMContentLoaded', function() {
             document.getElementById('imagenActualContainer').style.display = 'none';
             document.getElementById('edit_nombreArchivoFinal').value = '';
             document.getElementById('edit_fotoFinal').value = '';
+        }
+    });
+
+    document.addEventListener('DOMContentLoaded', function() {
+        const formVariante = document.querySelector('form[action*="agregarVariante"], form[action*="editarVariante"]');
+        
+        if (formVariante) {
+            formVariante.onsubmit = function(e) {
+                const idColor = this.querySelector('select[name="ID_Color"]').value;
+                const idTalla = this.querySelector('select[name="ID_Talla"]').value;
+                
+                if (!idColor || !idTalla) {
+                    alert('Por favor, selecciona color y talla.');
+                    return false;
+                }
+                
+                return true;
+            };
         }
     });
 

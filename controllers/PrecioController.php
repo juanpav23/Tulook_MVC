@@ -25,7 +25,8 @@ class PrecioController {
         $stmt->execute([(int)$_SESSION['rol']]);
         $rol = $stmt->fetchColumn();
 
-        if (!$rol || strtolower($rol) !== 'administrador') {
+        // Permitir rol 1 (Administrador) y rol 2 (Editor)
+        if (!$rol || (strtolower($rol) !== 'administrador' && strtolower($rol) !== 'editor')) {
             header("Location: " . BASE_URL);
             exit;
         }
