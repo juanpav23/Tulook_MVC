@@ -19,6 +19,7 @@ if (!isset($categorias)) $categorias = [];
     .product-card:hover{transform:translateY(-6px); box-shadow:0 8px 30px rgba(0,0,0,.07)}
     .product-image{height:220px; object-fit:cover}
     .price{color:var(--accent); font-weight:700}
+    .old-price{text-decoration:line-through; color:#777; font-size: .95rem;}
     .variant-list small{font-size: 0.9rem;}
   </style>
 </head>
@@ -43,6 +44,7 @@ if (!isset($categorias)) $categorias = [];
       </div>
     <?php else: ?>
       <?php foreach ($productos as $p): 
+
         $idArt = (int)($p['ID_Articulo'] ?? 0);
         $nombre = htmlspecialchars($p['N_Articulo'] ?? 'Sin nombre');
         $foto   = !empty($p['Foto']) ? $p['Foto'] : 'assets/img/placeholder.png';
@@ -50,16 +52,60 @@ if (!isset($categorias)) $categorias = [];
             $foto = 'ImgProducto/' . ltrim($foto, '/');
         }
         $fotoUrl = (strpos($foto, 'http') === 0) ? $foto : rtrim(BASE_URL, '/') . '/' . ltrim($foto, '/');
-        $precio = isset($p['Precio']) ? (float)$p['Precio'] : 0;
+
+        $precioBase = isset($p['Precio']) ? (float)$p['Precio'] : 0;
         $stock  = isset($p['Stock']) ? (int)$p['Stock'] : 0;
         $variantes = $p['Variantes'] ?? [];
+        $descuentos = $p['Descuentos'] ?? [];
+
+        // ================================
+        //        MANEJO DE DESCUENTOS
+        // ================================
+        $descuentoAplicado = null;
+        $precioFinal = $precioBase;
+
+        if (empty($variantes)) { // Solo si NO tiene variantes
+            foreach ($descuentos as $d) {
+                if ((int)$d["Activo"] !== 1) continue;
+
+                $hoy = strtotime(date("Y-m-d"));
+                if ($hoy < strtotime($d["FechaInicio"]) || $hoy > strtotime($d["FechaFin"])) continue;
+
+                if (!$descuentoAplicado || $d["Valor"] > $descuentoAplicado["Valor"]) {
+                    $descuentoAplicado = $d;
+                }
+            }
+
+            if ($descuentoAplicado) {
+                if ($descuentoAplicado["Tipo"] === "PORCENTAJE") {
+                    $precioFinal = $precioBase - ($precioBase * ($descuentoAplicado["Valor"] / 100));
+                } else {
+                    $precioFinal = max(0, $precioBase - $descuentoAplicado["Valor"]);
+                }
+            }
+        }
+
       ?>
         <div class="col-md-4 mb-4">
           <div class="card product-card h-100">
             <img src="<?php echo $fotoUrl; ?>" class="card-img-top product-image" alt="<?php echo $nombre; ?>">
             <div class="card-body text-center">
               <h5 class="card-title"><?php echo $nombre; ?></h5>
-              <p class="price">$<?php echo number_format($precio, 0, ',', '.'); ?></p>
+
+              <!-- ================================
+                     MOSTRAR PRECIOS
+              =================================-->
+              <?php if ($descuentoAplicado): ?>
+                  <p>
+                    <span class="old-price">$<?php echo number_format($precioBase, 0, ',', '.'); ?></span><br>
+                    <span class="price">$<?php echo number_format($precioFinal, 0, ',', '.'); ?></span>
+                  </p>
+                  <span class="badge bg-danger">
+                    -<?php echo $descuentoAplicado["Valor"]; ?><?= $descuentoAplicado["Tipo"] === "PORCENTAJE" ? "%" : "$" ?>
+                  </span>
+              <?php else: ?>
+                  <p class="price">$<?php echo number_format($precioBase, 0, ',', '.'); ?></p>
+              <?php endif; ?>
 
               <!-- Stock del producto base -->
               <?php if ($stock > 0): ?>
@@ -104,16 +150,3 @@ if (!isset($categorias)) $categorias = [];
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 </body>
 </html>
-
-
-
-
-
-
-
-
-
-
-
-
-
