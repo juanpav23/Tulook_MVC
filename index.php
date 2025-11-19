@@ -19,6 +19,8 @@ require_once "controllers/FavoritoController.php";
 require_once "controllers/TallasController.php";
 require_once "controllers/PrecioController.php";
 require_once "controllers/UsuarioAdminController.php";
+require_once "controllers/FavoritoStatsController.php";
+require_once "controllers/ChatbotController.php";
 
 // 🔹 Determinar controlador y acción por URL (GET)
 $controlador = $_GET['c'] ?? 'Producto';
@@ -51,9 +53,6 @@ switch ($controlador) {
     case 'Precio':
         $controller = new PrecioController($db);
         break;
-    case 'Descuento':
-        $controller = new DescuentoController($db);
-        break;
     case 'UsuarioAdmin':
         $controller = new UsuarioAdminController($db);
         break;
@@ -81,7 +80,3 @@ try {
     echo "<h2 style='color:red;text-align:center;margin-top:50px;'>⚠️ Error interno del servidor</h2>";
     echo "<pre style='color:#222;text-align:center;'>" . $e->getMessage() . "</pre>";
 }
-
-
-
-
