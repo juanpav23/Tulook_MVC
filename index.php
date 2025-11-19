@@ -19,6 +19,9 @@ require_once "controllers/FavoritoController.php";
 require_once "controllers/TallasController.php";
 require_once "controllers/PrecioController.php";
 require_once "controllers/UsuarioAdminController.php";
+require_once "controllers/DescuentoController.php";
+require_once "controllers/FavoritoStatsController.php";
+require_once "controllers/ChatbotController.php";
 
 // 🔹 Determinar controlador y acción por URL (GET)
 $controlador = $_GET['c'] ?? 'Producto';
