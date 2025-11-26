@@ -348,7 +348,177 @@ class UsuarioController {
             // Incluir la vista
             include "views/usuario/cambiar_contrasena.php";
         }
+// controllers/UsuarioController.php - Agregar estos métodos después del método actualizarContrasena()
 
+// =============================
+// MÉTODOS PARA GESTIONAR DIRECCIONES
+// =============================
+
+/**
+ * Guardar o actualizar una dirección
+ */
+public function guardarDireccion() {
+    if (!isset($_SESSION['usuario'])) {
+        header("Location: " . BASE_URL . "?c=Usuario&a=login");
+        exit;
+    }
+
+    if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+        try {
+            require_once "models/Direccion.php";
+            $dirModel = new Direccion($this->db);
+            
+            $data = [
+                'ID_Usuario' => $_SESSION['ID_Usuario'],
+                'Direccion' => trim($_POST['Direccion'] ?? ''),
+                'Ciudad' => trim($_POST['Ciudad'] ?? ''),
+                'Departamento' => trim($_POST['Departamento'] ?? ''),
+                'CodigoPostal' => trim($_POST['CodigoPostal'] ?? '')
+            ];
+
+            // Validaciones básicas
+            if (empty($data['Direccion']) || empty($data['Ciudad']) || empty($data['Departamento'])) {
+                $_SESSION['error_message'] = "Todos los campos son obligatorios";
+                header("Location: " . BASE_URL . "?c=Usuario&a=perfil");
+                exit;
+            }
+
+            $id_direccion = $_POST['ID_Direccion'] ?? null;
+
+            if ($id_direccion) {
+                // Actualizar dirección existente
+                $data['ID_Direccion'] = $id_direccion;
+                if ($dirModel->actualizar($data)) {
+                    $_SESSION['success_message'] = "Dirección actualizada correctamente";
+                }
+            } else {
+                // Crear nueva dirección
+                if ($dirModel->crear($data)) {
+                    $_SESSION['success_message'] = "Dirección guardada correctamente";
+                }
+            }
+
+        } catch (Exception $e) {
+            $_SESSION['error_message'] = "Error al guardar la dirección: " . $e->getMessage();
+        }
+    }
+
+    header("Location: " . BASE_URL . "?c=Usuario&a=perfil");
+    exit;
+}
+
+/**
+ * Eliminar una dirección
+ */
+public function eliminarDireccion() {
+    if (!isset($_SESSION['usuario'])) {
+        header("Location: " . BASE_URL . "?c=Usuario&a=login");
+        exit;
+    }
+
+    $id_direccion = $_GET['id'] ?? null;
+
+    if ($id_direccion) {
+        try {
+            require_once "models/Direccion.php";
+            $dirModel = new Direccion($this->db);
+            
+            // Verificar que la dirección pertenece al usuario
+            if ($dirModel->perteneceAUsuario($id_direccion, $_SESSION['ID_Usuario'])) {
+                if ($dirModel->eliminar($id_direccion)) {
+                    $_SESSION['success_message'] = "Dirección eliminada correctamente";
+                } else {
+                    $_SESSION['error_message'] = "Error al eliminar la dirección";
+                }
+            } else {
+                $_SESSION['error_message'] = "No tienes permisos para eliminar esta dirección";
+            }
+
+        } catch (Exception $e) {
+            $_SESSION['error_message'] = "Error al eliminar la dirección: " . $e->getMessage();
+        }
+    }
+
+    header("Location: " . BASE_URL . "?c=Usuario&a=perfil");
+    exit;
+}
+
+/**
+ * Establecer dirección como predeterminada
+ */
+public function predeterminada() {
+    if (!isset($_SESSION['usuario'])) {
+        header("Location: " . BASE_URL . "?c=Usuario&a=login");
+        exit;
+    }
+
+    $id_direccion = $_GET['id'] ?? null;
+
+    if ($id_direccion) {
+        try {
+            require_once "models/Direccion.php";
+            $dirModel = new Direccion($this->db);
+            
+            // Verificar que la dirección pertenece al usuario
+            if ($dirModel->perteneceAUsuario($id_direccion, $_SESSION['ID_Usuario'])) {
+                if ($dirModel->establecerPredeterminada($id_direccion, $_SESSION['ID_Usuario'])) {
+                    $_SESSION['success_message'] = "Dirección establecida como predeterminada";
+                } else {
+                    $_SESSION['error_message'] = "Error al establecer dirección predeterminada";
+                }
+            } else {
+                $_SESSION['error_message'] = "No tienes permisos para modificar esta dirección";
+            }
+
+        } catch (Exception $e) {
+            $_SESSION['error_message'] = "Error al establecer dirección predeterminada: " . $e->getMessage();
+        }
+    }
+
+    header("Location: " . BASE_URL . "?c=Usuario&a=perfil");
+    exit;
+}
+
+// =============================
+// MÉTODO INDEX FALTANTE
+// =============================
+
+/**
+ * Método index - Redirige al perfil del usuario
+ */
+public function index() {
+    if (!isset($_SESSION['usuario'])) {
+        header("Location: " . BASE_URL . "?c=Usuario&a=login");
+        exit;
+    }
+    
+    // Redirigir al perfil del usuario
+    header("Location: " . BASE_URL . "?c=Usuario&a=perfil");
+    exit;
+}
+
+// =============================
+// MÉTODO PARA MOSTRAR MENSAJES EN EL PERFIL
+// =============================
+
+/**
+ * Obtener mensajes de éxito/error para mostrar en el perfil
+ */
+private function obtenerMensajes() {
+    $mensajes = [];
+    
+    if (isset($_SESSION['success_message'])) {
+        $mensajes['success'] = $_SESSION['success_message'];
+        unset($_SESSION['success_message']);
+    }
+    
+    if (isset($_SESSION['error_message'])) {
+        $mensajes['error'] = $_SESSION['error_message'];
+        unset($_SESSION['error_message']);
+    }
+    
+    return $mensajes;
+}
         // Procesar cambio de contraseña
         public function actualizarContrasena() {
             if (!isset($_SESSION['usuario'])) {
