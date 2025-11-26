@@ -1,5 +1,5 @@
 <?php
-// views/layout/nav.php - SOLO EL NAVBAR
+// views/layout/nav.php - SOLO EL NAVBAR (VERSIÓN CORREGIDA)
 if (!isset($categorias) || !is_array($categorias)) {
     $categorias = [];
 }
