@@ -131,7 +131,5 @@ try {
 } catch (Throwable $e) {
     http_response_code(500);
     echo "<h2 style='color:red;text-align:center;margin-top:50px;'>⚠️ Error interno del servidor</h2>";
-    echo "<pre style='color:#333;text-align:center;font-size:14px;'>
-" . $e->getMessage() . "
-</pre>";
+    echo "<pre style='color:#222;text-align:center;'>" . $e->getMessage() . "</pre>";
 }
