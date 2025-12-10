@@ -1,9 +1,27 @@
+<?php
+// Verificación más robusta al inicio del archivo
+if (isset($_SESSION['usuario'])) {
+    // Headers adicionales para prevenir cache en la redirección
+    header("Cache-Control: no-cache, no-store, must-revalidate");
+    header("Pragma: no-cache");
+    header("Expires: 0");
+    header("Location: " . BASE_URL);
+    exit;
+}
+?>
+
 <!DOCTYPE html>
 <html lang="es">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>TuLook - Login</title>
+
+    <!-- META TAGS PARA PREVENIR CACHE -->
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+    <meta http-equiv="Pragma" content="no-cache">
+    <meta http-equiv="Expires" content="0">    
+
     <link rel="stylesheet" href="<?php echo BASE_URL; ?>assets/css/Basta.css">
     <!-- Agregar Google Fonts para tipografías más atractivas -->
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&family=Montserrat:wght@700;800&display=swap" rel="stylesheet">
@@ -293,6 +311,31 @@
                 }, 100);
             <?php endif; ?>
         });
+
+        // Script para prevenir que el navegador cachee la página
+        window.onpageshow = function(event) {
+            if (event.persisted) {
+                window.location.reload();
+            }
+        };
+
+        // Prevenir que se use el cache al navegar hacia atrás
+        if (performance.navigation.type === 2) {
+            // Si la página fue cargada desde cache (back/forward)
+            location.reload();
+        }
+
+        // Limpiar formularios cuando la página se carga desde cache
+        window.onload = function() {
+            // Limpiar campos sensibles si la página fue cargada desde cache
+            if (performance.getEntriesByType("navigation")[0].type === "back_forward") {
+                document.getElementById('login_correo').value = '';
+                document.getElementById('login_contrasena').value = '';
+                document.getElementById('reg_contrasena').value = '';
+                document.getElementById('reg_confirmar_contrasena').value = '';
+            }
+        };
+
     </script>
     <script src="<?php echo BASE_URL; ?>assets/js/script.js"></script>
 </body>

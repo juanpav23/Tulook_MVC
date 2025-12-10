@@ -8,27 +8,27 @@ class Producto {
     }
 
     // =======================================================
-    // 🛍️ LISTAR PRODUCTOS BASE (Catálogo general)
+    // 🛍️ LISTAR PRODUCTOS BASE (SOLO CON VARIANTES)
     // =======================================================
     public function read() {
         $sql = "SELECT 
                     a.ID_Articulo,
                     a.N_Articulo,
-                    COALESCE(MIN(aci.Foto), a.Foto) AS Foto,
+                    a.Foto,
                     c.N_Categoria,
                     g.N_Genero,
                     pr.Valor AS Precio,
-                    a.Cantidad AS StockBase,
-                    COALESCE(SUM(p.Cantidad), 0) AS StockVariantes,
-                    (a.Cantidad + COALESCE(SUM(p.Cantidad), 0)) AS Stock
+                    a.ID_Categoria,
+                    COALESCE(SUM(p.Cantidad), 0) AS Stock,
+                    COUNT(p.ID_Producto) AS Total_Variantes
                 FROM articulo a
-                LEFT JOIN producto p ON p.ID_Articulo = a.ID_Articulo
-                LEFT JOIN articulo_color_imagen aci ON aci.ID_Articulo = a.ID_Articulo
+                LEFT JOIN producto p ON p.ID_Articulo = a.ID_Articulo AND p.Activo = 1
                 LEFT JOIN precio pr ON pr.ID_Precio = a.ID_Precio
                 LEFT JOIN categoria c ON c.ID_Categoria = a.ID_Categoria
                 LEFT JOIN genero g ON g.ID_Genero = a.ID_Genero
                 WHERE a.Activo = 1
-                GROUP BY a.ID_Articulo, a.N_Articulo, a.Foto, c.N_Categoria, g.N_Genero, pr.Valor, a.Cantidad
+                GROUP BY a.ID_Articulo, a.N_Articulo, a.Foto, c.N_Categoria, g.N_Genero, pr.Valor, a.ID_Categoria
+                HAVING COUNT(p.ID_Producto) > 0
                 ORDER BY a.N_Articulo ASC";
 
         $stmt = $this->conn->prepare($sql);
@@ -37,7 +37,87 @@ class Producto {
     }
 
     // =======================================================
-    // 🔍 OBTENER DETALLE POR ID PRODUCTO
+    // 🔍 OBTENER INFORMACIÓN DE SUBCATEGORÍA
+    // =======================================================
+    public function getSubcategoriaInfo($idSubcategoria) {
+        try {
+            $sql = "SELECT s.* FROM subcategoria s WHERE s.ID_SubCategoria = ?";
+            
+            $stmt = $this->conn->prepare($sql);
+            $stmt->execute([$idSubcategoria]);
+            $result = $stmt->fetch(PDO::FETCH_ASSOC);
+            
+            if ($result && !empty($result['AtributosRequeridos'])) {
+                $atributosIds = array_filter(
+                    array_map('trim', explode(',', $result['AtributosRequeridos']))
+                );
+                $result['AtributosRequeridosArray'] = $atributosIds;
+            } else {
+                $result['AtributosRequeridosArray'] = [];
+            }
+            
+            return $result;
+            
+        } catch (PDOException $e) {
+            return ['AtributosRequeridosArray' => []];
+        }
+    }
+
+    public function getNombreTipoAtributo($idTipoAtributo) {
+        try {
+            $sql = "SELECT Nombre FROM tipo_atributo WHERE ID_TipoAtributo = ?";
+            $stmt = $this->conn->prepare($sql);
+            $stmt->execute([$idTipoAtributo]);
+            $result = $stmt->fetch(PDO::FETCH_ASSOC);
+            
+            return $result ? $result['Nombre'] : 'Atributo ' . $idTipoAtributo;
+            
+        } catch (PDOException $e) {
+            return 'Atributo';
+        }
+    }
+
+    // =======================================================
+    // 🎯 OBTENER ATRIBUTOS POR TIPO
+    // =======================================================
+    public function getAtributosByTipo($idTipoAtributo) {
+        try {
+            if ($idTipoAtributo == 2) {
+                $sql = "SELECT 
+                            c.ID_Color as ID_AtributoValor, 
+                            c.N_Color as Valor,
+                            c.CodigoHex,
+                            'Color' as Nombre
+                        FROM color c 
+                        ORDER BY c.N_Color ASC";
+                
+                $stmt = $this->conn->prepare($sql);
+                $stmt->execute();
+            } else {
+                $sql = "SELECT 
+                            av.ID_AtributoValor, 
+                            av.Valor,
+                            NULL as CodigoHex,
+                            ta.Nombre
+                        FROM atributo_valor av 
+                        INNER JOIN tipo_atributo ta ON av.ID_TipoAtributo = ta.ID_TipoAtributo
+                        WHERE av.ID_TipoAtributo = ? AND av.Activo = 1 
+                        ORDER BY av.Orden ASC, av.Valor ASC";
+                
+                $stmt = $this->conn->prepare($sql);
+                $stmt->execute([$idTipoAtributo]);
+            }
+            
+            $resultados = $stmt->fetchAll(PDO::FETCH_ASSOC);
+            return $resultados;
+            
+        } catch (PDOException $e) {
+            return [];
+        }
+    }
+
+    // =======================================================
+    // 🔍 OBTENER DETALLE POR ID PRODUCTO - ACTUALIZADO
     // =======================================================
     public function obtenerPorId($idProducto) {
         $sql = "SELECT 
@@ -52,7 +132,13 @@ class Producto {
                     pr.Valor AS Precio,
                     c.N_Categoria,
                     g.N_Genero,
-                    sc.SubCategoria
+                    sc.SubCategoria,
+                    p.ID_Atributo1,
+                    p.ID_Atributo2,
+                    p.ID_Atributo3,
+                    p.ValorAtributo1,
+                    p.ValorAtributo2,
+                    p.ValorAtributo3
                 FROM producto p
                 INNER JOIN articulo a ON p.ID_Articulo = a.ID_Articulo
                 LEFT JOIN precio pr ON pr.ID_Precio = a.ID_Precio
@@ -68,7 +154,7 @@ class Producto {
     }
 
     // =======================================================
-    // 🔎 OBTENER UN PRODUCTO COMPLETO (con color/talla)
+    // 🔎 OBTENER UN PRODUCTO COMPLETO - ACTUALIZADO
     // =======================================================
     public function readOne($idProducto) {
         $sql = "SELECT 
@@ -76,20 +162,22 @@ class Producto {
                     p.ID_Articulo,
                     p.Nombre_Producto,
                     a.N_Articulo AS Nombre_Articulo,
-                    p.ID_Color,
-                    col.N_Color AS Nombre_Color,
-                    col.CodigoHex,
-                    p.ID_Talla,
-                    t.N_Talla AS Nombre_Talla,
+                    p.ID_Atributo1,
+                    p.ValorAtributo1,
+                    p.ID_Atributo2,
+                    p.ValorAtributo2,
+                    p.ID_Atributo3,
+                    p.ValorAtributo3,
                     COALESCE(p.Foto, a.Foto) AS Foto,
                     pr.Valor AS Precio_Base,
                     (pr.Valor + (pr.Valor * (p.Porcentaje / 100))) AS Precio,
                     p.Cantidad,
-                    p.Porcentaje
+                    p.Porcentaje,
+                    a.ID_SubCategoria,
+                    sc.AtributosRequeridos
                 FROM producto p
                 INNER JOIN articulo a ON p.ID_Articulo = a.ID_Articulo
-                LEFT JOIN color col ON col.ID_Color = p.ID_Color
-                LEFT JOIN talla t ON t.ID_Talla = p.ID_Talla
+                LEFT JOIN subcategoria sc ON sc.ID_SubCategoria = a.ID_SubCategoria
                 LEFT JOIN precio pr ON pr.ID_Precio = a.ID_Precio
                 WHERE p.ID_Producto = ?
                 LIMIT 1";
@@ -99,14 +187,62 @@ class Producto {
         $row = $stmt->fetch(PDO::FETCH_ASSOC);
 
         if ($row) {
-            $row['Nombre_Completo'] = trim(
-                ($row['Nombre_Producto'] ?: $row['Nombre_Articulo']) . ' ' .
-                ($row['Nombre_Color'] ?? '') . ' ' .
-                ($row['Nombre_Talla'] ?? '')
-            );
+            $nombrePartes = [$row['Nombre_Producto'] ?: $row['Nombre_Articulo']];
+            
+            if (!empty($row['ValorAtributo1'])) $nombrePartes[] = $row['ValorAtributo1'];
+            if (!empty($row['ValorAtributo2'])) $nombrePartes[] = $row['ValorAtributo2'];
+            if (!empty($row['ValorAtributo3'])) $nombrePartes[] = $row['ValorAtributo3'];
+            
+            $row['Nombre_Completo'] = trim(implode(' ', $nombrePartes));
         }
 
         return $row ?: null;
+    }
+
+    // =======================================================
+    // 🎨 VARIANTES DE UN ARTÍCULO - ACTUALIZADO
+    // =======================================================
+    public function getVariantesByArticulo($idArticulo) {
+        $sql = "SELECT 
+                    p.ID_Producto,
+                    p.ID_Articulo,
+                    p.Nombre_Producto,
+                    p.ID_Atributo1,
+                    p.ValorAtributo1,
+                    p.ID_Atributo2,
+                    p.ValorAtributo2,
+                    p.ID_Atributo3,
+                    p.ValorAtributo3,
+                    COALESCE(p.Foto, a.Foto) AS Foto,
+                    p.Porcentaje,
+                    p.Cantidad,
+                    p.Activo,
+                    pr.Valor AS Precio_Base,
+                    (pr.Valor + (pr.Valor * (p.Porcentaje / 100))) AS Precio_Final,
+                    a.ID_SubCategoria,
+                    sc.AtributosRequeridos
+                FROM producto p
+                INNER JOIN articulo a ON a.ID_Articulo = p.ID_Articulo
+                LEFT JOIN subcategoria sc ON sc.ID_SubCategoria = a.ID_SubCategoria
+                LEFT JOIN precio pr ON pr.ID_Precio = a.ID_Precio
+                WHERE p.ID_Articulo = ? AND p.Activo = 1
+                ORDER BY p.ID_Producto ASC";
+
+        $stmt = $this->conn->prepare($sql);
+        $stmt->execute([$idArticulo]);
+        $variantes = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+        foreach ($variantes as &$variante) {
+            $nombrePartes = [$variante['Nombre_Producto']];
+            
+            if (!empty($variante['ValorAtributo1'])) $nombrePartes[] = $variante['ValorAtributo1'];
+            if (!empty($variante['ValorAtributo2'])) $nombrePartes[] = $variante['ValorAtributo2'];
+            if (!empty($variante['ValorAtributo3'])) $nombrePartes[] = $variante['ValorAtributo3'];
+            
+            $variante['Nombre_Descriptivo'] = trim(implode(' ', $nombrePartes));
+        }
+
+        return $variantes;
     }
 
     // =======================================================
@@ -119,145 +255,32 @@ class Producto {
                     a.Foto,
                     a.ID_Categoria,
                     a.ID_SubCategoria,
-                    a.ID_Color,
-                    a.ID_Talla,
                     a.ID_Genero,
                     pr.Valor AS Precio,
-                    a.Cantidad,
                     c.N_Categoria,
-                    g.N_Genero
+                    g.N_Genero,
+                    sc.SubCategoria,
+                    sc.AtributosRequeridos
                 FROM articulo a
                 LEFT JOIN precio pr ON pr.ID_Precio = a.ID_Precio
                 LEFT JOIN categoria c ON c.ID_Categoria = a.ID_Categoria
                 LEFT JOIN genero g ON g.ID_Genero = a.ID_Genero
+                LEFT JOIN subcategoria sc ON sc.ID_SubCategoria = a.ID_SubCategoria
                 WHERE a.ID_Articulo = ?
                 LIMIT 1";
 
         $stmt = $this->conn->prepare($sql);
         $stmt->execute([$idArticulo]);
-        $articulo = $stmt->fetch(PDO::FETCH_ASSOC);
-
-        if (!$articulo) {
-            return null;
-        }
-
-        return $articulo;
+        return $stmt->fetch(PDO::FETCH_ASSOC);
     }
 
     // =======================================================
-    // 🎨 VARIANTES (COLORES Y TALLAS) DE UN ARTÍCULO
+    // ✅ DESCONTAR STOCK AL COMPRAR
     // =======================================================
-    public function getVariantesByArticulo($idArticulo) {
-        $sql = "SELECT 
-                    p.ID_Producto,
-                    p.ID_Articulo,
-                    p.Nombre_Producto,
-                    p.ID_Color,
-                    col.N_Color,
-                    col.CodigoHex,
-                    p.ID_Talla,
-                    t.N_Talla,
-                    COALESCE(aci.Foto, p.Foto, a.Foto) AS Foto,
-                    p.Porcentaje,
-                    p.Cantidad,
-                    pr.Valor AS Precio_Base,
-                    (pr.Valor + (pr.Valor * (p.Porcentaje / 100))) AS Precio_Final
-                FROM producto p
-                INNER JOIN articulo a ON a.ID_Articulo = p.ID_Articulo
-                LEFT JOIN precio pr ON pr.ID_Precio = a.ID_Precio
-                LEFT JOIN (
-                    SELECT ID_Articulo, ID_Color, MIN(Foto) AS Foto
-                    FROM articulo_color_imagen
-                    GROUP BY ID_Articulo, ID_Color
-                ) aci ON aci.ID_Articulo = p.ID_Articulo AND aci.ID_Color = p.ID_Color
-                LEFT JOIN color col ON col.ID_Color = p.ID_Color
-                LEFT JOIN talla t ON t.ID_Talla = p.ID_Talla
-                WHERE p.ID_Articulo = ?
-                GROUP BY p.ID_Producto
-                ORDER BY col.N_Color ASC, t.N_Talla ASC";
-
-        $stmt = $this->conn->prepare($sql);
-        $stmt->execute([$idArticulo]);
-        return $stmt->fetchAll(PDO::FETCH_ASSOC);
-    }
-
-    // =======================================================
-    // 👕 OBTENER TALLAS DISPONIBLES (ARTÍCULO BASE + VARIANTES)
-    // =======================================================
-    public function getTallasDisponiblesByArticulo($idArticulo) {
-        $tallas = [];
-        
-        // 🔸 Tallas del artículo base
-        $sqlBase = "SELECT 
-                        a.ID_Talla,
-                        t.N_Talla,
-                        a.Cantidad,
-                        'base' AS Tipo,
-                        a.ID_Articulo AS ID_Producto
-                    FROM articulo a
-                    LEFT JOIN talla t ON t.ID_Talla = a.ID_Talla
-                    WHERE a.ID_Articulo = ? AND a.ID_Talla IS NOT NULL";
-        
-        $stmtBase = $this->conn->prepare($sqlBase);
-        $stmtBase->execute([$idArticulo]);
-        $tallasBase = $stmtBase->fetchAll(PDO::FETCH_ASSOC);
-        
-        // 🔸 Tallas de las variantes (productos)
-        $sqlVariantes = "SELECT 
-                            p.ID_Talla,
-                            t.N_Talla,
-                            p.Cantidad,
-                            'variante' AS Tipo,
-                            p.ID_Producto
-                        FROM producto p
-                        INNER JOIN talla t ON t.ID_Talla = p.ID_Talla
-                        WHERE p.ID_Articulo = ?
-                        ORDER BY t.N_Talla ASC";
-        
-        $stmtVariantes = $this->conn->prepare($sqlVariantes);
-        $stmtVariantes->execute([$idArticulo]);
-        $tallasVariantes = $stmtVariantes->fetchAll(PDO::FETCH_ASSOC);
-        
-        // Combinar ambas fuentes
-        $tallas = array_merge($tallasBase, $tallasVariantes);
-        
-        return $tallas;
-    }
-
-    // =======================================================
-    // 🔍 OBTENER STOCK TOTAL DEL ARTÍCULO
-    // =======================================================
-    public function getStockTotal($idArticulo) {
-        $sql = "SELECT 
-                    COALESCE(a.Cantidad, 0) + 
-                    COALESCE(SUM(p.Cantidad), 0) AS Stock_Total
-                FROM articulo a
-                LEFT JOIN producto p ON p.ID_Articulo = a.ID_Articulo
-                WHERE a.ID_Articulo = ?
-                GROUP BY a.ID_Articulo, a.Cantidad";
-        
-        $stmt = $this->conn->prepare($sql);
-        $stmt->execute([$idArticulo]);
-        $result = $stmt->fetch(PDO::FETCH_ASSOC);
-        
-        return $result ? (int)$result['Stock_Total'] : 0;
-    }
-
-    // =======================================================
-    // ✅ DESCONTAR STOCK AL COMPRAR (ARTÍCULO BASE Y VARIANTES)
-    // =======================================================
-    public function actualizarStock($idProducto, $cantidadComprada, $tipo = 'variante') {
-        if ($tipo === 'base') {
-            // Descontar stock del artículo base
-            $sql = "UPDATE articulo 
-                    SET Cantidad = GREATEST(Cantidad - ?, 0)
-                    WHERE ID_Articulo = ? AND Cantidad >= ?";
-        } else {
-            // Descontar stock de variante (producto)
-            $sql = "UPDATE producto 
-                    SET Cantidad = GREATEST(Cantidad - ?, 0)
-                    WHERE ID_Producto = ? AND Cantidad >= ?";
-        }
+    public function actualizarStock($idProducto, $cantidadComprada) {
+        $sql = "UPDATE producto 
+                SET Cantidad = GREATEST(Cantidad - ?, 0)
+                WHERE ID_Producto = ? AND Cantidad >= ?";
         
         $stmt = $this->conn->prepare($sql);
         return $stmt->execute([$cantidadComprada, $idProducto, $cantidadComprada]);
@@ -266,12 +289,8 @@ class Producto {
     // =======================================================
     // 🔄 VERIFICAR STOCK DISPONIBLE
     // =======================================================
-    public function verificarStock($idProducto, $cantidad, $tipo = 'variante') {
-        if ($tipo === 'base') {
-            $sql = "SELECT Cantidad FROM articulo WHERE ID_Articulo = ?";
-        } else {
-            $sql = "SELECT Cantidad FROM producto WHERE ID_Producto = ?";
-        }
+    public function verificarStock($idProducto, $cantidad) {
+        $sql = "SELECT Cantidad FROM producto WHERE ID_Producto = ?";
         
         $stmt = $this->conn->prepare($sql);
         $stmt->execute([$idProducto]);
@@ -281,24 +300,41 @@ class Producto {
     }
 
     // =======================================================
+    // 🔍 OBTENER STOCK TOTAL DEL ARTÍCULO
+    // =======================================================
+    public function getStockTotal($idArticulo) {
+        $sql = "SELECT 
+                    COALESCE(SUM(p.Cantidad), 0) AS Stock_Total
+                FROM articulo a
+                LEFT JOIN producto p ON p.ID_Articulo = a.ID_Articulo
+                WHERE a.ID_Articulo = ? AND p.Activo = 1
+                GROUP BY a.ID_Articulo";
+        
+        $stmt = $this->conn->prepare($sql);
+        $stmt->execute([$idArticulo]);
+        $result = $stmt->fetch(PDO::FETCH_ASSOC);
+        
+        return $result ? (int)$result['Stock_Total'] : 0;
+    }
+
+    // =======================================================
     // 🎯 OBTENER PRODUCTOS DESTACADOS
     // =======================================================
     public function getDestacados($limit = 8) {
         $sql = "SELECT 
                     a.ID_Articulo,
                     a.N_Articulo,
-                    COALESCE(MIN(aci.Foto), a.Foto) AS Foto,
+                    a.Foto,
                     c.N_Categoria,
                     pr.Valor AS Precio,
-                    (COALESCE(a.Cantidad, 0) + COALESCE(SUM(p.Cantidad), 0)) AS Stock
+                    COALESCE(SUM(p.Cantidad), 0) AS Stock
                 FROM articulo a
                 LEFT JOIN producto p ON p.ID_Articulo = a.ID_Articulo
-                LEFT JOIN articulo_color_imagen aci ON aci.ID_Articulo = a.ID_Articulo
                 LEFT JOIN precio pr ON pr.ID_Precio = a.ID_Precio
                 LEFT JOIN categoria c ON c.ID_Categoria = a.ID_Categoria
-                WHERE a.Activo = 1 AND a.Destacado = 1
-                GROUP BY a.ID_Articulo, a.N_Articulo, a.Foto, c.N_Categoria, pr.Valor, a.Cantidad
-                ORDER BY a.Fecha_Creacion DESC
+                WHERE a.Activo = 1
+                GROUP BY a.ID_Articulo, a.N_Articulo, a.Foto, c.N_Categoria, pr.Valor
+                ORDER BY a.ID_Articulo DESC
                 LIMIT ?";
         
         $stmt = $this->conn->prepare($sql);
@@ -313,14 +349,13 @@ class Producto {
         $sql = "SELECT 
                     a.ID_Articulo,
                     a.N_Articulo,
-                    COALESCE(MIN(aci.Foto), a.Foto) AS Foto,
+                    a.Foto,
                     c.N_Categoria,
                     g.N_Genero,
                     pr.Valor AS Precio,
-                    (COALESCE(a.Cantidad, 0) + COALESCE(SUM(p.Cantidad), 0)) AS Stock
+                    COALESCE(SUM(p.Cantidad), 0) AS Stock
                 FROM articulo a
                 LEFT JOIN producto p ON p.ID_Articulo = a.ID_Articulo
-                LEFT JOIN articulo_color_imagen aci ON aci.ID_Articulo = a.ID_Articulo
                 LEFT JOIN precio pr ON pr.ID_Precio = a.ID_Precio
                 LEFT JOIN categoria c ON c.ID_Categoria = a.ID_Categoria
                 LEFT JOIN genero g ON g.ID_Genero = a.ID_Genero
@@ -339,7 +374,7 @@ class Producto {
             $params[] = $idGenero;
         }
         
-        $sql .= " GROUP BY a.ID_Articulo, a.N_Articulo, a.Foto, c.N_Categoria, g.N_Genero, pr.Valor, a.Cantidad
+        $sql .= " GROUP BY a.ID_Articulo, a.N_Articulo, a.Foto, c.N_Categoria, g.N_Genero, pr.Valor
                   ORDER BY a.N_Articulo ASC";
         
         $stmt = $this->conn->prepare($sql);
@@ -348,37 +383,119 @@ class Producto {
     }
 
     // =======================================================
-    // 🎨 OBTENER INFORMACIÓN DE COLOR POR ID
+    // 🎨 OBTENER INFORMACIÓN DE COLOR DESDE ATRIBUTOS
     // =======================================================
-    public function getColorInfo($idColor) {
-        $sql = "SELECT N_Color, CodigoHex FROM color WHERE ID_Color = ?";
-        $stmt = $this->conn->prepare($sql);
-        $stmt->execute([$idColor]);
-        return $stmt->fetch(PDO::FETCH_ASSOC);
+    public function getColorInfo($id_atributo_color) {
+        try {
+            // Buscar en atributo_valor
+            $sql = "SELECT av.Valor as N_Color, NULL as CodigoHex 
+                    FROM atributo_valor av 
+                    WHERE av.ID_AtributoValor = ? 
+                    LIMIT 1";
+            
+            $stmt = $this->conn->prepare($sql);
+            $stmt->execute([$id_atributo_color]);
+            $result = $stmt->fetch(PDO::FETCH_ASSOC);
+            
+            if ($result) {
+                return $result;
+            }
+            
+            // Si no encuentra, podría ser de la tabla color
+            $sql2 = "SELECT N_Color, CodigoHex FROM color WHERE ID_Color = ? LIMIT 1";
+            $stmt2 = $this->conn->prepare($sql2);
+            $stmt2->execute([$id_atributo_color]);
+            $result2 = $stmt2->fetch(PDO::FETCH_ASSOC);
+            
+            return $result2 ?: ['N_Color' => 'Color no encontrado', 'CodigoHex' => null];
+            
+        } catch (Exception $e) {
+            error_log("Error obteniendo color: " . $e->getMessage());
+            return ['N_Color' => 'Error', 'CodigoHex' => null];
+        }
     }
 
     // =======================================================
-    // 📏 OBTENER INFORMACIÓN DE TALLA POR ID
+    // 📏 OBTENER INFORMACIÓN DE TALLA DESDE ATRIBUTOS
     // =======================================================
-    public function getTallaInfo($idTalla) {
-        $sql = "SELECT N_Talla FROM talla WHERE ID_Talla = ?";
-        $stmt = $this->conn->prepare($sql);
-        $stmt->execute([$idTalla]);
-        return $stmt->fetch(PDO::FETCH_ASSOC);
+    public function getTallaInfo($id_atributo_talla) {
+        try {
+            // Buscar en atributo_valor
+            $sql = "SELECT av.Valor as N_Talla 
+                    FROM atributo_valor av 
+                    WHERE av.ID_AtributoValor = ? 
+                    LIMIT 1";
+            
+            $stmt = $this->conn->prepare($sql);
+            $stmt->execute([$id_atributo_talla]);
+            $result = $stmt->fetch(PDO::FETCH_ASSOC);
+            
+            if ($result) {
+                return $result;
+            }
+            
+            // Si no encuentra, podría ser de la tabla talla
+            $sql2 = "SELECT N_Talla FROM talla WHERE ID_Talla = ? LIMIT 1";
+            $stmt2 = $this->conn->prepare($sql2);
+            $stmt2->execute([$id_atributo_talla]);
+            $result2 = $stmt2->fetch(PDO::FETCH_ASSOC);
+            
+            return $result2 ?: ['N_Talla' => 'Talla no encontrada'];
+            
+        } catch (Exception $e) {
+            error_log("Error obteniendo talla: " . $e->getMessage());
+            return ['N_Talla' => 'Error'];
+        }
     }
+
+    // =======================================================
+    // 🔍 OBTENER COLOR Y TALLA DE UN PRODUCTO
+    // =======================================================
+    public function getColorYTalla($id_producto) {
+        try {
+            $sql = "SELECT 
+                        p.ID_Atributo1,
+                        p.ValorAtributo1,
+                        p.ID_Atributo2,
+                        p.ValorAtributo2,
+                        p.ID_Atributo3,
+                        p.ValorAtributo3
+                    FROM producto p 
+                    WHERE p.ID_Producto = ? 
+                    LIMIT 1";
+            
+            $stmt = $this->conn->prepare($sql);
+            $stmt->execute([$id_producto]);
+            $producto = $stmt->fetch(PDO::FETCH_ASSOC);
+            
+            $color = 'Sin color';
+            $talla = 'Única';
+            
+            if ($producto) {
+                // Buscar color (ID_TipoAtributo = 2)
+                // Buscar talla (ID_TipoAtributo = 3)
+                // Nota: Esto depende de cómo tengas configurados tus IDs de tipo atributo
+                
+                // Suponiendo que ID_TipoAtributo=2 es color y ID_TipoAtributo=3 es talla
+                if ($producto['ID_Atributo1'] == 2) $color = $producto['ValorAtributo1'];
+                elseif ($producto['ID_Atributo2'] == 2) $color = $producto['ValorAtributo2'];
+                elseif ($producto['ID_Atributo3'] == 2) $color = $producto['ValorAtributo3'];
+                
+                if ($producto['ID_Atributo1'] == 3) $talla = $producto['ValorAtributo1'];
+                elseif ($producto['ID_Atributo2'] == 3) $talla = $producto['ValorAtributo2'];
+                elseif ($producto['ID_Atributo3'] == 3) $talla = $producto['ValorAtributo3'];
+            }
+            
+            return [
+                'color' => $color,
+                'talla' => $talla
+            ];
+            
+        } catch (Exception $e) {
+            error_log("Error obteniendo color y talla: " . $e->getMessage());
+            return ['color' => 'Error', 'talla' => 'Error'];
+        }
+    }
+
 }
 ?>
-
-
-
-
-
-
-
-
-
-
-
-
-
-

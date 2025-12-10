@@ -54,28 +54,37 @@ include "views/layout/nav.php";
                 </thead>
                 <tbody>
                     <?php foreach ($items as $it): ?>
-                    <?php 
-                        // ✅ APLICANDO LA MISMA LÓGICA DEL CARRITO PARA IMÁGENES
-                        $foto = $it['Foto'] ?? 'assets/img/placeholder.png';
-                        
-                        // Si la foto no es una URL completa y no empieza con ImgProducto/ o assets/, agregar ImgProducto/
-                        if (!preg_match('/^https?:\\/\\//i', $foto) && !str_starts_with($foto, 'ImgProducto/') && !str_starts_with($foto, 'assets/')) {
-                            $foto = 'ImgProducto/' . ltrim($foto, '/');
+                    <?php
+                    // Preparar especificaciones para success.php también
+                    $especificaciones = [];
+                    
+                    // Usar atributos dinámicos si existen
+                    if (!empty($it['Atributos'])) {
+                        foreach ($it['Atributos'] as $atributo) {
+                            if (!empty($atributo['nombre']) && !empty($atributo['valor'])) {
+                                $especificaciones[] = $atributo['nombre'] . ': ' . $atributo['valor'];
+                            }
                         }
-                        
-                        $fotoUrl = (strpos($foto, 'http') === 0) ? $foto : rtrim(BASE_URL, '/') . '/' . ltrim($foto, '/');
+                    }
+                    // Fallback a atributos básicos
+                    else {
+                        if (!empty($it['ValorAtributo1'])) $especificaciones[] = $it['ValorAtributo1'];
+                        if (!empty($it['ValorAtributo2'])) $especificaciones[] = $it['ValorAtributo2'];
+                        if (!empty($it['ValorAtributo3'])) $especificaciones[] = $it['ValorAtributo3'];
+                    }
+                    
+                    $especificacionesStr = !empty($especificaciones) ? implode(' | ', $especificaciones) : '—';
                     ?>
                     <tr>
                         <td>
                             <img src="<?php echo $fotoUrl; ?>" 
-                                 width="70" 
-                                 class="rounded"
-                                 alt="<?php echo htmlspecialchars($it['N_Articulo']); ?>"
-                                 onerror="this.src='<?php echo BASE_URL; ?>assets/img/placeholder.png'">
+                                width="70" 
+                                class="rounded"
+                                alt="<?php echo htmlspecialchars($it['N_Articulo']); ?>"
+                                onerror="this.src='<?php echo BASE_URL; ?>assets/img/placeholder.png'">
                         </td>
                         <td><?php echo htmlspecialchars($it['N_Articulo']); ?></td>
-                        <td><?php echo htmlspecialchars($it['N_Talla'] ?? "—"); ?></td>
-                        <td><?php echo htmlspecialchars($it['N_Color'] ?? "—"); ?></td>
+                        <td><?php echo htmlspecialchars($especificacionesStr); ?></td>
                         <td>$<?php echo number_format($it['Precio_Unitario'], 0, ',', '.'); ?></td>
                         <td><?php echo $it['Cantidad']; ?></td>
                         <td class="text-success fw-bold">

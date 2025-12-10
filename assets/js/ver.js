@@ -1,22 +1,18 @@
 // ===============================
-// Archivo: ver.js (CORREGIDO PARA VALORFIJO)
+// Archivo: ver.js (SISTEMA DE ATRIBUTOS DINÁMICOS CON CÓDIGO DE DESCUENTO)
 // ===============================
 document.addEventListener("DOMContentLoaded", () => {
-  const { usuarioLogueado, variantes, baseTallas, productoBase, baseUrl, esFavorito, infoDescuento, todosDescuentos } = PRODUCTO_DATA;
+  const { usuarioLogueado, variantes, variantesAgrupadas, productoBase, baseUrl, esFavorito, infoDescuento, todosDescuentos, atributosRequeridos } = PRODUCTO_DATA;
 
   // === Elementos DOM ===
-  const colorChips = document.querySelectorAll('#color-container .chip');
-  const tallaContainer = document.getElementById('talla-container');
+  const atributoContainers = document.querySelectorAll('.atributo-container');
+  const variantesContainer = document.getElementById('variantes-container');
   const mainImg = document.getElementById('main-img');
   const nombreProd = document.getElementById('nombre-producto');
   const cantidadInput = document.getElementById('cantidad');
   const stockInfo = document.getElementById('stock-info');
   const formTipo = document.getElementById('form-tipo');
   const formIdProducto = document.getElementById('form-id-producto');
-  const formIdColor = document.getElementById('form-id-color');
-  const formNColor = document.getElementById('form-n-color');
-  const formCodigoHex = document.getElementById('form-codigo-hex');
-  const formIdTalla = document.getElementById('form-id-talla');
   const formCantidad = document.getElementById('form-cantidad');
   const formPrecioFinal = document.getElementById('form-precio-final');
   const favForm = document.getElementById('fav-form');
@@ -26,8 +22,15 @@ document.addEventListener("DOMContentLoaded", () => {
   const btnPlus = document.getElementById('qty-plus');
   const btnMinus = document.getElementById('qty-minus');
   
-  // Elementos para descuentos
-  const opcionesDescuento = document.querySelectorAll('.opcion-descuento');
+  // Elementos para descuentos - NUEVOS
+  const inputCodigoDescuento = document.getElementById('input-codigo-descuento');
+  const btnAplicarDescuento = document.getElementById('btn-aplicar-descuento');
+  const mensajeDescuento = document.getElementById('mensaje-descuento');
+  const descuentoActualDiv = document.getElementById('descuento-actual');
+  const btnRemoverDescuento = document.getElementById('btn-remover-descuento');
+  const textoDescuentoActivo = document.getElementById('texto-descuento-activo');
+  
+  // Elementos hidden del formulario
   const formCodigoDescuento = document.getElementById('form-codigo-descuento-final');
   const formTipoDescuento = document.getElementById('form-tipo-descuento-final');
   const formValorDescuento = document.getElementById('form-valor-descuento-final');
@@ -35,14 +38,13 @@ document.addEventListener("DOMContentLoaded", () => {
 
   // === Estado actual ===
   let seleccionActual = {
-    tallaSeleccionada: false,
+    atributosSeleccionados: {},
+    varianteSeleccionada: null,
     stockDisponible: 0,
-    colorId: productoBase.idColor,
-    productoId: productoBase.id,
-    tipoActual: 'base',
+    productoId: null,
     esFavorito: esFavorito || false,
-    precioBase: productoBase.precio,
-    precioFinal: productoBase.precio,
+    precioBase: 0,
+    precioFinal: 0,
     descuentoAplicado: 0,
     descuentoSeleccionado: {
       codigo: '',
@@ -52,7 +54,7 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   };
 
-  // ---------- SISTEMA DE DESCUENTOS CORREGIDO ----------
+  // ---------- SISTEMA DE DESCUENTOS ----------
   function aplicarDescuentoManual(precioBase, tipoDescuento, valorDescuento) {
     let precioFinal = precioBase;
     let descuentoAplicado = 0;
@@ -60,11 +62,9 @@ document.addEventListener("DOMContentLoaded", () => {
     console.log('Aplicando descuento manual:', { precioBase, tipoDescuento, valorDescuento });
 
     if (tipoDescuento === 'Porcentaje' && valorDescuento > 0) {
-      // Descuento porcentual
       descuentoAplicado = (precioBase * valorDescuento) / 100;
       precioFinal = precioBase - descuentoAplicado;
     } else if ((tipoDescuento === 'Fijo' || tipoDescuento === 'ValorFijo') && valorDescuento > 0) {
-      // Descuento fijo - CORREGIDO: acepta tanto 'Fijo' como 'ValorFijo'
       descuentoAplicado = Math.min(valorDescuento, precioBase);
       precioFinal = precioBase - descuentoAplicado;
     }
@@ -144,7 +144,6 @@ document.addEventListener("DOMContentLoaded", () => {
     const descuentoBadgeElement = document.getElementById('descuento-badge');
     const ahorroInfoElement = document.getElementById('ahorro-info');
     
-    // Formatear números
     const precioFinalFormateado = new Intl.NumberFormat('es-CO').format(precioFinal);
     const precioOriginalFormateado = new Intl.NumberFormat('es-CO').format(precioOriginal);
     const ahorro = precioOriginal - precioFinal;
@@ -152,25 +151,51 @@ document.addEventListener("DOMContentLoaded", () => {
     
     console.log('Actualizando precio visual:', { precioFinal, precioOriginal, descuento, ahorro });
     
-    if (descuento > 0 && ahorro > 0) {
-        precioFinalElement.textContent = `$${precioFinalFormateado}`;
-        precioFinalElement.className = 'precio-final fw-bold';
-        
-        precioOriginalElement.textContent = `$${precioOriginalFormateado}`;
-        precioOriginalElement.style.display = 'inline';
-        
-        descuentoBadgeElement.innerHTML = `<i class="fas fa-tag me-1"></i>-${descuento.toFixed(1)}%`;
-        descuentoBadgeElement.style.display = 'inline-block';
-        
-        ahorroInfoElement.innerHTML = `<i class="fas fa-bolt me-1"></i>Ahorras $${new Intl.NumberFormat('es-CO').format(ahorro)} (${porcentajeAhorro}%)`;
-        ahorroInfoElement.style.display = 'block';
-    } else {
-        precioFinalElement.textContent = `$${precioFinalFormateado}`;
-        precioFinalElement.className = 'precio-final fw-bold';
+    // ✅ CORRECCIÓN: Solo mostrar "GRATIS" cuando el precio final sea 0
+    if (precioFinal === 0 || precioFinal === '0' || precioFinal === 0.00) {
+      // Si el precio original también era 0, es gratis de verdad
+      if (precioOriginal === 0 || precioOriginal === '0' || precioOriginal === 0.00) {
+        precioFinalElement.innerHTML = '<span class="text-success fw-bold">GRATIS</span>';
+        precioFinalElement.className = 'precio-final';
         
         precioOriginalElement.style.display = 'none';
         descuentoBadgeElement.style.display = 'none';
         ahorroInfoElement.style.display = 'none';
+      } else {
+        // Si el precio original > 0 pero ahora es 0 por descuento
+        precioFinalElement.innerHTML = '<span class="text-success fw-bold">GRATIS</span>';
+        precioFinalElement.className = 'precio-final';
+        
+        precioOriginalElement.textContent = `$${precioOriginalFormateado}`;
+        precioOriginalElement.style.display = 'inline';
+        
+        if (descuento > 0) {
+          descuentoBadgeElement.innerHTML = `<i class="fas fa-tag me-1"></i>-${descuento.toFixed(1)}%`;
+          descuentoBadgeElement.style.display = 'inline-block';
+        }
+        
+        ahorroInfoElement.innerHTML = `<i class="fas fa-bolt me-1"></i>Ahorras $${new Intl.NumberFormat('es-CO').format(ahorro)} (100%)`;
+        ahorroInfoElement.style.display = 'block';
+      }
+    } else if (descuento > 0 && ahorro > 0) {
+      precioFinalElement.textContent = `$${precioFinalFormateado}`;
+      precioFinalElement.className = 'precio-final fw-bold';
+      
+      precioOriginalElement.textContent = `$${precioOriginalFormateado}`;
+      precioOriginalElement.style.display = 'inline';
+      
+      descuentoBadgeElement.innerHTML = `<i class="fas fa-tag me-1"></i>-${descuento.toFixed(1)}%`;
+      descuentoBadgeElement.style.display = 'inline-block';
+      
+      ahorroInfoElement.innerHTML = `<i class="fas fa-bolt me-1"></i>Ahorras $${new Intl.NumberFormat('es-CO').format(ahorro)} (${porcentajeAhorro}%)`;
+      ahorroInfoElement.style.display = 'block';
+    } else {
+      precioFinalElement.textContent = `$${precioFinalFormateado}`;
+      precioFinalElement.className = 'precio-final fw-bold';
+      
+      precioOriginalElement.style.display = 'none';
+      descuentoBadgeElement.style.display = 'none';
+      ahorroInfoElement.style.display = 'none';
     }
 
     if (formPrecioFinal) {
@@ -182,68 +207,220 @@ document.addEventListener("DOMContentLoaded", () => {
     seleccionActual.descuentoAplicado = descuento;
   }
 
-  // ---------- SISTEMA DE SELECCIÓN DE DESCUENTOS ----------
-  function inicializarSelectorDescuentos() {
-    if (!usuarioLogueado || opcionesDescuento.length === 0) return;
-
-    opcionesDescuento.forEach(opcion => {
-      opcion.addEventListener('click', function() {
-        // Remover clase activa de todas las opciones
-        opcionesDescuento.forEach(o => {
-          o.classList.remove('activa');
-          const badge = o.querySelector('.badge');
-          const button = o.querySelector('button');
-          if (badge) {
-            badge.textContent = '';
-            badge.className = 'badge bg-secondary px-2';
-          }
-          if (button) {
-            button.textContent = 'Seleccionar';
-            button.className = 'btn btn-outline-success btn-sm btn-descuento';
-          }
-        });
-
-        // Agregar clase activa a la opción seleccionada
-        this.classList.add('activa');
+  // ---------- SISTEMA DE INGRESO DE CÓDIGO DE DESCUENTO ----------
+  function inicializarSistemaDescuentos() {
+    if (!usuarioLogueado) return;
+    
+    // Cargar descuento de localStorage si existe
+    const descuentoGuardado = localStorage.getItem('descuentoActual');
+    if (descuentoGuardado && seleccionActual.productoId) {
+      const descuento = JSON.parse(descuentoGuardado);
+      if (validarDescuentoParaProducto(descuento, seleccionActual.productoId)) {
+        aplicarDescuentoDesdeStorage(descuento);
+      }
+    }
+    
+    btnAplicarDescuento.addEventListener('click', async function() {
+      const codigo = inputCodigoDescuento.value.trim().toUpperCase();
+      
+      if (!codigo) {
+        mostrarMensajeDescuento('Por favor ingresa un código de descuento', 'warning');
+        return;
+      }
+      
+      // Mostrar loading
+      btnAplicarDescuento.disabled = true;
+      btnAplicarDescuento.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Validando...';
+      
+      try {
+        const descuentoValido = await validarCodigoDescuento(codigo);
         
-        // Actualizar botones
-        const badge = this.querySelector('.badge');
-        const button = this.querySelector('button');
-        if (badge) {
-          badge.textContent = 'Seleccionado';
-          badge.className = 'badge bg-success px-2';
+        if (descuentoValido) {
+          // Verificar si aplica al producto actual
+          if (validarDescuentoParaProducto(descuentoValido, seleccionActual.productoId)) {
+            aplicarDescuentoManualDesdeCodigo(descuentoValido);
+            guardarDescuentoEnStorage(descuentoValido);
+            mostrarDescuentoActivo(descuentoValido);
+            mostrarMensajeDescuento('✅ ¡Descuento aplicado correctamente!', 'success');
+            inputCodigoDescuento.value = '';
+          } else {
+            mostrarMensajeDescuento('❌ Este descuento no aplica para el producto seleccionado', 'danger');
+          }
+        } else {
+          mostrarMensajeDescuento('❌ Código de descuento inválido o expirado', 'danger');
         }
-        if (button) {
-          button.textContent = 'Seleccionado';
-          button.className = 'btn btn-success btn-sm btn-descuento';
-        }
-
-        // Obtener datos del descuento
-        const codigo = this.dataset.codigo || '';
-        const tipo = this.dataset.tipo || 'ninguno';
-        const valor = parseFloat(this.dataset.valor) || 0;
-        const idDescuento = this.dataset.idDescuento || null;
-
-        console.log('Descuento seleccionado:', { codigo, tipo, valor, idDescuento });
-
-        // Actualizar estado
-        seleccionActual.descuentoSeleccionado = {
-          codigo,
-          tipo,
-          valor,
-          idDescuento
-        };
-
-        // Actualizar campos ocultos del formulario
-        if (formCodigoDescuento) formCodigoDescuento.value = codigo;
-        if (formTipoDescuento) formTipoDescuento.value = tipo;
-        if (formValorDescuento) formValorDescuento.value = valor;
-        if (formIdDescuento) formIdDescuento.value = idDescuento;
-
-        // Recalcular precio con el descuento seleccionado
-        recalcularPrecioConDescuento();
-      });
+      } catch (error) {
+        console.error('Error validando descuento:', error);
+        mostrarMensajeDescuento('❌ Error al validar el código. Intenta nuevamente.', 'danger');
+      } finally {
+        btnAplicarDescuento.disabled = false;
+        btnAplicarDescuento.innerHTML = '<i class="fas fa-check me-1"></i>Aplicar';
+      }
     });
+    
+    // Permitir presionar Enter
+    inputCodigoDescuento.addEventListener('keypress', function(e) {
+      if (e.key === 'Enter') {
+        btnAplicarDescuento.click();
+      }
+    });
+    
+    // Botón para remover descuento
+    if (btnRemoverDescuento) {
+      btnRemoverDescuento.addEventListener('click', function() {
+        removerDescuento();
+        localStorage.removeItem('descuentoActual');
+        descuentoActualDiv.style.display = 'none';
+        mostrarMensajeDescuento('Descuento removido', 'info');
+      });
+    }
+  }
+
+  async function validarCodigoDescuento(codigo) {
+    try {
+      // Buscar en los descuentos vigentes que ya tenemos cargados
+      for (const descuento of todosDescuentos) {
+        if (descuento.Codigo === codigo) {
+          // Verificar vigencia
+          const ahora = new Date().toISOString();
+          if (descuento.Activo === 1 && 
+              descuento.FechaInicio <= ahora && 
+              descuento.FechaFin >= ahora) {
+            return descuento;
+          }
+        }
+      }
+      
+      // Si no se encuentra localmente, consultar al servidor
+      const formData = new FormData();
+      formData.append('codigo', codigo);
+      
+      const response = await fetch(`${baseUrl}?c=Descuento&a=validarCodigo`, {
+        method: 'POST',
+        body: formData
+      });
+      
+      if (response.ok) {
+        const data = await response.json();
+        if (data.success) {
+          return data.descuento;
+        }
+      }
+      
+      return null;
+    } catch (error) {
+      console.error('Error validando código:', error);
+      return null;
+    }
+  }
+
+  function validarDescuentoParaProducto(descuento, productoId) {
+    // Si el descuento es general (sin ID específico), aplica a todos
+    if (!descuento.ID_Articulo && !descuento.ID_Producto && !descuento.ID_Categoria) {
+      return true;
+    }
+    
+    // Verificar si aplica por artículo
+    if (descuento.ID_Articulo && descuento.ID_Articulo == productoBase.id) {
+      return true;
+    }
+    
+    // Verificar si aplica por producto específico
+    if (descuento.ID_Producto && descuento.ID_Producto == productoId) {
+      return true;
+    }
+    
+    // Verificar si aplica por categoría
+    if (descuento.ID_Categoria && descuento.ID_Categoria == productoBase.id_categoria) {
+      return true;
+    }
+    
+    return false;
+  }
+
+  function aplicarDescuentoManualDesdeCodigo(descuento) {
+    seleccionActual.descuentoSeleccionado = {
+      codigo: descuento.Codigo,
+      tipo: descuento.Tipo,
+      valor: parseFloat(descuento.Valor),
+      idDescuento: descuento.ID_Descuento
+    };
+
+    // Actualizar campos hidden
+    if (formCodigoDescuento) formCodigoDescuento.value = descuento.Codigo;
+    if (formTipoDescuento) formTipoDescuento.value = descuento.Tipo;
+    if (formValorDescuento) formValorDescuento.value = descuento.Valor;
+    if (formIdDescuento) formIdDescuento.value = descuento.ID_Descuento;
+
+    // Recalcular precio
+    recalcularPrecioConDescuento();
+  }
+
+  function aplicarDescuentoDesdeStorage(descuento) {
+    aplicarDescuentoManualDesdeCodigo(descuento);
+    mostrarDescuentoActivo(descuento);
+  }
+
+  function mostrarDescuentoActivo(descuento) {
+    if (descuentoActualDiv && textoDescuentoActivo) {
+      const valorMostrar = descuento.Tipo === 'Porcentaje' 
+        ? `${descuento.Valor}%` 
+        : `$${new Intl.NumberFormat('es-CO').format(descuento.Valor)}`;
+      
+      textoDescuentoActivo.textContent = 
+        `Descuento "${descuento.Codigo}" aplicado: -${valorMostrar}`;
+      
+      descuentoActualDiv.style.display = 'block';
+    }
+  }
+
+  function mostrarMensajeDescuento(mensaje, tipo = 'info') {
+    if (!mensajeDescuento) return;
+    
+    const clases = {
+      success: 'alert-success',
+      danger: 'alert-danger',
+      warning: 'alert-warning',
+      info: 'alert-info'
+    };
+    
+    mensajeDescuento.innerHTML = `
+      <div class="alert ${clases[tipo]} alert-dismissible fade show py-2" role="alert">
+        <div class="d-flex align-items-center">
+          <i class="fas fa-${tipo === 'success' ? 'check-circle' : 'info-circle'} me-2"></i>
+          <span>${mensaje}</span>
+        </div>
+        <button type="button" class="btn-close btn-sm" data-bs-dismiss="alert"></button>
+      </div>
+    `;
+    mensajeDescuento.style.display = 'block';
+    
+    // Auto-ocultar después de 5 segundos
+    setTimeout(() => {
+      mensajeDescuento.style.display = 'none';
+    }, 5000);
+  }
+
+  function removerDescuento() {
+    seleccionActual.descuentoSeleccionado = {
+      codigo: '',
+      tipo: 'ninguno',
+      valor: 0,
+      idDescuento: null
+    };
+
+    // Limpiar campos hidden
+    if (formCodigoDescuento) formCodigoDescuento.value = '';
+    if (formTipoDescuento) formTipoDescuento.value = '';
+    if (formValorDescuento) formValorDescuento.value = 0;
+    if (formIdDescuento) formIdDescuento.value = '';
+
+    // Recalcular precio sin descuento
+    recalcularPrecioConDescuento();
+  }
+
+  function guardarDescuentoEnStorage(descuento) {
+    localStorage.setItem('descuentoActual', JSON.stringify(descuento));
   }
 
   function recalcularPrecioConDescuento() {
@@ -253,11 +430,9 @@ document.addEventListener("DOMContentLoaded", () => {
     console.log('Recalculando precio con descuento:', { precioBase, tipo, valor });
 
     if (tipo === 'ninguno' || valor === 0) {
-      // Mostrar precio base sin descuento
       console.log('Sin descuento aplicado');
       actualizarPrecioVisual(precioBase, precioBase, 0);
     } else {
-      // Aplicar descuento manual (corregido)
       const infoPrecio = aplicarDescuentoManual(precioBase, tipo, valor);
       console.log('Precio con descuento aplicado:', infoPrecio);
       actualizarPrecioVisual(infoPrecio.precioFinal, infoPrecio.precioOriginal, infoPrecio.descuento);
@@ -286,13 +461,9 @@ document.addEventListener("DOMContentLoaded", () => {
 
     try {
       const formData = new FormData();
-      const idProductoActual = formIdProducto.value || productoBase.id;
+      const idProductoActual = formIdProducto.value;
       
-      if (seleccionActual.tipoActual === 'variante') {
-        formData.append('id_producto', idProductoActual);
-      } else {
-        formData.append('id_articulo', productoBase.id);
-      }
+      formData.append('id_producto', idProductoActual);
 
       const response = await fetch(`${baseUrl}?c=Favorito&a=verificarEstado`, {
         method: 'POST',
@@ -357,6 +528,320 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
 
+  // ---------- SISTEMA DE ATRIBUTOS DINÁMICOS ----------
+  function inicializarSelectoresAtributos() {
+    console.log('🔄 Inicializando sistema de atributos dependientes...');
+    
+    const chips = document.querySelectorAll('.chip');
+    console.log('🎯 Chips encontrados:', chips.length);
+    
+    chips.forEach(chip => {
+      chip.addEventListener('click', function() {
+        if (this.classList.contains('disabled')) {
+          return; // No hacer nada si está deshabilitado
+        }
+        
+        const atributoId = this.dataset.atributoId;
+        const valor = this.dataset.valor;
+        const step = parseInt(this.dataset.step);
+        
+        console.log(`📍 Seleccionado: ${valor} (Atributo: ${atributoId}, Paso: ${step})`);
+        
+        // Remover selección de otros chips del mismo atributo
+        document.querySelectorAll(`.chip[data-atributo-id="${atributoId}"]`).forEach(c => {
+          c.classList.remove('active');
+        });
+        
+        // Seleccionar este chip
+        this.classList.add('active');
+        
+        // Actualizar selección
+        seleccionActual.atributosSeleccionados[atributoId] = valor;
+        
+        console.log('📋 Selección actual:', seleccionActual.atributosSeleccionados);
+        
+        // Procesar selección en cadena
+        procesarSeleccionEnCadena(step);
+      });
+    });
+  }
+
+  function procesarSeleccionEnCadena(stepSeleccionado) {
+    const gruposAtributos = document.querySelectorAll('.atributo-group');
+    
+    // Resetear atributos siguientes
+    for (let i = stepSeleccionado; i < gruposAtributos.length; i++) {
+      const grupo = gruposAtributos[i];
+      const atributoId = grupo.dataset.atributoId;
+      const step = parseInt(grupo.dataset.step);
+      
+      if (step > stepSeleccionado) {
+        // Limpiar selección de atributos siguientes
+        delete seleccionActual.atributosSeleccionados[atributoId];
+        
+        // Deseleccionar chips
+        grupo.querySelectorAll('.chip').forEach(chip => {
+          chip.classList.remove('active');
+        });
+        
+        // Actualizar disponibilidad
+        actualizarDisponibilidadAtributos(step);
+      }
+    }
+    
+    // Actualizar el siguiente atributo inmediato
+    if (stepSeleccionado < gruposAtributos.length) {
+      actualizarDisponibilidadAtributos(stepSeleccionado + 1);
+    }
+    
+    // Verificar combinación completa
+    verificarCombinacionAtributos();
+  }
+
+  function actualizarDisponibilidadAtributos(stepTarget) {
+    const grupo = document.querySelector(`.atributo-group[data-step="${stepTarget}"]`);
+    if (!grupo) return;
+    
+    const atributoId = grupo.dataset.atributoId;
+    const chips = grupo.querySelectorAll('.chip');
+    
+    // Obtener selección actual de atributos anteriores
+    const seleccionAnterior = {};
+    for (let i = 1; i < stepTarget; i++) {
+      const grupoAnterior = document.querySelector(`.atributo-group[data-step="${i}"]`);
+      if (grupoAnterior) {
+        const atributoIdAnterior = grupoAnterior.dataset.atributoId;
+        seleccionAnterior[atributoIdAnterior] = seleccionActual.atributosSeleccionados[atributoIdAnterior];
+      }
+    }
+    
+    // Verificar disponibilidad para cada opción
+    chips.forEach(chip => {
+      const valor = chip.dataset.valor;
+      
+      // Combinación temporal para verificar
+      const combinacionTemp = {...seleccionAnterior, [atributoId]: valor};
+      const disponible = verificarCombinacionDisponible(combinacionTemp);
+      
+      if (disponible) {
+        chip.classList.remove('disabled');
+        chip.style.opacity = '1';
+      } else {
+        chip.classList.add('disabled');
+        chip.style.opacity = '0.5';
+      }
+    });
+    
+    // Actualizar mensaje
+    const mensaje = grupo.querySelector('.atributo-message');
+    if (mensaje) {
+      const todosDeshabilitados = Array.from(chips).every(chip => chip.classList.contains('disabled'));
+      if (todosDeshabilitados) {
+        mensaje.innerHTML = '<small class="text-danger">No hay productos disponibles con la selección actual</small>';
+      } else {
+        const atributoAnterior = document.querySelector(`.atributo-group[data-step="${stepTarget - 1}"] h6`)?.textContent || 'las opciones anteriores';
+        mensaje.innerHTML = `<small class="text-muted"><i class="fas fa-info-circle"></i> Opciones disponibles para la selección actual</small>`;
+      }
+    }
+  }
+
+  function verificarCombinacionDisponible(combinacion) {
+    // Buscar en las variantes si existe esta combinación
+    for (const variante of variantes) {
+      let coincide = true;
+      
+      for (const [atributoId, valor] of Object.entries(combinacion)) {
+        let encontrado = false;
+        
+        // Buscar en los 3 posibles atributos de la variante
+        for (let i = 1; i <= 3; i++) {
+          const idAtributoVariante = variante[`ID_Atributo${i}`];
+          const valorAtributoVariante = variante[`ValorAtributo${i}`];
+          
+          if (idAtributoVariante == atributoId && valorAtributoVariante == valor) {
+            encontrado = true;
+            break;
+          }
+        }
+        
+        if (!encontrado) {
+          coincide = false;
+          break;
+        }
+      }
+      
+      if (coincide && (variante.Cantidad > 0 || variante.Cantidad === null)) {
+        return true; // Combinación disponible
+      }
+    }
+    
+    return false; // Combinación no disponible
+  }
+
+  function verificarCombinacionAtributos() {
+    console.log('Verificando combinación de atributos...');
+    
+    // Verificar si tenemos todos los atributos requeridos seleccionados
+    const todosAtributosSeleccionados = atributosRequeridos.every(id => {
+      const seleccionado = seleccionActual.atributosSeleccionados[id];
+      console.log(`Atributo ${id}: ${seleccionado ? 'seleccionado' : 'no seleccionado'}`);
+      return seleccionado;
+    });
+
+    console.log('Todos los atributos seleccionados:', todosAtributosSeleccionados);
+
+    if (todosAtributosSeleccionados) {
+      // Buscar la variante que coincida con la combinación seleccionada
+      const varianteEncontrada = buscarVariantePorAtributos();
+      
+      if (varianteEncontrada) {
+        console.log('Variante encontrada:', varianteEncontrada);
+        seleccionarVariante(varianteEncontrada);
+      } else {
+        // No se encontró variante para esta combinación
+        console.log('No se encontró variante para esta combinación');
+        limpiarSeleccionVariante();
+        stockInfo.textContent = 'Combinación no disponible';
+        stockInfo.className = 'text-danger';
+        btnAddCart.disabled = true;
+        btnAddCart.innerHTML = '<i class="fa fa-times"></i> Combinación no disponible';
+      }
+    } else {
+      // Aún no se han seleccionado todos los atributos
+      console.log('Selecciona todos los atributos...');
+      limpiarSeleccionVariante();
+      stockInfo.textContent = 'Selecciona todas las opciones';
+      stockInfo.className = 'text-muted';
+      btnAddCart.disabled = true;
+      btnAddCart.innerHTML = '<i class="fa fa-shopping-cart"></i> Selecciona todas las opciones';
+    }
+  }
+
+  function buscarVariantePorAtributos() {
+    console.log('🔍 Buscando variante con atributos:', seleccionActual.atributosSeleccionados);
+    
+    // Buscar en las variantes agrupadas primero
+    for (const grupo of Object.values(variantesAgrupadas)) {
+      const coincide = grupo.atributos.every(atributo => {
+        const valorSeleccionado = seleccionActual.atributosSeleccionados[atributo.id];
+        console.log(`  - Comparando: ${atributo.id}: ${atributo.valor} vs ${valorSeleccionado}`);
+        return valorSeleccionado === atributo.valor;
+      });
+      
+      if (coincide && grupo.variantes.length > 0) {
+        console.log('✅ Variante encontrada en grupo:', grupo.variantes[0]);
+        return grupo.variantes[0];
+      }
+    }
+    
+    // Si no se encuentra en agrupadas, buscar en todas las variantes
+    for (const variante of variantes) {
+      let coincide = true;
+      
+      for (let i = 1; i <= 3; i++) {
+        const idAtributo = variante[`ID_Atributo${i}`];
+        const valorAtributo = variante[`ValorAtributo${i}`];
+        
+        if (idAtributo && valorAtributo) {
+          const valorSeleccionado = seleccionActual.atributosSeleccionados[idAtributo];
+          if (valorSeleccionado !== valorAtributo) {
+            coincide = false;
+            break;
+          }
+        }
+      }
+      
+      if (coincide) {
+        console.log('✅ Variante encontrada en lista completa:', variante);
+        return variante;
+      }
+    }
+    
+    console.log('❌ No se encontró variante para los atributos seleccionados');
+    return null;
+  }
+
+  async function seleccionarVariante(variante) {
+    console.log('🎯 Seleccionando variante:', variante);
+    
+    if (!variante || !variante.ID_Producto) {
+      console.error('❌ Variante inválida:', variante);
+      return;
+    }
+
+    seleccionActual.varianteSeleccionada = variante;
+    seleccionActual.productoId = variante.ID_Producto;
+    seleccionActual.stockDisponible = variante.Cantidad || 0;
+
+    // ✅ CORRECCIÓN: Actualizar el campo hidden del formulario
+    const formIdProducto = document.getElementById('form-id-producto');
+    if (formIdProducto) {
+      formIdProducto.value = variante.ID_Producto;
+      console.log('✅ form-id-producto actualizado:', formIdProducto.value);
+    }
+
+    // Actualizar formulario
+    formTipo.value = 'variante';
+    
+    if (favIdProd) {
+      favIdProd.value = variante.ID_Producto;
+    }
+
+    // Actualizar imagen si tiene una específica
+    if (variante.Foto && variante.Foto !== productoBase.Foto) {
+      mainImg.src = variante.Foto;
+    }
+
+    // Obtener precio base para esta variante
+    let precioBaseVariante = productoBase.precio; // Precio por defecto del artículo
+
+    // Buscar el precio en las variantes
+    for (const v of variantes) {
+        if (v.ID_Producto === variante.ID_Producto) {
+            precioBaseVariante = v.Precio_Final || productoBase.precio;
+            break;
+        }
+    }
+
+    console.log('💰 Precio base de la variante:', precioBaseVariante);
+
+    // Aplicar descuento automático
+    const info = await aplicarDescuentoAutomatico(variante.ID_Producto, precioBaseVariante);
+    console.log('💰 Info descuento automático:', info);
+    
+    // Actualizar precio base en el estado
+    seleccionActual.precioBase = info.precioOriginal;
+    
+    // Luego aplicar descuento seleccionado por el usuario si existe
+    if (seleccionActual.descuentoSeleccionado.valor > 0) {
+      const infoConDescuentoManual = aplicarDescuentoManual(
+        info.precioOriginal, 
+        seleccionActual.descuentoSeleccionado.tipo, 
+        seleccionActual.descuentoSeleccionado.valor
+      );
+      actualizarPrecioVisual(infoConDescuentoManual.precioFinal, infoConDescuentoManual.precioOriginal, infoConDescuentoManual.descuento);
+    } else {
+      actualizarPrecioVisual(info.precioFinal, info.precioOriginal, info.descuento);
+    }
+
+    // Actualizar información de stock
+    actualizarInfoStock(seleccionActual.stockDisponible);
+    actualizarBotonCarrito();
+    verificarEstadoFavorito();
+
+    console.log('✅ Variante seleccionada correctamente. ID_Producto:', seleccionActual.productoId);
+  }
+
+  function limpiarSeleccionVariante() {
+    seleccionActual.varianteSeleccionada = null;
+    seleccionActual.productoId = null;
+    seleccionActual.stockDisponible = 0;
+    formIdProducto.value = '';
+    stockInfo.textContent = '';
+    cantidadInput.removeAttribute('max');
+    actualizarBotonCarrito();
+  }
+
   // ---------- HELPERS ----------
   function setCantidad(val) {
     const max = parseInt(cantidadInput.max || seleccionActual.stockDisponible || 999, 10);
@@ -369,9 +854,9 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   function actualizarBotonCarrito() {
-    if (!seleccionActual.tallaSeleccionada) {
+    if (!seleccionActual.varianteSeleccionada) {
       btnAddCart.disabled = true;
-      btnAddCart.innerHTML = '<i class="fa fa-shopping-cart"></i> Selecciona una talla';
+      btnAddCart.innerHTML = '<i class="fa fa-shopping-cart"></i> Selecciona todas las opciones';
       return;
     }
 
@@ -405,233 +890,6 @@ document.addEventListener("DOMContentLoaded", () => {
     setCantidad(cantidadInput.value);
   }
 
-  // ---------- TALLAS ----------
-  function renderTallasBase() {
-    tallaContainer.innerHTML = '';
-    limpiarSeleccionTalla();
-
-    const tallasBase = baseTallas.filter(t => t.Tipo === 'base');
-
-    if (!tallasBase.length) {
-      tallaContainer.innerHTML = '<div class="text-muted">No hay tallas disponibles</div>';
-      return;
-    }
-
-    tallasBase.forEach(t => {
-      const btn = document.createElement('button');
-      btn.type = 'button';
-      btn.className = 'chip';
-      btn.textContent = t.N_Talla;
-
-      btn.dataset.idTalla = t.ID_Talla;
-      btn.dataset.idProducto = t.ID_Producto;
-      btn.dataset.tipo = 'base';
-      btn.dataset.cantidad = t.Cantidad || 0;
-
-      if (t.Cantidad <= 0) {
-        btn.classList.add('disabled');
-        btn.disabled = true;
-        btn.innerHTML += ' <small class="ms-1 text-muted">(Agotado)</small>';
-      } else {
-        btn.addEventListener('click', (ev) => seleccionarTallaBase(ev, t));
-      }
-
-      tallaContainer.appendChild(btn);
-    });
-  }
-
-  async function renderTallasVariantes(colorId) {
-    tallaContainer.innerHTML = '';
-    limpiarSeleccionTalla();
-
-    const opciones = variantes.filter(v => String(v.ID_Color) === String(colorId));
-
-    if (!opciones.length) {
-      tallaContainer.innerHTML = '<div class="text-muted">No hay tallas disponibles</div>';
-      return;
-    }
-
-    const ejemplo = opciones[0];
-    nombreProd.textContent = ejemplo.Nombre_Producto;
-    mainImg.src = ejemplo.Foto;
-
-    // Obtener precio base para este producto
-    const precioBaseVariante = ejemplo.Precio_Final;
-    
-    // Aplicar descuento automático inicial
-    const info = await aplicarDescuentoAutomatico(ejemplo.ID_Producto, precioBaseVariante);
-    
-    // Luego aplicar descuento seleccionado por el usuario si existe
-    if (seleccionActual.descuentoSeleccionado.valor > 0) {
-      const infoConDescuentoManual = aplicarDescuentoManual(
-        info.precioOriginal, 
-        seleccionActual.descuentoSeleccionado.tipo, 
-        seleccionActual.descuentoSeleccionado.valor
-      );
-      actualizarPrecioVisual(infoConDescuentoManual.precioFinal, infoConDescuentoManual.precioOriginal, infoConDescuentoManual.descuento);
-    } else {
-      actualizarPrecioVisual(info.precioFinal, info.precioOriginal, info.descuento);
-    }
-
-    opciones.forEach(opt => {
-      const btn = document.createElement('button');
-      btn.type = 'button';
-      btn.className = 'chip';
-      btn.textContent = opt.N_Talla;
-
-      btn.dataset.idProducto = opt.ID_Producto;
-      btn.dataset.idTalla = opt.ID_Talla;
-      btn.dataset.tipo = 'variante';
-      btn.dataset.cantidad = opt.Cantidad || 0;
-
-      if (opt.Cantidad <= 0) {
-        btn.classList.add('disabled');
-        btn.disabled = true;
-        btn.innerHTML += ' <small class="ms-1 text-muted">(Agotado)</small>';
-      } else {
-        btn.addEventListener('click', (ev) => seleccionarTallaVariante(ev, opt, colorId));
-      }
-
-      tallaContainer.appendChild(btn);
-    });
-  }
-
-  function limpiarSeleccionTalla() {
-    formIdTalla.value = '';
-    formIdProducto.value = productoBase.id;
-    seleccionActual.tallaSeleccionada = false;
-    seleccionActual.stockDisponible = 0;
-    stockInfo.textContent = '';
-    cantidadInput.removeAttribute('max');
-    actualizarBotonCarrito();
-  }
-
-  async function seleccionarTallaBase(ev, talla) {
-    document.querySelectorAll('#talla-container .chip').forEach(c => c.classList.remove('active'));
-    ev.currentTarget.classList.add('active');
-
-    formIdProducto.value = talla.ID_Producto;
-    formIdColor.value = 'base';
-    formIdTalla.value = talla.ID_Talla;
-    formTipo.value = 'base';
-  
-    if (favIdProd) favIdProd.value = talla.ID_Producto;
-
-    seleccionActual.tallaSeleccionada = true;
-    seleccionActual.stockDisponible = parseInt(talla.Cantidad, 10);
-    seleccionActual.tipoActual = 'base';
-
-    // Obtener precio base
-    const precioBase = productoBase.precio;
-    
-    // Aplicar descuento automático
-    const info = await aplicarDescuentoAutomatico(talla.ID_Producto, precioBase);
-    
-    // Luego aplicar descuento seleccionado por el usuario si existe
-    if (seleccionActual.descuentoSeleccionado.valor > 0) {
-      const infoConDescuentoManual = aplicarDescuentoManual(
-        info.precioOriginal, 
-        seleccionActual.descuentoSeleccionado.tipo, 
-        seleccionActual.descuentoSeleccionado.valor
-      );
-      actualizarPrecioVisual(infoConDescuentoManual.precioFinal, infoConDescuentoManual.precioOriginal, infoConDescuentoManual.descuento);
-    } else {
-      actualizarPrecioVisual(info.precioFinal, info.precioOriginal, info.descuento);
-    }
-
-    actualizarInfoStock(seleccionActual.stockDisponible);
-    actualizarBotonCarrito();
-    verificarEstadoFavorito();
-  }
-
-  async function seleccionarTallaVariante(ev, opcion, colorId) {
-    document.querySelectorAll('#talla-container .chip').forEach(c => c.classList.remove('active'));
-    ev.currentTarget.classList.add('active');
-
-    formIdProducto.value = opcion.ID_Producto;
-    formIdColor.value = colorId;
-    formIdTalla.value = opcion.ID_Talla;
-    formTipo.value = 'variante';
-  
-    if (favIdProd) favIdProd.value = opcion.ID_Producto;
-
-    mainImg.src = opcion.Foto;
-    nombreProd.textContent = `${opcion.Nombre_Producto}`;
-
-    seleccionActual.tallaSeleccionada = true;
-    seleccionActual.stockDisponible = parseInt(opcion.Cantidad, 10);
-    seleccionActual.tipoActual = 'variante';
-
-    // Obtener precio base para esta variante
-    const precioBaseVariante = opcion.Precio_Final;
-    
-    // Aplicar descuento automático
-    const info = await aplicarDescuentoAutomatico(opcion.ID_Producto, precioBaseVariante);
-    
-    // Luego aplicar descuento seleccionado por el usuario si existe
-    if (seleccionActual.descuentoSeleccionado.valor > 0) {
-      const infoConDescuentoManual = aplicarDescuentoManual(
-        info.precioOriginal, 
-        seleccionActual.descuentoSeleccionado.tipo, 
-        seleccionActual.descuentoSeleccionado.valor
-      );
-      actualizarPrecioVisual(infoConDescuentoManual.precioFinal, infoConDescuentoManual.precioOriginal, infoConDescuentoManual.descuento);
-    } else {
-      actualizarPrecioVisual(info.precioFinal, info.precioOriginal, info.descuento);
-    }
-
-    actualizarInfoStock(seleccionActual.stockDisponible);
-    actualizarBotonCarrito();
-    verificarEstadoFavorito();
-  }
-
-  // ---------- COLORES ----------
-  colorChips.forEach(chip => {
-    chip.addEventListener('click', async () => {
-      colorChips.forEach(c => c.classList.remove('active'));
-      chip.classList.add('active');
-
-      const id = chip.dataset.id;
-      seleccionActual.colorId = id;
-
-      const colorDot = chip.querySelector('.color-dot');
-      const nColor = chip.dataset.nombre;
-      const codigoHex = chip.dataset.hex || '#ccc';
-
-      formIdColor.value = id;
-      formNColor.value = nColor;
-      formCodigoHex.value = codigoHex;
-
-      mainImg.src = chip.dataset.foto;
-      nombreProd.textContent = chip.dataset.nombre;
-
-      limpiarSeleccionTalla();
-
-      if (chip.dataset.base === "1") {
-        const precioBase = productoBase.precio;
-        const info = await aplicarDescuentoAutomatico(productoBase.id, precioBase);
-        
-        // Aplicar descuento seleccionado si existe
-        if (seleccionActual.descuentoSeleccionado.valor > 0) {
-          const infoConDescuentoManual = aplicarDescuentoManual(
-            info.precioOriginal, 
-            seleccionActual.descuentoSeleccionado.tipo, 
-            seleccionActual.descuentoSeleccionado.valor
-          );
-          actualizarPrecioVisual(infoConDescuentoManual.precioFinal, infoConDescuentoManual.precioOriginal, infoConDescuentoManual.descuento);
-        } else {
-          actualizarPrecioVisual(info.precioFinal, info.precioOriginal, info.descuento);
-        }
-        
-        renderTallasBase();
-      } else {
-        await renderTallasVariantes(id);
-      }
-
-      setTimeout(verificarEstadoFavorito, 100);
-    });
-  });
-
   // ---------- CANTIDAD ----------
   cantidadInput.addEventListener('input', () => {
     const val = cantidadInput.value.replace(/\D+/g, '');
@@ -649,22 +907,27 @@ document.addEventListener("DOMContentLoaded", () => {
     if (n > 1) setCantidad(n - 1);
   });
 
-  // ---------- CARRITO ----------
-  btnAddCart.addEventListener('click', () => {
+  // ---------- CARRITO CON AJAX ----------
+  btnAddCart.addEventListener('click', async () => {
     if (!usuarioLogueado) {
       return Swal.fire({
         icon: 'info',
         title: 'Inicia sesión',
         text: 'Debes iniciar sesión para agregar productos al carrito.',
         confirmButtonText: 'Ir al login'
-      }).then(() => window.location.href = `${baseUrl}?c=Usuario&a=login`);
+      }).then((result) => {
+        if (result.isConfirmed) {
+          window.location.href = `${baseUrl}?c=Usuario&a=login`;
+        }
+      });
     }
 
-    if (!seleccionActual.tallaSeleccionada) {
+    if (!seleccionActual.varianteSeleccionada) {
       return Swal.fire({
         icon: 'warning',
-        title: 'Selecciona talla',
-        text: 'Debes elegir una talla antes de agregar al carrito.'
+        title: 'Selecciona opciones',
+        text: 'Debes elegir todas las opciones antes de agregar al carrito.',
+        confirmButtonText: 'Entendido'
       });
     }
 
@@ -673,57 +936,112 @@ document.addEventListener("DOMContentLoaded", () => {
       return Swal.fire({
         icon: 'error',
         title: 'Stock insuficiente',
-        text: `Solo hay ${seleccionActual.stockDisponible} unidades disponibles.`
+        text: `Solo hay ${seleccionActual.stockDisponible} unidades disponibles.`,
+        confirmButtonText: 'Entendido'
       });
     }
 
-    formCantidad.value = qty;
-    formPrecioFinal.value = seleccionActual.precioFinal;
+    // Loading
+    const originalText = btnAddCart.innerHTML;
+    btnAddCart.disabled = true;
+    btnAddCart.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Agregando...';
 
-    // Mostrar resumen del descuento aplicado
-    let mensajeDescuento = '';
-    if (seleccionActual.descuentoSeleccionado.valor > 0) {
-      const valorMostrar = seleccionActual.descuentoSeleccionado.tipo === 'Porcentaje' 
-        ? seleccionActual.descuentoSeleccionado.valor + '%' 
-        : '$' + new Intl.NumberFormat('es-CO').format(seleccionActual.descuentoSeleccionado.valor);
-      
-      mensajeDescuento = `<br><small>Descuento aplicado: <strong>${seleccionActual.descuentoSeleccionado.codigo}</strong> (${valorMostrar})</small>`;
+    try {
+      console.log('🛒 Enviando al carrito:', {
+        productoId: seleccionActual.productoId,
+        precioFinal: seleccionActual.precioFinal,
+        esGratis: seleccionActual.precioFinal === 0
+      });
+
+      // ✅ ENVÍO SIMPLE QUE FUNCIONA
+      const params = new URLSearchParams();
+      params.append('id_producto', seleccionActual.productoId);
+      params.append('id_articulo', document.querySelector('input[name="id_articulo"]').value);
+      params.append('cantidad', qty);
+      params.append('precio_final', seleccionActual.precioFinal);
+      params.append('tipo', 'variante');
+
+      // ✅ Asegurar que también se pasen los datos del descuento
+      params.append('codigo_descuento', seleccionActual.descuentoSeleccionado.codigo || '');
+      params.append('tipo_descuento', seleccionActual.descuentoSeleccionado.tipo || '');
+      params.append('valor_descuento', seleccionActual.descuentoSeleccionado.valor || 0);
+      params.append('id_descuento', seleccionActual.descuentoSeleccionado.idDescuento || '');
+
+      const response = await fetch(`${baseUrl}?c=Carrito&a=agregarAjax&${params.toString()}`, {
+        method: 'GET' // ✅ USAR GET QUE SÍ FUNCIONA
+      });
+
+      const result = await response.json();
+
+      if (result.success) {
+        // ✅ ÉXITO
+        await Swal.fire({
+          icon: 'success',
+          title: '✅ ¡Agregado al carrito!',
+          html: `
+            <div class="text-start">
+              <p><strong>${productoBase.nombre}</strong></p>
+              <p>Cantidad: <strong>${qty}</strong></p>
+              <p>Precio: <strong>$${new Intl.NumberFormat('es-CO').format(seleccionActual.precioFinal)}</strong></p>
+            </div>
+          `,
+          showConfirmButton: true,
+          confirmButtonText: 'Seguir comprando',
+          showCancelButton: true,
+          cancelButtonText: 'Ver carrito'
+        }).then((result) => {
+          if (result.dismiss === Swal.DismissReason.cancel) {
+            window.location.href = `${baseUrl}?c=Carrito&a=carrito`;
+          }
+        });
+
+      } else {
+        throw new Error(result.message);
+      }
+
+    } catch (error) {
+      Swal.fire({
+        icon: 'error',
+        title: 'Error',
+        text: error.message
+      });
+    } finally {
+      btnAddCart.disabled = false;
+      btnAddCart.innerHTML = originalText;
     }
-
-    Swal.fire({
-      icon: 'success',
-      title: 'Producto agregado 🛒',
-      html: `Precio final: <strong>$${new Intl.NumberFormat('es-CO').format(seleccionActual.precioFinal)}</strong>${mensajeDescuento}`,
-      showConfirmButton: false,
-      timer: 1500
-    }).then(() => {
-      document.getElementById('add-cart-form').submit();
-    });
   });
 
   // ---------- INICIALIZACIÓN ----------
   async function inicializar() {
     actualizarEstadoFavorito(seleccionActual.esFavorito);
     setupFavoritosAJAX();
-    inicializarSelectorDescuentos();
+    inicializarSistemaDescuentos();  // Cambiado de inicializarSelectorDescuentos()
+    inicializarSelectoresAtributos();
   
     setCantidad(1);
 
-    // Aplicar descuento inicial
-    const infoInicial = await aplicarDescuentoAutomatico(productoBase.id, productoBase.precio);
-    actualizarPrecioVisual(infoInicial.precioFinal, infoInicial.precioOriginal, infoInicial.descuento);
-
-    const chipBase = document.querySelector('#color-container .chip[data-base="1"]');
-    if (chipBase) {
-      await chipBase.click();
-    } else if (colorChips.length > 0) {
-      await colorChips[0].click();
-    } else {
-      renderTallasBase();
-    }
+    // Mostrar mensaje inicial
+    stockInfo.textContent = 'Selecciona todas las opciones';
+    stockInfo.className = 'text-muted';
+    btnAddCart.disabled = true;
+    btnAddCart.innerHTML = '<i class="fa fa-shopping-cart"></i> Selecciona todas las opciones';
 
     setTimeout(verificarEstadoFavorito, 300);
   }
+
+  // 🔍 DEBUG: Verificar datos del producto
+  function debugProducto() {
+      console.log('=== DEBUG PRODUCTO ===');
+      console.log('Precio base del producto:', productoBase.precio);
+      console.log('Variantes disponibles:', variantes.length);
+      console.log('Primera variante:', variantes[0]);
+      console.log('Info descuento:', infoDescuento);
+      console.log('Todos descuentos:', todosDescuentos);
+      console.log('======================');
+  }
+
+  // Llamar al debug después de inicializar
+  setTimeout(debugProducto, 1000);
 
   inicializar();
 });
