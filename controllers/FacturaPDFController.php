@@ -35,14 +35,34 @@ class FacturaPDFController {
 
             $items = $this->compra->obtenerFacturaItems($id);
 
-            // Preparar items para el PDF
+            // ✅ PREPARAR ITEMS PARA EL PDF CON ATRIBUTOS DINÁMICOS
             $itemsParaPdf = [];
             foreach ($items as $item) {
+                // ✅ USAR EL MÉTODO AUXILIAR PARA OBTENER ESPECIFICACIONES
+                $especificaciones = $this->formatearEspecificacionesItem($item);
+                
+                // ✅ CREAR ESPECIFICACIONES CLARAS
+                $especificacionesStr = '';
+                
+                // Construir especificaciones limpias
+                foreach ($especificaciones as $esp) {
+                    if (!empty($esp)) {
+                        if (!empty($especificacionesStr)) {
+                            $especificacionesStr .= ' | ';
+                        }
+                        $especificacionesStr .= $esp;
+                    }
+                }
+                
+                // Si no hay especificaciones, usar "—"
+                if (empty($especificacionesStr)) {
+                    $especificacionesStr = '—';
+                }
+                
                 $itemsParaPdf[] = [
-                    'Nombre_Producto' => $item['Nombre_Producto'] ?? $item['N_Articulo'] ?? 'Producto',
-                    'Producto' => $item['Nombre_Producto'] ?? $item['N_Articulo'] ?? 'Producto',
-                    'Color' => $item['N_Color'] ?? 'No especificado',
-                    'Talla' => $item['N_Talla'] ?? 'Única',
+                    'Nombre_Producto' => $item['Nombre_Final'] ?? $item['N_Articulo'] ?? 'Producto',
+                    'Producto' => $item['Nombre_Final'] ?? $item['N_Articulo'] ?? 'Producto',
+                    'Especificaciones' => $especificacionesStr,  // ✅ SOLO ESTE CAMPO
                     'Cantidad' => (int)($item['Cantidad'] ?? 1),
                     'Precio_Unitario' => floatval($item['Precio_Unitario'] ?? $item['Subtotal'] / max(1, $item['Cantidad'])),
                     'Precio' => floatval($item['Precio_Unitario'] ?? $item['Subtotal'] / max(1, $item['Cantidad'])),
@@ -105,6 +125,29 @@ class FacturaPDFController {
             error_log("Error generando PDF: " . $e->getMessage());
             $this->redirigirConError($id, 'Error al generar el PDF');
         }
+    }
+
+    // ✅ MÉTODO AUXILIAR PARA FORMATEAR ATRIBUTOS (COPIADO DE Compra.php)
+    private function formatearEspecificacionesItem($item) {
+        $especificaciones = [];
+        
+        // Verificar si hay atributos dinámicos
+        if (!empty($item['ID_Atributo1']) && !empty($item['ValorAtributo1'])) {
+            $nombre = !empty($item['Nombre_Atributo1']) ? $item['Nombre_Atributo1'] : 'Especificación';
+            $especificaciones[] = $nombre . ': ' . $item['ValorAtributo1'];
+        }
+        
+        if (!empty($item['ID_Atributo2']) && !empty($item['ValorAtributo2'])) {
+            $nombre = !empty($item['Nombre_Atributo2']) ? $item['Nombre_Atributo2'] : 'Especificación';
+            $especificaciones[] = $nombre . ': ' . $item['ValorAtributo2'];
+        }
+        
+        if (!empty($item['ID_Atributo3']) && !empty($item['ValorAtributo3'])) {
+            $nombre = !empty($item['Nombre_Atributo3']) ? $item['Nombre_Atributo3'] : 'Especificación';
+            $especificaciones[] = $nombre . ': ' . $item['ValorAtributo3'];
+        }
+        
+        return $especificaciones;
     }
 
     private function redirigirInicio() {

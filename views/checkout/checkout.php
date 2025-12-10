@@ -199,44 +199,59 @@ include "views/layout/nav.php";
             </div>
 
 
-            <!-- ======================
-                 RESUMEN
-            ======================= -->
+            <!-- RESUMEN -->
             <div class="col-md-5">
-
                 <div class="card card-summary mb-4">
                     <div class="card-header bg-dark text-white"><strong>Resumen de compra</strong></div>
                     <div class="card-body">
-
                         <?php
                         $total = 0;
                         foreach ($carrito as $item):
                             $subtotal = $item['Precio'] * $item['Cantidad'];
                             $total += $subtotal;
+                            
+                            // Preparar especificaciones
+                            $especificaciones = [];
+                            
+                            // Usar atributos dinámicos si existen
+                            if (!empty($item['Atributos'])) {
+                                foreach ($item['Atributos'] as $atributo) {
+                                    if (!empty($atributo['nombre']) && !empty($atributo['valor'])) {
+                                        $especificaciones[] = $atributo['nombre'] . ': ' . $atributo['valor'];
+                                    }
+                                }
+                            }
+                            // Fallback a atributos básicos
+                            else {
+                                if (!empty($item['ValorAtributo1'])) $especificaciones[] = $item['ValorAtributo1'];
+                                if (!empty($item['ValorAtributo2'])) $especificaciones[] = $item['ValorAtributo2'];
+                                if (!empty($item['ValorAtributo3'])) $especificaciones[] = $item['ValorAtributo3'];
+                            }
+                            
+                            $especificacionesStr = !empty($especificaciones) ? implode(' | ', $especificaciones) : 'Sin especificaciones';
                         ?>
-                        <div class="d-flex justify-content-between border-bottom py-2">
-                            <div>
-                                <strong><?= $item['N_Articulo'] ?></strong><br>
-                                <small><?= $item['N_Color'] ?> | <?= $item['N_Talla'] ?></small><br>
-                                <small>Cant: <?= $item['Cantidad'] ?></small>
+                            <div class="d-flex justify-content-between border-bottom py-2">
+                                <div>
+                                    <strong><?= htmlspecialchars($item['N_Articulo']) ?></strong><br>
+                                    <small class="text-muted"><?= $especificacionesStr ?></small><br>
+                                    <small>Cant: <?= $item['Cantidad'] ?></small>
+                                </div>
+                                <div class="text-end">
+                                    $<?= number_format($subtotal, 0, ',', '.') ?>
+                                </div>
                             </div>
-                            <div class="text-end">
-                                $<?= number_format($subtotal,0,',','.') ?>
-                            </div>
-                        </div>
                         <?php endforeach; ?>
-
+                        
                         <div class="d-flex justify-content-between mt-3">
                             <h5>Total:</h5>
-                            <h5 class="text-success">$<?= number_format($total,0,',','.') ?></h5>
+                            <h5 class="text-success">$<?= number_format($total, 0, ',', '.') ?></h5>
                         </div>
-
+                        
                         <button class="btn btn-dark w-100 mt-4">Pagar ahora</button>
-
                     </div>
                 </div>
-
             </div>
+
         </div>
 
     </form>

@@ -56,8 +56,7 @@ body { font-family: DejaVu Sans, sans-serif; font-size: 12px; color:#222; }
 <thead>
 <tr>
     <th>Producto</th>
-    <th>Color</th>
-    <th>Talla</th>
+    <th>Especificaciones</th>
     <th>Cantidad</th>
     <th>Precio Unit.</th>
     <th>Subtotal</th>
@@ -69,15 +68,41 @@ body { font-family: DejaVu Sans, sans-serif; font-size: 12px; color:#222; }
 $totalGeneral = 0;
 foreach ($items as $it): 
     // CALCULAR PRECIOS CORRECTAMENTE
-    $precioUnitario = floatval($it['Precio_Unitario'] ?? $it['PrecioUnit'] ?? $it['Precio'] ?? 0);
+    $precioUnitario = floatval($it['Precio_Unitario'] ?? $it['Precio'] ?? 0);
     $cantidad = intval($it['Cantidad'] ?? 1);
     $subtotal = floatval($it['Subtotal'] ?? ($precioUnitario * $cantidad));
     $totalGeneral += $subtotal;
+    
+    // ✅ SIMPLIFICADO: USAR SOLO LAS ESPECIFICACIONES COMPLETAS
+    $especificacionesMostrar = '';
+    
+    // Si tiene Color y no es "No especificado", mostrarlo
+    if (!empty($it['Color']) && $it['Color'] !== 'No especificado') {
+        $especificacionesMostrar = $it['Color'];
+        
+        // Si también tiene Talla específica, agregarla
+        if (!empty($it['Talla']) && $it['Talla'] !== 'Única' && $it['Talla'] !== '—') {
+            $especificacionesMostrar .= ' | Talla: ' . $it['Talla'];
+        }
+    }
+    
+    // ✅ PARA PRODUCTOS COMO PERFUME: Usar el campo Especificaciones
+    if (empty($especificacionesMostrar) && !empty($it['Especificaciones'])) {
+        $especificacionesMostrar = $it['Especificaciones'];
+    }
+    
+    // ✅ LIMPIAR EL "| —" que aparece
+    $especificacionesMostrar = str_replace(' | —', '', $especificacionesMostrar);
+    $especificacionesMostrar = str_replace('— | ', '', $especificacionesMostrar);
+    
+    // Si aún está vacío, mostrar "—"
+    if (empty($especificacionesMostrar) || trim($especificacionesMostrar) === '—') {
+        $especificacionesMostrar = '—';
+    }
 ?>
 <tr>
-    <td><?= htmlspecialchars($it['Nombre_Producto'] ?? $it['Producto'] ?? $it['N_Articulo'] ?? 'Producto') ?></td>
-    <td><?= htmlspecialchars($it['Color'] ?? $it['N_Color'] ?? '') ?></td>
-    <td><?= htmlspecialchars($it['Talla'] ?? $it['N_Talla'] ?? '') ?></td>
+    <td><?= htmlspecialchars($it['Nombre_Producto'] ?? $it['Producto'] ?? 'Producto') ?></td>
+    <td><?= htmlspecialchars($especificacionesMostrar) ?></td>
     <td><?= $cantidad ?></td>
     <td>$<?= number_format($precioUnitario, 0, ',', '.') ?></td>
     <td>$<?= number_format($subtotal, 0, ',', '.') ?></td>

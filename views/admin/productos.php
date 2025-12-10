@@ -93,7 +93,7 @@
                         <i class="fas fa-power-off me-1 text-success"></i>Estado
                     </label>
                     <select name="estado" class="form-select">
-                        <option value="" disabled selected>Todos los estados</option>
+                        <option value="">Todos los estados</option>
                         <option value="1" <?= ($filtrosAplicados['estado'] ?? '') === '1' ? 'selected' : '' ?>>Activos</option>
                         <option value="0" <?= ($filtrosAplicados['estado'] ?? '') === '0' ? 'selected' : '' ?>>Inactivos</option>
                     </select>
@@ -198,7 +198,7 @@
         </div>
     <?php endif; ?>
 
-    <!-- TABLA DE PRODUCTOS MEJORADA -->
+    <!-- TABLA DE PRODUCTOS -->
     <div class="card border-0 shadow-lg">
         <div class="card-header bg-light py-3">
             <div class="d-flex justify-content-between align-items-center">
@@ -221,11 +221,8 @@
                                 <th width="120">Categoría</th>
                                 <th width="120">SubCategoría</th>
                                 <th width="100">Género</th>
-                                <th width="100">Color Base</th>
-                                <th width="100">Talla Base</th>
                                 <th width="100">Foto</th>
                                 <th width="100" class="text-center">Precio Base</th>
-                                <th width="100" class="text-center">Cantidad</th>
                                 <th width="100" class="text-center">Estado</th>
                                 <th width="180" class="text-center">Acciones</th>
                             </tr>
@@ -255,16 +252,6 @@
                                         </span>
                                     </td>
                                     <td>
-                                        <span class="badge bg-secondary bg-opacity-10 text-secondary border border-secondary border-opacity-25">
-                                            <?= htmlspecialchars($a['N_Color'] ?? 'N/A'); ?>
-                                        </span>
-                                    </td>
-                                    <td>
-                                        <span class="badge bg-dark bg-opacity-10 text-dark border border-dark border-opacity-25">
-                                            <?= htmlspecialchars($a['N_Talla'] ?? 'N/A'); ?>
-                                        </span>
-                                    </td>
-                                    <td>
                                         <?php
                                             $foto = trim($a['Foto'] ?? '');
                                             if ($foto !== '') {
@@ -277,24 +264,14 @@
                                             }
                                         ?>
                                         <img src="<?= htmlspecialchars($rutaFoto); ?>"
-                                             class="img-thumbnail rounded-3 shadow-sm"
-                                             style="width:80px; height:60px; object-fit:cover;"
-                                             alt="<?= htmlspecialchars($a['N_Articulo']); ?>">
+                                            class="img-thumbnail rounded-3 shadow-sm"
+                                            style="width:80px; height:60px; object-fit:cover;"
+                                            alt="<?= htmlspecialchars($a['N_Articulo']); ?>">
                                     </td>
                                     <td class="text-center">
                                         <span class="fw-bold text-success">
                                             $<?= number_format($a['PrecioBase'] ?? 0, 2) ?>
                                         </span>
-                                    </td>
-                                    <td class="text-center">
-                                        <span class="fw-bold <?= $a['Cantidad'] > 0 ? 'text-primary' : 'text-danger' ?>">
-                                            <?= (int)$a['Cantidad'] ?>
-                                        </span>
-                                        <?php if ($a['Cantidad'] == 0): ?>
-                                            <br><small class="text-danger">Sin stock</small>
-                                        <?php elseif ($a['Cantidad'] < 10): ?>
-                                            <br><small class="text-warning">Stock bajo</small>
-                                        <?php endif; ?>
                                     </td>
                                     <td class="text-center">
                                         <span class="badge bg-<?= !empty($a['Activo']) ? 'success' : 'secondary'; ?> rounded-pill">
@@ -304,22 +281,22 @@
                                     <td>
                                         <div class="d-flex justify-content-center gap-1">
                                             <a class="btn btn-sm btn-outline-primary rounded-pill"
-                                               href="<?= BASE_URL; ?>?c=Admin&a=productoForm&id=<?= (int)$a['ID_Articulo']; ?>"
-                                               title="Editar producto"
-                                               data-bs-toggle="tooltip">
+                                            href="<?= BASE_URL; ?>?c=Admin&a=productoForm&id=<?= (int)$a['ID_Articulo']; ?>"
+                                            title="Editar producto"
+                                            data-bs-toggle="tooltip">
                                                 <i class="fas fa-edit"></i>
                                             </a>
                                             <a class="btn btn-sm btn-outline-info rounded-pill"
-                                               href="<?= BASE_URL; ?>?c=Admin&a=detalleProducto&id=<?= (int)$a['ID_Articulo']; ?>"
-                                               title="Ver detalle y variantes"
-                                               data-bs-toggle="tooltip">
+                                            href="<?= BASE_URL; ?>?c=Admin&a=detalleProducto&id=<?= (int)$a['ID_Articulo']; ?>"
+                                            title="Ver detalle y variantes"
+                                            data-bs-toggle="tooltip">
                                                 <i class="fas fa-eye"></i>
                                             </a>
                                             <a class="btn btn-sm btn-outline-danger rounded-pill"
-                                               href="<?= BASE_URL; ?>?c=Admin&a=deleteProducto&id=<?= (int)$a['ID_Articulo']; ?>"
-                                               onclick="return confirm('¿Estás seguro de eliminar este producto y todas sus variantes?');"
-                                               title="Eliminar producto"
-                                               data-bs-toggle="tooltip">
+                                            href="<?= BASE_URL; ?>?c=Admin&a=deleteProducto&id=<?= (int)$a['ID_Articulo']; ?>"
+                                            onclick="return confirm('¿Estás seguro de eliminar este producto y todas sus variantes?');"
+                                            title="Eliminar producto"
+                                            data-bs-toggle="tooltip">
                                                 <i class="fas fa-trash-alt"></i>
                                             </a>
                                         </div>

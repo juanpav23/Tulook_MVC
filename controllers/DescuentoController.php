@@ -227,17 +227,17 @@ class DescuentoController {
                     p.ID_Producto,
                     p.Nombre_Producto,
                     a.N_Articulo,
-                    t.N_Talla,
-                    c.N_Color,
+                    av1.Valor as Talla,
+                    av2.Valor as Color,
                     CONCAT(a.N_Articulo, ' - ', 
-                           COALESCE(c.N_Color, ''), ' ', 
-                           COALESCE(t.N_Talla, '')) as Nombre_Completo
-                  FROM producto p
-                  INNER JOIN articulo a ON p.ID_Articulo = a.ID_Articulo
-                  LEFT JOIN talla t ON p.ID_Talla = t.ID_Talla
-                  LEFT JOIN color c ON p.ID_Color = c.ID_Color
-                  WHERE a.Activo = 1
-                  ORDER BY a.N_Articulo, c.N_Color, t.N_Talla";
+                        COALESCE(av2.Valor, ''), ' ', 
+                        COALESCE(av1.Valor, '')) as Nombre_Completo
+                FROM producto p
+                INNER JOIN articulo a ON p.ID_Articulo = a.ID_Articulo
+                LEFT JOIN atributo_valor av1 ON p.ValorAtributo1 = av1.Valor AND av1.ID_TipoAtributo = 1
+                LEFT JOIN atributo_valor av2 ON p.ValorAtributo2 = av2.Valor AND av2.ID_TipoAtributo = 2
+                WHERE a.Activo = 1
+                ORDER BY a.N_Articulo, av2.Valor, av1.Valor";
         
         $stmt = $this->db->prepare($query);
         $stmt->execute();

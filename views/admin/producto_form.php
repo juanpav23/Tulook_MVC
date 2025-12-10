@@ -5,13 +5,13 @@
     </h2>
 
     <!-- Mensajes de sesión -->
-    <?php if (isset($_SESSION['msg'])): ?>
-        <div class="alert alert-<?= $_SESSION['msg_type'] ?? 'info' ?> alert-dismissible fade show shadow-sm">
-            <i class="fas <?= $_SESSION['msg_type'] === 'success' ? 'fa-check-circle' : 'fa-info-circle' ?>"></i>
-            <?= $_SESSION['msg'] ?>
+    <?php if (isset($tieneVariantes) && $tieneVariantes): ?>
+        <div class="alert alert-warning alert-dismissible fade show shadow-sm">
+            <i class="fas fa-exclamation-triangle"></i>
+            <strong>Producto con variantes:</strong> La categoría, subcategoría y género están bloqueadas porque este producto ya tiene variantes creadas. 
+            Solo puedes modificar el nombre, precio, imagen y estado.
             <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
         </div>
-        <?php unset($_SESSION['msg'], $_SESSION['msg_type']); ?>
     <?php endif; ?>
 
     <!-- Contenedor de mensajes en tiempo real -->
@@ -41,9 +41,12 @@
                         <div class="row">
                             <!-- Categoría -->
                             <div class="col-md-4 mb-3">
-                                <label class="form-label fw-bold">Categoría *</label>
-                                <select name="ID_Categoria" class="form-select" required id="ID_Categoria">
-                                    <option value="" disabled selected>Seleccionar...</option>
+                                <label class="form-label fw-bold">Categoría <?= $tieneVariantes ? '<span class="text-muted">(Bloqueado)</span>' : '*'; ?></label>
+                                <select name="ID_Categoria" class="form-select" required id="ID_Categoria" 
+                                        <?= $tieneVariantes ? 'disabled' : '' ?>>
+                                    <option value="" disabled selected>
+                                        <?= $tieneVariantes ? 'Bloqueado - Producto tiene variantes' : 'Seleccionar...' ?>
+                                    </option>
                                     <?php foreach ($categorias as $cat): ?>
                                         <option value="<?= $cat['ID_Categoria'] ?>" 
                                             <?= (isset($articulo['ID_Categoria']) && $articulo['ID_Categoria'] == $cat['ID_Categoria']) ? 'selected' : '' ?>>
@@ -51,13 +54,19 @@
                                         </option>
                                     <?php endforeach; ?>
                                 </select>
+                                <?php if ($tieneVariantes): ?>
+                                    <input type="hidden" name="ID_Categoria" value="<?= $articulo['ID_Categoria'] ?? '' ?>">
+                                <?php endif; ?>
                             </div>
 
                             <!-- Género -->
                             <div class="col-md-4 mb-3">
-                                <label class="form-label fw-bold">Género *</label>
-                                <select name="ID_Genero" class="form-select" required id="ID_Genero">
-                                    <option value="" disabled selected>Seleccionar...</option>
+                                <label class="form-label fw-bold">Género <?= $tieneVariantes ? '<span class="text-muted">(Bloqueado)</span>' : '*'; ?></label>
+                                <select name="ID_Genero" class="form-select" required id="ID_Genero" 
+                                        <?= $tieneVariantes ? 'disabled' : '' ?>>
+                                    <option value="" disabled selected>
+                                        <?= $tieneVariantes ? 'Bloqueado - Producto tiene variantes' : 'Seleccionar...' ?>
+                                    </option>
                                     <?php foreach ($generos as $g): ?>
                                         <option value="<?= $g['ID_Genero'] ?>" 
                                             <?= (isset($articulo['ID_Genero']) && $articulo['ID_Genero'] == $g['ID_Genero']) ? 'selected' : '' ?>>
@@ -65,13 +74,19 @@
                                         </option>
                                     <?php endforeach; ?>
                                 </select>
+                                <?php if ($tieneVariantes): ?>
+                                    <input type="hidden" name="ID_Genero" value="<?= $articulo['ID_Genero'] ?? '' ?>">
+                                <?php endif; ?>
                             </div>
 
                             <!-- Subcategoría -->
                             <div class="col-md-4 mb-3">
-                                <label class="form-label fw-bold">Subcategoría *</label>
-                                <select name="ID_SubCategoria" class="form-select" required id="ID_SubCategoria" disabled>
-                                    <option value="" disabled selected>Primero selecciona categoría y género</option>
+                                <label class="form-label fw-bold">Subcategoría <?= $tieneVariantes ? '<span class="text-muted">(Bloqueado)</span>' : '*'; ?></label>
+                                <select name="ID_SubCategoria" class="form-select" required id="ID_SubCategoria" 
+                                        <?= $tieneVariantes ? 'disabled' : '' ?>>
+                                    <option value="" disabled selected>
+                                        <?= $tieneVariantes ? 'Bloqueado - Producto tiene variantes' : 'Primero selecciona categoría y género' ?>
+                                    </option>
                                     <?php if (isset($articulo['ID_SubCategoria'])): ?>
                                         <?php foreach ($subcats as $sub): ?>
                                             <option value="<?= $sub['ID_SubCategoria'] ?>" 
@@ -81,17 +96,20 @@
                                         <?php endforeach; ?>
                                     <?php endif; ?>
                                 </select>
+                                <?php if ($tieneVariantes): ?>
+                                    <input type="hidden" name="ID_SubCategoria" value="<?= $articulo['ID_SubCategoria'] ?? '' ?>">
+                                <?php endif; ?>
                                 <div id="loadingSubcategorias" class="spinner-border spinner-border-sm text-primary d-none mt-1" role="status">
                                     <span class="visually-hidden">Cargando...</span>
                                 </div>
-                                <small class="form-text text-muted" id="subcategoriaInfo">
-                                    Selecciona categoría y género para ver las subcategorías disponibles
+                                <small class="form-text <?= $tieneVariantes ? 'text-danger fw-bold' : 'text-muted' ?>" id="subcategoriaInfo">
+                                    <?= $tieneVariantes ? 'Este producto tiene variantes. No se pueden modificar categorías.' : 'Selecciona categoría y género para ver las subcategorías disponibles' ?>
                                 </small>
                             </div>
                         </div>
 
                         <div class="row">
-                            <div class="col-md-4 mb-3">
+                            <div class="col-md-6 mb-3">
                                 <label class="form-label fw-bold">Precio Base *</label>
                                 <select name="ID_Precio" class="form-select" required>
                                     <option value="" disabled selected>Seleccionar...</option>
@@ -104,47 +122,15 @@
                                 </select>
                             </div>
 
-                            <div class="col-md-4 mb-3">
-                                <label class="form-label fw-bold">Color Base *</label>
-                                <select name="ID_Color" class="form-select" required>
-                                    <option value="" disabled selected>Seleccionar...</option>
-                                    <?php foreach ($colors as $c): ?>
-                                        <option value="<?= $c['ID_Color'] ?>" 
-                                            <?= (isset($articulo['ID_Color']) && $articulo['ID_Color'] == $c['ID_Color']) ? 'selected' : '' ?>>
-                                            <?= htmlspecialchars($c['N_Color']) ?>
-                                        </option>
-                                    <?php endforeach; ?>
-                                </select>
-                            </div>
-
-                            <div class="col-md-4 mb-3">
-                                <label class="form-label fw-bold">Talla Base *</label>
-                                <select name="ID_Talla" class="form-select" required>
-                                    <option value="" disabled selected>Seleccionar...</option>
-                                    <?php foreach ($tallas as $t): ?>
-                                        <option value="<?= $t['ID_Talla'] ?>" 
-                                            <?= (isset($articulo['ID_Talla']) && $articulo['ID_Talla'] == $t['ID_Talla']) ? 'selected' : '' ?>>
-                                            <?= htmlspecialchars($t['N_Talla']) ?>
-                                        </option>
-                                    <?php endforeach; ?>
-                                </select>
-                            </div>
-                        </div>
-
-                        <div class="row">
-                            <div class="col-md-6 mb-3">
-                                <label class="form-label fw-bold">Cantidad en Stock *</label>
-                                <input type="number" name="Cantidad" class="form-control" min="0" required
-                                    value="<?= htmlspecialchars($articulo['Cantidad'] ?? '0') ?>" 
-                                    placeholder="Ej: 20">
-                            </div>
-
                             <div class="col-md-6 mb-3">
                                 <div class="form-check mt-4">
                                     <input type="checkbox" name="Activo" class="form-check-input" id="activo"
                                         <?= (isset($articulo['Activo']) && $articulo['Activo'] == 1) ? 'checked' : '' ?>>
                                     <label class="form-check-label fw-bold" for="activo">Producto Activo</label>
                                 </div>
+                                <small class="form-text text-muted">
+                                    Los colores y tallas se definen en las variantes del producto.
+                                </small>
                             </div>
                         </div>
                     </div>
@@ -327,6 +313,41 @@ select option[disabled][selected] {
     content: " *";
     color: #dc3545;
 }
+
+/* Estilos para campos bloqueados */
+select:disabled, select.bg-light {
+    background-color: #f8f9fa !important;
+    color: #6c757d !important;
+    border-color: #dee2e6 !important;
+    cursor: not-allowed !important;
+    opacity: 0.7 !important;
+}
+
+/* Indicador visual para campos bloqueados */
+.field-blocked {
+    position: relative;
+}
+
+.field-blocked::after {
+    content: "🔒";
+    position: absolute;
+    right: 35px;
+    top: 50%;
+    transform: translateY(-50%);
+    font-size: 1.2em;
+    z-index: 100;
+}
+
+/* Para el select bloqueado */
+select.field-blocked {
+    padding-right: 60px;
+}
+
+/* Estilo para mensajes de bloqueo */
+.text-danger.fw-bold {
+    font-weight: 700 !important;
+    color: #dc3545 !important;
+}
 </style>
 
 <!-- SCRIPT DE VALIDACIÓN Y SISTEMA DE SUBIDA DE IMÁGENES -->
@@ -364,7 +385,46 @@ function validarCampoEnTiempoReal(campo, mensaje) {
 
 // ===== FUNCIONES PARA MANEJO DE SELECTS =====
 function configurarSelects() {
-    // Configurar todos los selects para deshabilitar y seleccionar la opción "Seleccionar..."
+    // Verificar si el producto tiene variantes
+    const tieneVariantes = <?= isset($tieneVariantes) && $tieneVariantes ? 'true' : 'false' ?>;
+    
+    if (tieneVariantes) {
+        console.log('🚫 Producto tiene variantes - Bloques activados');
+        
+        // IDs de selects a bloquear
+        const selectsBloqueados = ['ID_Categoria', 'ID_Genero', 'ID_SubCategoria'];
+        
+        selectsBloqueados.forEach(id => {
+            const select = document.getElementById(id);
+            if (select) {
+                // Deshabilitar select
+                select.disabled = true;
+                
+                // Agregar estilos visuales claros
+                select.classList.add('bg-light', 'text-muted', 'field-blocked');
+                select.style.cursor = 'not-allowed';
+                select.style.opacity = '0.7';
+                
+                // Crear un clon limpio sin event listeners
+                const newSelect = select.cloneNode(true);
+                select.parentNode.replaceChild(newSelect, select);
+                
+                // Agregar atributos de solo lectura
+                newSelect.setAttribute('readonly', 'readonly');
+                newSelect.setAttribute('aria-disabled', 'true');
+                
+                // Mensaje claro en el select
+                const defaultOption = newSelect.querySelector('option[disabled][selected]');
+                if (defaultOption) {
+                    defaultOption.textContent = 'Bloqueado - Producto tiene variantes';
+                }
+            }
+        });
+        
+        return;
+    }
+    
+    // Configurar normalmente solo si NO tiene variantes
     const selects = document.querySelectorAll('select');
     selects.forEach(select => {
         // Agregar evento change para validación
@@ -386,12 +446,6 @@ function configurarSelects() {
                     case 'ID_Precio':
                         message = 'Precio base seleccionado correctamente';
                         break;
-                    case 'ID_Color':
-                        message = 'Color base seleccionado correctamente';
-                        break;
-                    case 'ID_Talla':
-                        message = 'Talla base seleccionada correctamente';
-                        break;
                     default:
                         message = 'Opción seleccionada correctamente';
                 }
@@ -400,46 +454,36 @@ function configurarSelects() {
             }
         });
     });
-    
-    // Configurar validación para campo de texto
-    const nombreInput = document.getElementById('N_Articulo');
-    nombreInput.addEventListener('input', function() {
-        if (this.value.trim()) {
-            validarCampoEnTiempoReal(this, 'Nombre del producto válido');
-        }
-    });
-    
-    // Configurar validación para cantidad
-    const cantidadInput = document.querySelector('input[name="Cantidad"]');
-    cantidadInput.addEventListener('input', function() {
-        if (this.value && this.value > 0) {
-            validarCampoEnTiempoReal(this, 'Cantidad establecida');
-        }
-    });
-    
-    // Configurar validación para nombre de archivo
-    const nombreArchivoInput = document.getElementById('nombreArchivo');
-    nombreArchivoInput.addEventListener('input', function() {
-        if (this.value.trim()) {
-            validarCampoEnTiempoReal(this, 'Nombre de archivo válido');
-        }
-    });
 }
 
 // ===== FUNCIONES PARA CARGA DINÁMICA DE SUBCATEGORÍAS =====
 function verificarYCargarSubcategorias() {
-    const categoria = document.getElementById('ID_Categoria').value;
-    const genero = document.getElementById('ID_Genero').value;
+    const tieneVariantes = <?= isset($tieneVariantes) && $tieneVariantes ? 'true' : 'false' ?>;
+    
+    if (tieneVariantes) {
+        console.log('🚫 Producto tiene variantes - Subcategorías no se cargan');
+        return;
+    }
+    
+    const categoriaSelect = document.getElementById('ID_Categoria');
+    const generoSelect = document.getElementById('ID_Genero');
+    const subcategoriaSelect = document.getElementById('ID_SubCategoria');
+    
+    const categoria = categoriaSelect.value;
+    const genero = generoSelect.value;
     
     if (categoria && genero) {
         console.log('Cargando subcategorías para:', { categoria, genero });
         cargarSubcategorias(categoria, genero);
     } else {
         // Si falta categoría o género, deshabilitar subcategoría
-        const subcategoriaSelect = document.getElementById('ID_SubCategoria');
         subcategoriaSelect.innerHTML = '<option value="" disabled selected>Selecciona categoría y género primero</option>';
         subcategoriaSelect.disabled = true;
-        document.getElementById('subcategoriaInfo').textContent = 'Selecciona categoría y género para ver las subcategorías disponibles';
+        const infoElement = document.getElementById('subcategoriaInfo');
+        if (infoElement) {
+            infoElement.textContent = 'Selecciona categoría y género para ver las subcategorías disponibles';
+            infoElement.className = 'form-text text-muted';
+        }
         
         actualizarBadges();
         generarRutaCompleta();
@@ -447,6 +491,13 @@ function verificarYCargarSubcategorias() {
 }
 
 function cargarSubcategorias(idCategoria, idGenero) {
+    const tieneVariantes = <?= isset($tieneVariantes) && $tieneVariantes ? 'true' : 'false' ?>;
+    
+    if (tieneVariantes) {
+        console.log('🚫 Producto tiene variantes - No se cargan subcategorías');
+        return;
+    }
+    
     const subcategoriaSelect = document.getElementById('ID_SubCategoria');
     const loadingElement = document.getElementById('loadingSubcategorias');
     const infoElement = document.getElementById('subcategoriaInfo');
@@ -672,80 +723,80 @@ function mostrarMensaje(tipo, texto) {
     console.log('Mensaje:', texto);
 }
 
+// ===== INICIALIZACIÓN PRINCIPAL =====
 document.addEventListener('DOMContentLoaded', function() {
     console.log('✅ Script cargado correctamente');
+    
+    const tieneVariantes = <?= isset($tieneVariantes) && $tieneVariantes ? 'true' : 'false' ?>;
     
     // Cargar datos iniciales si estamos editando
     <?php if (isset($articulo)): ?>
     console.log('📦 Cargando datos del producto para edición');
     
-    // Forzar la carga de subcategorías si ya tenemos categoría y género
-    const categoriaInicial = document.getElementById('ID_Categoria').value;
-    const generoInicial = document.getElementById('ID_Genero').value;
-    
-    if (categoriaInicial && generoInicial) {
-        console.log('🔄 Cargando subcategorías iniciales...');
-        setTimeout(() => {
-            cargarSubcategorias(categoriaInicial, generoInicial);
-        }, 500);
+    // Solo cargar subcategorías si NO tiene variantes
+    if (!tieneVariantes) {
+        const categoriaInicial = document.getElementById('ID_Categoria').value;
+        const generoInicial = document.getElementById('ID_Genero').value;
+        
+        if (categoriaInicial && generoInicial) {
+            console.log('🔄 Cargando subcategorías iniciales...');
+            setTimeout(() => {
+                cargarSubcategorias(categoriaInicial, generoInicial);
+            }, 500);
+        }
+    } else {
+        console.log('🚫 Producto con variantes - Subcategorías no se recargan');
     }
     <?php endif; ?>
     
-    // Configurar selects
+    // Configurar selects (incluye bloqueo si tiene variantes)
     configurarSelects();
     
-    // Inicializar badges y previsualizaciones con valores actuales
-    actualizarBadges();
-    generarRutaCompleta();
-    
-    // Escuchar cambios en categoría y género para cargar subcategorías
-    document.getElementById('ID_Categoria').addEventListener('change', function() {
-        console.log('Categoría cambiada:', this.value);
-        verificarYCargarSubcategorias();
+    // Solo configurar event listeners si NO tiene variantes
+    if (!tieneVariantes) {
+        // Escuchar cambios en categoría y género para cargar subcategorías
+        document.getElementById('ID_Categoria').addEventListener('change', function() {
+            console.log('Categoría cambiada:', this.value);
+            verificarYCargarSubcategorias();
+            
+            // Validación en tiempo real
+            if (this.value) {
+                validarCampoEnTiempoReal(this, 'Categoría seleccionada correctamente');
+            }
+        });
         
-        // Validación en tiempo real
-        if (this.value) {
-            validarCampoEnTiempoReal(this, 'Categoría seleccionada correctamente');
-        }
-    });
-    
-    document.getElementById('ID_Genero').addEventListener('change', function() {
-        console.log('Género cambiado:', this.value);
-        verificarYCargarSubcategorias();
+        document.getElementById('ID_Genero').addEventListener('change', function() {
+            console.log('Género cambiado:', this.value);
+            verificarYCargarSubcategorias();
+            
+            // Validación en tiempo real
+            if (this.value) {
+                validarCampoEnTiempoReal(this, 'Género seleccionado correctamente');
+            }
+        });
         
-        // Validación en tiempo real
-        if (this.value) {
-            validarCampoEnTiempoReal(this, 'Género seleccionado correctamente');
-        }
-    });
-    
-    document.getElementById('ID_SubCategoria').addEventListener('change', function() {
-        console.log('Subcategoría cambiada:', this.value);
+        document.getElementById('ID_SubCategoria').addEventListener('change', function() {
+            console.log('Subcategoría cambiada:', this.value);
+            actualizarBadges();
+            generarRutaCompleta();
+            
+            // Validación en tiempo real
+            if (this.value) {
+                validarCampoEnTiempoReal(this, 'Subcategoría seleccionada correctamente');
+            }
+        });
+    } else {
+        console.log('🚫 Event listeners desactivados - Producto tiene variantes');
+        
+        // Forzar badges con valores actuales
         actualizarBadges();
         generarRutaCompleta();
-        
-        // Validación en tiempo real
-        if (this.value) {
-            validarCampoEnTiempoReal(this, 'Subcategoría seleccionada correctamente');
-        }
-    });
+    }
     
     // Escuchar cambios en otros selects importantes
     document.querySelector('select[name="ID_Precio"]').addEventListener('change', function() {
         if (this.value) {
             validarCampoEnTiempoReal(this, 'Precio base seleccionado correctamente');
-        }
-    });
-    
-    document.querySelector('select[name="ID_Color"]').addEventListener('change', function() {
-        if (this.value) {
-            validarCampoEnTiempoReal(this, 'Color base seleccionado correctamente');
-        }
-    });
-    
-    document.querySelector('select[name="ID_Talla"]').addEventListener('change', function() {
-        if (this.value) {
-            validarCampoEnTiempoReal(this, 'Talla base seleccionada correctamente');
         }
     });
     
@@ -778,13 +829,7 @@ document.addEventListener('DOMContentLoaded', function() {
                         message = 'Subcategoría seleccionada correctamente';
                         break;
                     case 'ID_Precio':
-                        message = 'Precio base seleccionado correctamente';
-                        break;
-                    case 'ID_Color':
-                        message = 'Color base seleccionado correctamente';
-                        break;
-                    case 'ID_Talla':
-                        message = 'Talla base seleccionada correctamente';
+                        message = 'Precio base seleccionada correctamente';
                         break;
                 }
                 if (message) {
@@ -799,12 +844,6 @@ document.addEventListener('DOMContentLoaded', function() {
             validarCampoEnTiempoReal(nombreInput, 'Nombre del producto válido');
         }
         
-        // Validar cantidad si ya existe
-        const cantidadInput = document.querySelector('input[name="Cantidad"]');
-        if (cantidadInput.value && cantidadInput.value > 0) {
-            validarCampoEnTiempoReal(cantidadInput, 'Cantidad establecida');
-        }
-        
         // Validar nombre de archivo si ya existe
         const nombreArchivoInput = document.getElementById('nombreArchivo');
         if (nombreArchivoInput.value.trim()) {
@@ -813,23 +852,42 @@ document.addEventListener('DOMContentLoaded', function() {
     }, 500);
 });
 
-// Validación del formulario
+// ===== VALIDACIÓN DEL FORMULARIO AL ENVIAR =====
 document.getElementById('formProducto').onsubmit = function(e) {
+    const tieneVariantes = <?= isset($tieneVariantes) && $tieneVariantes ? 'true' : 'false' ?>;
+    
+    // Si tiene variantes, validar que no se hayan modificado los campos bloqueados
+    if (tieneVariantes) {
+        const categoriaOriginal = '<?= $articulo['ID_Categoria'] ?? '' ?>';
+        const generoOriginal = '<?= $articulo['ID_Genero'] ?? '' ?>';
+        const subcategoriaOriginal = '<?= $articulo['ID_SubCategoria'] ?? '' ?>';
+        
+        const categoriaActual = document.getElementById('ID_Categoria').value;
+        const generoActual = document.getElementById('ID_Genero').value;
+        const subcategoriaActual = document.getElementById('ID_SubCategoria').value;
+        
+        if (categoriaOriginal !== categoriaActual || 
+            generoOriginal !== generoActual || 
+            subcategoriaOriginal !== subcategoriaActual) {
+            
+            e.preventDefault();
+            mostrarMensaje('danger', '❌ No se pueden modificar la categoría, género o subcategoría porque este producto tiene variantes creadas.');
+            return false;
+        }
+    }
+    
     const categoria = document.getElementById('ID_Categoria').value;
     const genero = document.getElementById('ID_Genero').value;
     const subcategoria = document.getElementById('ID_SubCategoria').value;
     const precio = document.querySelector('select[name="ID_Precio"]').value;
-    const color = document.querySelector('select[name="ID_Color"]').value;
-    const talla = document.querySelector('select[name="ID_Talla"]').value;
-    const cantidad = document.querySelector('input[name="Cantidad"]').value;
     const nombre = document.getElementById('N_Articulo').value;
     const imagenInput = document.getElementById('imagenProducto');
     const fotoFinal = document.getElementById('fotoFinal').value;
     const nombreArchivo = document.getElementById('nombreArchivo').value;
     
     console.log('Validando formulario...', { 
-        categoria, genero, subcategoria, precio, color, talla, cantidad, 
-        nombre, fotoFinal, nombreArchivo 
+        categoria, genero, subcategoria, precio, nombre, 
+        fotoFinal, nombreArchivo 
     });
     
     // Limpiar mensajes anteriores
@@ -856,24 +914,6 @@ document.getElementById('formProducto').onsubmit = function(e) {
     
     if (!precio) {
         mostrarMensaje('danger', '⚠️ Debes seleccionar un precio base.');
-        e.preventDefault();
-        return false;
-    }
-    
-    if (!color) {
-        mostrarMensaje('danger', '⚠️ Debes seleccionar un color base.');
-        e.preventDefault();
-        return false;
-    }
-    
-    if (!talla) {
-        mostrarMensaje('danger', '⚠️ Debes seleccionar una talla base.');
-        e.preventDefault();
-        return false;
-    }
-    
-    if (!cantidad || cantidad < 0) {
-        mostrarMensaje('danger', '⚠️ La cantidad en stock es obligatoria y debe ser mayor o igual a 0.');
         e.preventDefault();
         return false;
     }

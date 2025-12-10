@@ -217,6 +217,22 @@ $tipoUsuario = $esAdministrador ? 'Administrador' : ($esEditor ? 'Editor' : 'Usu
                   </a>
               </li>
 
+              <!-- Gestión de Atributos (Admin y Editor) -->
+              <li class="nav-item mb-1">
+                  <a class="nav-link <?php echo ($_GET['c'] ?? '') === 'Atributo' ? 'active' : ''; ?>" 
+                    href="<?php echo BASE_URL; ?>?c=Atributo&a=index">
+                      <i class="fas fa-list-alt me-2"></i> Gestión de Atributos
+                  </a>
+              </li>
+
+              <!-- Gestión de Colores (Admin y Editor) -->
+              <li class="nav-item mb-1">
+                  <a class="nav-link <?php echo ($_GET['c'] ?? '') === 'Color' ? 'active' : ''; ?>" 
+                    href="<?php echo BASE_URL; ?>?c=Color&a=index">
+                      <i class="fas fa-palette me-2"></i> Gestión de Colores
+                  </a>
+              </li>
+
               <!-- Gestión de Precios (Admin y Editor) -->
               <li class="nav-item mb-1">
                   <a class="nav-link <?php echo ($_GET['c'] ?? '') === 'Precio' ? 'active' : ''; ?>" 
@@ -234,11 +250,28 @@ $tipoUsuario = $esAdministrador ? 'Administrador' : ($esEditor ? 'Editor' : 'Usu
                   </a>
               </li>
               <li class="nav-item mb-1">
-               <a class="nav-link <?php echo ($_GET['c'] ?? '') === 'Descuento' ? 'active' : ''; ?>" 
-                href="<?php echo BASE_URL; ?>?c=Descuento&a=index">
-                <i class="fas fa-tag me-2"></i> Descuentos
+                <a class="nav-link <?php echo ($_GET['c'] ?? '') === 'Descuento' ? 'active' : ''; ?>" 
+                  href="<?php echo BASE_URL; ?>?c=Descuento&a=index">
+                    <i class="fas fa-tag me-2"></i> Descuentos
                 </a>
               </li>
+
+              <!-- Gestión de Pedidos (Admin y Editor) -->
+              <li class="nav-item mb-1">
+                  <a class="nav-link <?php echo ($_GET['c'] ?? '') === 'Pedido' && ($_GET['a'] ?? 'index') === 'index' ? 'active' : ''; ?>" 
+                    href="<?php echo BASE_URL; ?>?c=Pedido&a=index">
+                      <i class="fas fa-shopping-cart me-2"></i> Gestión de Pedidos
+                  </a>
+              </li>
+
+              <!-- Pedidos Enviados (para seguimiento) -->
+              <li class="nav-item mb-1">
+                  <a class="nav-link <?php echo ($_GET['c'] ?? '') === 'Pedido' && ($_GET['a'] ?? '') === 'enviados' ? 'active' : ''; ?>" 
+                    href="<?php echo BASE_URL; ?>?c=Pedido&a=enviados">
+                      <i class="fas fa-truck me-2"></i> Pedidos Enviados
+                  </a>
+              </li>
+
               <!-- Separador sutil SOLO para administradores -->
               <li class="nav-item my-2">
                   <hr style="border-color: rgba(255,255,255,0.08); margin: 8px 0;">
@@ -322,30 +355,55 @@ $tipoUsuario = $esAdministrador ? 'Administrador' : ($esEditor ? 'Editor' : 'Usu
                   'cambiarEstado' => 'talla/index.php'
               ],
               'Precio' => [
-                'index' => 'precio/index.php',
-                'crear' => 'precio/form.php',
-                'editar' => 'precio/form.php',
-                'guardar' => 'precio/index.php',
-                'actualizar' => 'precio/index.php',
-                'cambiarEstado' => 'precio/index.php',
-                'limpiarDuplicados' => 'precio/index.php',
-                'duplicados' => 'precio/duplicados.php'
+                  'index' => 'precio/index.php',
+                  'crear' => 'precio/form.php',
+                  'editar' => 'precio/form.php',
+                  'guardar' => 'precio/index.php',
+                  'actualizar' => 'precio/index.php',
+                  'cambiarEstado' => 'precio/index.php',
+                  'limpiarDuplicados' => 'precio/index.php',
+                  'duplicados' => 'precio/duplicados.php'
               ],
               'Descuento' => [
-                'index' => 'descuentos/index.php',
-                'crear' => 'descuentos/crear.php',
-                'editar' => 'descuentos/editar.php',
-                'ver' => 'descuentos/ver.php',
-                'guardar' => 'descuentos/index.php',
-                'actualizar' => 'descuentos/index.php',
-                'eliminar' => 'descuentos/index.php'
+                  'index' => 'descuentos/index.php',
+                  'crear' => 'descuentos/crear.php',
+                  'editar' => 'descuentos/editar.php',
+                  'ver' => 'descuentos/ver.php',
+                  'guardar' => 'descuentos/index.php',
+                  'actualizar' => 'descuentos/index.php',
+                  'eliminar' => 'descuentos/index.php'
               ],
               'UsuarioAdmin' => [
-                'index' => 'usuario/index.php',
-                'crear' => 'usuario/form.php',
-                'guardar' => 'usuario/index.php',
-                'cambiarEstado' => 'usuario/index.php',
-                'cambiarRol' => 'usuario/index.php'
+                  'index' => 'usuario/index.php',
+                  'crear' => 'usuario/form.php',
+                  'guardar' => 'usuario/index.php',
+                  'cambiarEstado' => 'usuario/index.php',
+                  'cambiarRol' => 'usuario/index.php'
+              ],
+              'Atributo' => [
+                  'index' => 'atributo/index.php',
+                  'crear' => 'atributo/form.php',
+                  'editar' => 'atributo/form.php',
+                  'detalle' => 'atributo/detalle.php',
+                  'guardar' => 'atributo/index.php',
+                  'actualizar' => 'atributo/index.php',
+                  'cambiarEstado' => 'atributo/index.php'
+              ],
+              'Color' => [
+                  'index' => 'colores/index.php',
+                  'crear' => 'colores/crear.php',
+                  'editar' => 'colores/editar.php',
+                  'detalle' => 'colores/detalle.php',
+                  'guardar' => 'colores/index.php',
+                  'actualizar' => 'colores/index.php',
+                  'eliminar' => 'colores/index.php'
+              ],
+              'Pedido' => [
+                  'index' => 'pedidos/index.php',
+                  'enviados' => 'pedidos/enviados.php',
+                  'detalle' => 'pedidos/detalle.php',
+                  'reporte' => 'pedidos/reporte.php',
+                  'envioRapido' => 'pedidos/generar_envio.php'
               ],
               'FavoritoStats' => [ 
                   'index' => 'favoritos/index.php',

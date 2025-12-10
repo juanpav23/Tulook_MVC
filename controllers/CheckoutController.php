@@ -37,7 +37,6 @@ class CheckoutController {
 
     // =============== PROCESAR COMPRA ================
     public function procesar() {
-
         if (!isset($_SESSION['ID_Usuario'])) {
             header("Location: " . BASE_URL . "?c=Usuario&a=login");
             exit;
@@ -54,7 +53,6 @@ class CheckoutController {
 
         // ---------------- DIRECCIÓN ----------------
         if (!empty($_POST['crear_direccion'])) {
-
             $direccion = trim($_POST['nueva_direccion']);
             $ciudad = trim($_POST['nueva_ciudad']);
             $departamento = trim($_POST['nueva_departamento']);
@@ -72,9 +70,7 @@ class CheckoutController {
             $stmt->execute([$id_usuario, $direccion, $ciudad, $departamento, $postal]);
 
             $direccion_id = $this->db->lastInsertId();
-
         } else {
-
             $direccion_id = $_POST['direccion'] ?? null;
 
             if (!$direccion_id) {
@@ -94,11 +90,6 @@ class CheckoutController {
         }
 
         // CONVERTIR NOMBRE DE MÉTODO A ID
-        $mp = new MetodoPago($this->db);
-        $metodos = $mp->obtenerMetodosPago();
-        $metodo_pago_id = null;
-
-        // Mapear nombres a IDs
         $metodos_map = [
             'Tarjeta' => 1,
             'Efectivo' => 2, 
@@ -113,13 +104,16 @@ class CheckoutController {
             exit;
         }
 
-        // ---------------- VALIDAR STOCK ----------------
+        // ---------------- VALIDAR STOCK - SOLO PRODUCTOS ----------------
         foreach ($carrito as $item) {
+            // Solo validar productos (variantes)
+            if (empty($item['ID_Producto'])) {
+                $_SESSION['mensaje_error'] = "❌ Error: Producto no válido en el carrito.";
+                header("Location: " . BASE_URL . "?c=Carrito&a=carrito");
+                exit;
+            }
 
-            $tipo = ($item['Tipo'] ?? 'variante') === 'base' ? 'base' : 'variante';
-            $id = $tipo === 'base' ? $item['ID_Articulo'] : $item['ID_Producto'];
-
-            if (!$this->compra->stockDisponible($id, $item['Cantidad'], $tipo)) {
+            if (!$this->compra->stockDisponible($item['ID_Producto'], $item['Cantidad'])) {
                 $_SESSION['mensaje_error'] = "❌ Stock insuficiente de: {$item['N_Articulo']}";
                 header("Location: " . BASE_URL . "?c=Carrito&a=carrito");
                 exit;
@@ -131,7 +125,6 @@ class CheckoutController {
         $itemsToSave = [];
 
         foreach ($carrito as $item) {
-
             $precioUnit = floatval($item['Precio']);
             $cant = intval($item['Cantidad']);
             $subtotal = $precioUnit * $cant;
@@ -139,8 +132,7 @@ class CheckoutController {
             $total += $subtotal;
 
             $itemsToSave[] = [
-                "ID_Producto" => $item["ID_Producto"] ?? null,
-                "ID_Articulo" => $item["ID_Articulo"] ?? null,
+                "ID_Producto" => $item["ID_Producto"],
                 "Cantidad" => $cant,
                 "Precio_Unitario" => $precioUnit,
                 "Subtotal" => $subtotal,
@@ -154,7 +146,7 @@ class CheckoutController {
         $id_factura = $this->compra->crearFactura(
             $id_usuario,
             $direccion_id,
-            $metodo_pago_id,  // ← USAR EL ID, NO EL NOMBRE
+            $metodo_pago_id,
             $total,
             $codigo_acceso
         );
@@ -165,24 +157,19 @@ class CheckoutController {
             exit;
         }
 
-        // ---------------- GUARDAR ITEMS ----------------
+        // ---------------- GUARDAR ITEMS - SOLO PRODUCTOS ----------------
         foreach ($itemsToSave as $i) {
-
             $this->compra->agregarItem(
                 $id_factura,
                 $i['ID_Producto'],
-                $i['ID_Articulo'],
                 $i['Cantidad'],
                 $i['Precio_Unitario'],
                 $i['Subtotal'],
                 $i['Descuento_Aplicado']
             );
 
-            if (!empty($i['ID_Producto'])) {
-                $this->compra->descontarStock($i['ID_Producto'], $i['Cantidad'], "variante");
-            } else {
-                $this->compra->descontarStock($i['ID_Articulo'], $i['Cantidad'], "base");
-            }
+            // Descontar stock del producto
+            $this->compra->descontarStock($i['ID_Producto'], $i['Cantidad']);
         }
 
         unset($_SESSION['carrito']);
@@ -194,12 +181,12 @@ class CheckoutController {
         $factura = $this->compra->obtenerFacturaDetalle($id_factura);
         $items = $this->compra->obtenerFacturaItems($id_factura);
 
-        // PREPARAR DATOS CORRECTAMENTE PARA EL PDF
+        // PREPARAR DATOS PARA EL PDF
         $itemsParaPdf = [];
         foreach ($items as $item) {
             $itemsParaPdf[] = [
-                'Nombre_Producto' => $item['Nombre_Producto'] ?? $item['N_Articulo'] ?? 'Producto',
-                'Producto' => $item['Nombre_Producto'] ?? $item['N_Articulo'] ?? 'Producto',
+                'Nombre_Producto' => $item['Nombre_Final'] ?? $item['N_Articulo'] ?? 'Producto',
+                'Producto' => $item['Nombre_Final'] ?? $item['N_Articulo'] ?? 'Producto',
                 'Color' => $item['N_Color'] ?? 'No especificado',
                 'Talla' => $item['N_Talla'] ?? 'Única',
                 'Cantidad' => (int)($item['Cantidad'] ?? 1),
@@ -218,26 +205,24 @@ class CheckoutController {
         
         $metodo_pago_nombre_pdf = $metodos_map_inverso[$factura['ID_Metodo_Pago']] ?? 'No especificado';
 
-        // En la parte de preparar datos para PDF, actualiza:
-$facturaParaPdf = [
-    'ID_Factura' => $factura['ID_Factura'] ?? $id_factura,
-    'Nombre_Cliente' => trim(($factura['Nombre'] ?? '') . ' ' . ($factura['Apellido'] ?? '')),
-    'Email_Cliente' => $factura['Correo'] ?? 'No especificado',
-    'Telefono_Cliente' => 'No especificado',
-    'Fecha_Factura' => $factura['Fecha_Factura'] ?? date('Y-m-d H:i:s'),
-    'Metodo_Pago' => $metodo_pago_nombre_pdf,
-    'Total' => floatval($factura['Monto_Total'] ?? 0),
-    'Direccion_Completa' => ($factura['Direccion'] ?? '') . ', ' . 
-                           ($factura['Ciudad'] ?? '') . ', ' . 
-                           ($factura['Departamento'] ?? ''),
-    // ✅ AGREGAR ESTOS CAMPOS
-    'CodigoPostal' => $factura['CodigoPostal'] ?? '155201',
-    'Nombre' => $factura['Nombre'] ?? '',
-    'Apellido' => $factura['Apellido'] ?? '',
-    'Correo' => $factura['Correo'] ?? '',
-    'Monto_Total' => $factura['Monto_Total'] ?? 0,
-    'T_Pago' => $metodo_pago_nombre_pdf
-];
+        $facturaParaPdf = [
+            'ID_Factura' => $factura['ID_Factura'] ?? $id_factura,
+            'Nombre_Cliente' => trim(($factura['Nombre'] ?? '') . ' ' . ($factura['Apellido'] ?? '')),
+            'Email_Cliente' => $factura['Correo'] ?? 'No especificado',
+            'Telefono_Cliente' => 'No especificado',
+            'Fecha_Factura' => $factura['Fecha_Factura'] ?? date('Y-m-d H:i:s'),
+            'Metodo_Pago' => $metodo_pago_nombre_pdf,
+            'Total' => floatval($factura['Monto_Total'] ?? 0),
+            'Direccion_Completa' => ($factura['Direccion'] ?? '') . ', ' . 
+                                ($factura['Ciudad'] ?? '') . ', ' . 
+                                ($factura['Departamento'] ?? ''),
+            'CodigoPostal' => $factura['CodigoPostal'] ?? '155201',
+            'Nombre' => $factura['Nombre'] ?? '',
+            'Apellido' => $factura['Apellido'] ?? '',
+            'Correo' => $factura['Correo'] ?? '',
+            'Monto_Total' => $factura['Monto_Total'] ?? 0,
+            'T_Pago' => $metodo_pago_nombre_pdf
+        ];
 
         $pdfTemp = $mailer->generarPdfFactura([
             "factura" => $facturaParaPdf,
@@ -248,7 +233,6 @@ $facturaParaPdf = [
         $nombre = trim($factura['Nombre'] . " " . $factura['Apellido']);
 
         if ($correo) {
-
             $send = $mailer->enviarFacturaConAdjunto(
                 $correo,
                 $nombre,
@@ -261,7 +245,6 @@ $facturaParaPdf = [
             } else {
                 $_SESSION["mensaje_ok"] = "✅ Compra realizada y correo enviado.";
             }
-
         } else {
             $_SESSION["mensaje_info"] = "⚠️ Compra realizada, pero el usuario no tiene correo registrado.";
         }

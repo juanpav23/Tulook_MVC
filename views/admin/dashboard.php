@@ -14,7 +14,7 @@ $stats = [
     // Estadísticas de productos
     'productos_activos' => (int)$this->db->query("SELECT COUNT(*) FROM articulo WHERE Activo = 1")->fetchColumn(),
     'productos_inactivos' => (int)$this->db->query("SELECT COUNT(*) FROM articulo WHERE Activo = 0")->fetchColumn(),
-    'stock_total' => (int)$this->db->query("SELECT SUM(Cantidad) FROM articulo")->fetchColumn(),
+    'stock_total' => (int)$this->db->query("SELECT SUM(Cantidad) FROM producto")->fetchColumn(),
     
     // Estadísticas de variantes
     'total_variantes' => (int)$this->db->query("SELECT COUNT(*) FROM producto")->fetchColumn(),
@@ -38,28 +38,28 @@ $stats = [
 
 // Obtener productos más populares (basado en stock y actividad)
 $productosPopulares = $this->db->query("
-    SELECT a.ID_Articulo, a.N_Articulo, a.Foto, a.Cantidad, a.Activo,
+    SELECT a.ID_Articulo, a.N_Articulo, a.Foto, a.Activo,
            c.N_Categoria, COUNT(p.ID_Producto) as total_variantes,
-           (a.Cantidad * COUNT(p.ID_Producto)) as score
+           COALESCE(SUM(p.Cantidad), 0) as stock_total
     FROM articulo a
     LEFT JOIN categoria c ON a.ID_Categoria = c.ID_Categoria
     LEFT JOIN producto p ON a.ID_Articulo = p.ID_Articulo
     WHERE a.Activo = 1
-    GROUP BY a.ID_Articulo, a.N_Articulo, a.Foto, a.Cantidad, a.Activo, c.N_Categoria
-    ORDER BY score DESC, a.Cantidad DESC
+    GROUP BY a.ID_Articulo, a.N_Articulo, a.Foto, a.Activo, c.N_Categoria
+    ORDER BY stock_total DESC
     LIMIT 1
 ")->fetch(PDO::FETCH_ASSOC);
 
 $productosMenosPopulares = $this->db->query("
-    SELECT a.ID_Articulo, a.N_Articulo, a.Foto, a.Cantidad, a.Activo,
+    SELECT a.ID_Articulo, a.N_Articulo, a.Foto, a.Activo,
            c.N_Categoria, COUNT(p.ID_Producto) as total_variantes,
-           (a.Cantidad * COUNT(p.ID_Producto)) as score
+           COALESCE(SUM(p.Cantidad), 0) as stock_total
     FROM articulo a
     LEFT JOIN categoria c ON a.ID_Categoria = c.ID_Categoria
     LEFT JOIN producto p ON a.ID_Articulo = p.ID_Articulo
     WHERE a.Activo = 1
-    GROUP BY a.ID_Articulo, a.N_Articulo, a.Foto, a.Cantidad, a.Activo, c.N_Categoria
-    ORDER BY score ASC, a.Cantidad ASC
+    GROUP BY a.ID_Articulo, a.N_Articulo, a.Foto, a.Activo, c.N_Categoria
+    ORDER BY stock_total ASC
     LIMIT 1
 ")->fetch(PDO::FETCH_ASSOC);
 
@@ -78,40 +78,42 @@ $ultimosProductos = $this->db->query("
     LIMIT 5
 ")->fetchAll(PDO::FETCH_ASSOC);
 
-// Obtener productos con stock bajo
+// Obtener productos con stock bajo (basado en variantes)
 $stockBajo = $this->db->query("
-    SELECT a.ID_Articulo, a.N_Articulo, a.Foto, a.Cantidad, a.Activo,
-           c.N_Categoria, COUNT(p.ID_Producto) as total_variantes
+    SELECT a.ID_Articulo, a.N_Articulo, a.Foto, a.Activo,
+           c.N_Categoria, COUNT(p.ID_Producto) as total_variantes,
+           COALESCE(SUM(p.Cantidad), 0) as stock_total
     FROM articulo a
     LEFT JOIN categoria c ON a.ID_Categoria = c.ID_Categoria
     LEFT JOIN producto p ON a.ID_Articulo = p.ID_Articulo
-    WHERE a.Cantidad <= 10 AND a.Cantidad > 0
-    GROUP BY a.ID_Articulo, a.N_Articulo, a.Foto, a.Cantidad, a.Activo, c.N_Categoria
-    ORDER BY a.Cantidad ASC
+    WHERE a.Activo = 1
+    GROUP BY a.ID_Articulo, a.N_Articulo, a.Foto, a.Activo, c.N_Categoria
+    HAVING stock_total <= 10 AND stock_total > 0
+    ORDER BY stock_total ASC
     LIMIT 5
 ")->fetchAll(PDO::FETCH_ASSOC);
 
 // Obtener productos sin stock
 $sinStock = $this->db->query("
-    SELECT a.ID_Articulo, a.N_Articulo, a.Foto, a.Cantidad,
-           c.N_Categoria, COUNT(p.ID_Producto) as total_variantes
+    SELECT a.ID_Articulo, a.N_Articulo, a.Foto,
+           c.N_Categoria, COUNT(p.ID_Producto) as total_variantes,
+           COALESCE(SUM(p.Cantidad), 0) as stock_total
     FROM articulo a
     LEFT JOIN categoria c ON a.ID_Categoria = c.ID_Categoria
     LEFT JOIN producto p ON a.ID_Articulo = p.ID_Articulo
-    WHERE a.Cantidad = 0
-    GROUP BY a.ID_Articulo, a.N_Articulo, a.Foto, a.Cantidad, c.N_Categoria
+    GROUP BY a.ID_Articulo, a.N_Articulo, a.Foto, c.N_Categoria
+    HAVING stock_total = 0
     ORDER BY a.N_Articulo ASC
     LIMIT 5
 ")->fetchAll(PDO::FETCH_ASSOC);
 
 // Obtener variantes más recientes
 $ultimasVariantes = $this->db->query("
-    SELECT p.ID_Producto, a.N_Articulo, col.N_Color, t.N_Talla, p.Cantidad,
-           p.Porcentaje, p.Nombre_Producto
+    SELECT p.ID_Producto, a.N_Articulo, 
+           p.ValorAtributo1, p.ValorAtributo2, p.ValorAtributo3,
+           p.Cantidad, p.Porcentaje, p.Nombre_Producto
     FROM producto p
     LEFT JOIN articulo a ON p.ID_Articulo = a.ID_Articulo
-    LEFT JOIN color col ON p.ID_Color = col.ID_Color
-    LEFT JOIN talla t ON p.ID_Talla = t.ID_Talla
     ORDER BY p.ID_Producto DESC
     LIMIT 5
 ")->fetchAll(PDO::FETCH_ASSOC);
@@ -134,6 +136,47 @@ $ultimasVariantes = $this->db->query("
         <div class="text-end">
             <small class="text-muted d-block">Usuario ID: <?php echo htmlspecialchars($_SESSION['ID_Usuario'] ?? '-'); ?></small>
             <small class="text-muted"><?php echo date('d/m/Y H:i:s'); ?></small>
+        </div>
+    </div>
+
+    <!-- RESUMEN DE ESTADISTICAS -->
+    <div class="row">
+        <div class="col-12">
+            <div class="card border-0 shadow-sm">
+                <div class="card-header bg-info text-white">
+                    <h5 class="mb-0">
+                        <i class="fas fa-chart-bar me-2"></i>Resumen del Sistema
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="row text-center">
+                        <div class="col-md-3 mb-3">
+                            <div class="border-end">
+                                <h4 class="text-primary fw-bold"><?= $stats['total_colores'] ?></h4>
+                                <small class="text-muted">Colores Disponibles</small>
+                            </div>
+                        </div>
+                        <div class="col-md-3 mb-3">
+                            <div class="border-end">
+                                <h4 class="text-success fw-bold"><?= $stats['total_tallas'] ?></h4>
+                                <small class="text-muted">Tallas Configuradas</small>
+                            </div>
+                        </div>
+                        <div class="col-md-3 mb-3">
+                            <div class="border-end">
+                                <h4 class="text-warning fw-bold"><?= $stats['total_precios'] ?></h4>
+                                <small class="text-muted">Precios Base</small>
+                            </div>
+                        </div>
+                        <div class="col-md-3 mb-3">
+                            <div>
+                                <h4 class="text-danger fw-bold"><?= $stats['variantes_sin_stock'] ?></h4>
+                                <small class="text-muted">Variantes Sin Stock</small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
         </div>
     </div>
 
@@ -390,8 +433,13 @@ $ultimasVariantes = $this->db->query("
                                         <div>
                                             <h6 class="mb-0"><?= htmlspecialchars($variante['N_Articulo']); ?></h6>
                                             <small class="text-muted">
-                                                <?= htmlspecialchars($variante['N_Color']); ?> • 
-                                                <?= htmlspecialchars($variante['N_Talla']); ?>
+                                                <?php
+                                                $atributos = [];
+                                                if (!empty($variante['ValorAtributo1'])) $atributos[] = $variante['ValorAtributo1'];
+                                                if (!empty($variante['ValorAtributo2'])) $atributos[] = $variante['ValorAtributo2'];
+                                                if (!empty($variante['ValorAtributo3'])) $atributos[] = $variante['ValorAtributo3'];
+                                                echo !empty($atributos) ? implode(' • ', $atributos) : 'Sin atributos';
+                                                ?>
                                                 <?php if (!empty($variante['Nombre_Producto'])): ?>
                                                     • <?= htmlspecialchars($variante['Nombre_Producto']); ?>
                                                 <?php endif; ?>
@@ -438,7 +486,7 @@ $ultimasVariantes = $this->db->query("
                                             <?= $producto['total_variantes'] ?> variantes
                                         </small>
                                     </div>
-                                    <span class="badge bg-warning"><?= $producto['Cantidad'] ?> unidades</span>
+                                    <span class="badge bg-warning"><?= $producto['stock_total'] ?> unidades</span>
                                 </div>
                             <?php endforeach; ?>
                         </div>
@@ -476,47 +524,6 @@ $ultimasVariantes = $this->db->query("
                     <?php else: ?>
                         <p class="text-muted text-center mb-0">✅ Todos los productos tienen stock</p>
                     <?php endif; ?>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- ESTADÍSTICAS ADICIONALES -->
-    <div class="row">
-        <div class="col-12">
-            <div class="card border-0 shadow-sm">
-                <div class="card-header bg-info text-white">
-                    <h5 class="mb-0">
-                        <i class="fas fa-chart-bar me-2"></i>Resumen del Sistema
-                    </h5>
-                </div>
-                <div class="card-body">
-                    <div class="row text-center">
-                        <div class="col-md-3 mb-3">
-                            <div class="border-end">
-                                <h4 class="text-primary fw-bold"><?= $stats['total_colores'] ?></h4>
-                                <small class="text-muted">Colores Disponibles</small>
-                            </div>
-                        </div>
-                        <div class="col-md-3 mb-3">
-                            <div class="border-end">
-                                <h4 class="text-success fw-bold"><?= $stats['total_tallas'] ?></h4>
-                                <small class="text-muted">Tallas Configuradas</small>
-                            </div>
-                        </div>
-                        <div class="col-md-3 mb-3">
-                            <div class="border-end">
-                                <h4 class="text-warning fw-bold"><?= $stats['total_precios'] ?></h4>
-                                <small class="text-muted">Precios Base</small>
-                            </div>
-                        </div>
-                        <div class="col-md-3 mb-3">
-                            <div>
-                                <h4 class="text-danger fw-bold"><?= $stats['variantes_sin_stock'] ?></h4>
-                                <small class="text-muted">Variantes Sin Stock</small>
-                            </div>
-                        </div>
-                    </div>
                 </div>
             </div>
         </div>

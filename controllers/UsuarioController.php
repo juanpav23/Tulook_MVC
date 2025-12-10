@@ -2,13 +2,13 @@
 // controllers/UsuarioController.php
 require_once "models/Usuario.php";
 require_once "models/Database.php";
+require_once "controllers/BaseController.php"; 
 
-class UsuarioController {
+class UsuarioController extends BaseController { 
     private $usuario;
-    private $db;
 
-    public function __construct() {
-        $this->db = (new Database())->getConnection();
+    public function __construct($db = null) {
+        parent::__construct($db); 
         $this->usuario = new Usuario($this->db);
         $this->iniciarSesion();
     }
@@ -119,6 +119,15 @@ class UsuarioController {
 
     // Registro de usuario (actualizado con validaciones específicas)
     public function registrar() {
+        // VERIFICACIÓN: Si el usuario ya está logueado, redirigir
+        if (isset($_SESSION['usuario'])) {
+            header("Cache-Control: no-cache, no-store, must-revalidate");
+            header("Pragma: no-cache");
+            header("Expires: 0");
+            header("Location: " . BASE_URL);
+            exit;
+        }
+
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             try {
                 // Sanitizar y validar datos
@@ -211,8 +220,19 @@ class UsuarioController {
         }
     }
 
-    // Login (actualizado con validaciones específicas)
+    // Login
     public function login() {
+        // NUEVA VERIFICACIÓN: Si el usuario ya está logueado, redirigir
+        if (isset($_SESSION['usuario'])) {
+            // Redirección según el rol
+            if (isset($_SESSION['rol']) && $_SESSION['rol'] == 1) { // Administrador
+                header("Location: " . BASE_URL . "?c=Admin&a=index");
+            } else {
+                header("Location: " . BASE_URL);
+            }
+            exit;
+        }
+        
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             try {
                 $correo = filter_var($_POST['Correo'] ?? '', FILTER_SANITIZE_EMAIL);
@@ -262,6 +282,7 @@ class UsuarioController {
                     $_SESSION['Nombre'] = $user['Nombre'];
                     $_SESSION['Apellido'] = $user['Apellido'];
                     $_SESSION['Nombre_Completo'] = $user['Nombre'] . ' ' . $user['Apellido'];
+                    $_SESSION['login_time'] = time();
 
                     // Obtener nombre del rol
                     $stmtRol = $this->db->prepare("SELECT Roles FROM rol WHERE ID_Rol = ?");
@@ -269,15 +290,20 @@ class UsuarioController {
                     $rolName = $stmtRol->fetchColumn();
                     $_SESSION['RolName'] = $rolName;
 
-                    // Redirección según el rol
+                    // PREVENIR CACHE EN LA REDIRECCIÓN
+                    header("Cache-Control: no-cache, no-store, must-revalidate");
+                    header("Pragma: no-cache");
+                    header("Expires: 0");
+                    
+                    // Redirección con parámetro único para evitar cache
+                    $randomParam = 't=' . time() . '&r=' . rand(1000, 9999);
+                    
                     if (strtolower($rolName) === 'administrador') {
-                        header("Location: " . BASE_URL . "?c=Admin&a=index");
-                        exit;
+                        header("Location: " . BASE_URL . "?c=Admin&a=index&" . $randomParam);
                     } else {
-                        header("Location: " . BASE_URL);
-                        exit;
+                        header("Location: " . BASE_URL . "?" . $randomParam);
                     }
-
+                    exit;
                 } else {
                     $this->mostrarError("Contraseña incorrecta. Verifique sus credenciales.");
                 }
@@ -286,18 +312,33 @@ class UsuarioController {
                 $this->mostrarError("Error interno del sistema: " . $e->getMessage());
             }
         } else {
-            // Mostrar formulario de login
-            $tipo_docs = $this->usuario->getTipoDocumentos();
-            
-            // Determinar si debemos mostrar el formulario de registro automáticamente
-            $mostrarRegistro = isset($_SESSION['mostrar_registro']) ? $_SESSION['mostrar_registro'] : false;
-            if (isset($_SESSION['mostrar_registro'])) {
-                unset($_SESSION['mostrar_registro']);
+        // NUEVA VERIFICACIÓN: Si el usuario ya está logueado, redirigir (para GET también)
+        if (isset($_SESSION['usuario'])) {
+            if (isset($_SESSION['rol']) && $_SESSION['rol'] == 1) { // Administrador
+                header("Location: " . BASE_URL . "?c=Admin&a=index");
+            } else {
+                header("Location: " . BASE_URL);
             }
-            
-            include "views/usuario/login.php";
+            exit;
         }
+        
+        // HEADERS PARA PREVENIR CACHE
+        header("Cache-Control: no-cache, no-store, must-revalidate");
+        header("Pragma: no-cache");
+        header("Expires: 0");
+        
+        // Mostrar formulario de login
+        $tipo_docs = $this->usuario->getTipoDocumentos();
+        
+        // Determinar si debemos mostrar el formulario de registro automáticamente
+        $mostrarRegistro = isset($_SESSION['mostrar_registro']) ? $_SESSION['mostrar_registro'] : false;
+        if (isset($_SESSION['mostrar_registro'])) {
+            unset($_SESSION['mostrar_registro']);
+        }
+        
+        include "views/usuario/login.php";
     }
+}
 
     public function logout() {
         session_unset();
@@ -614,4 +655,25 @@ private function obtenerMensajes() {
                 exit;
             }
         }
+
+        public function checkAuthStatus() {
+            // Headers para prevenir cache
+            header("Cache-Control: no-cache, no-store, must-revalidate");
+            header("Pragma: no-cache");
+            header("Expires: 0");
+            header('Content-Type: application/json');
+            
+            if (session_status() === PHP_SESSION_NONE) {
+                session_start();
+            }
+            
+            $loggedIn = isset($_SESSION['ID_Usuario']) && !empty($_SESSION['ID_Usuario']);
+            
+            echo json_encode([
+                'loggedIn' => $loggedIn,
+                'timestamp' => time()
+            ]);
+            exit;
+        }
+
     }
