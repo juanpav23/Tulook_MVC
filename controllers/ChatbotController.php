@@ -10,32 +10,8 @@ class ChatbotController {
     }
     
     public function handleMessage() {
-        if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-            $input = json_decode(file_get_contents('php://input'), true);
-            $message = $input['message'] ?? '';
-            
-            if (!empty($message)) {
-                $response = $this->chatbot->getResponse($message);
-                
-                // NO se guarda en base de datos - mejor rendimiento
-                header('Content-Type: application/json');
-                echo json_encode([
-                    'success' => true,
-                    'response' => $response,
-                    'timestamp' => date('H:i:s')
-                ]);
-                exit;
-            } else {
-                header('Content-Type: application/json');
-                echo json_encode([
-                    'success' => false,
-                    'response' => 'Por favor, escribe un mensaje.'
-                ]);
-                exit;
-            }
-        }
-        
-        // Si no es POST, mostrar la vista del chat
+        // Este método ahora solo se usa si se llama vía el routing normal
+        // Para AJAX, se usa la API en /api/chatbot.php directamente
         $this->showChat();
     }
     
