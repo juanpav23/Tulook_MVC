@@ -5,7 +5,6 @@
 // ==========================================
 
 require_once "models/Producto.php";
-require_once "models/Favorito.php";
 require_once "models/Database.php";
 require_once "services/DescuentoService.php";
 
@@ -322,27 +321,22 @@ class ProductoController {
             }
         }
 
-        // Comprobar favorito
-        $esFavorito = false;
-        if (isset($_SESSION['ID_Usuario']) && !empty($variantes[0]['ID_Producto'])) {
-            $favModel = new Favorito($this->db);
-            $favModel->ID_Usuario = $_SESSION['ID_Usuario'];
-            $favModel->ID_Producto = (int)$variantes[0]['ID_Producto'];
-            if (method_exists($favModel, 'exists')) $esFavorito = $favModel->exists();
-        }
-
         $categorias = $this->getMenuCategorias();
         
+        // Pasar la conexión a la vista para los descuentos
         $datosVista = [
             'producto' => $producto,
             'variantes' => $variantes,
             'variantesAgrupadas' => $variantesAgrupadas,
             'opcionesAtributos' => $opcionesAtributos,
             'atributosRequeridos' => $atributosRequeridos,
-            'esFavorito' => $esFavorito,
             'categorias' => $categorias,
-            'infoDescuento' => $infoDescuento
+            'infoDescuento' => $infoDescuento,
+            'db' => $this->db // ← ¡IMPORTANTE! Pasar la conexión a la vista
         ];
+        
+        // Extraer las variables para que estén disponibles en la vista
+        extract($datosVista);
         
         include "views/productos/ver.php";
     }
@@ -364,18 +358,31 @@ class ProductoController {
     // ✅ OBTENER PRECIO CON DESCUENTO (AJAX)
     // =======================================================
     public function obtenerPrecioConDescuento() {
-        if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+        // Permitir tanto POST como GET para mayor flexibilidad
+        $method = $_SERVER['REQUEST_METHOD'];
+        
+        // Obtener datos según el método
+        if ($method === 'POST') {
+            $idProducto = $_POST['id_producto'] ?? null;
+            $precioBase = $_POST['precio_base'] ?? null;
+        } else if ($method === 'GET') {
+            $idProducto = $_GET['id_producto'] ?? null;
+            $precioBase = $_GET['precio_base'] ?? null;
+        } else {
             http_response_code(405);
             echo json_encode(['success' => false, 'error' => 'Método no permitido']);
             exit;
         }
+        
+        error_log("DEBUG obtenerPrecioConDescuento - Método: $method, ID_Producto: $idProducto, PrecioBase: $precioBase");
 
         try {
-            $idProducto = $_POST['id_producto'] ?? null;
-            $precioBase = $_POST['precio_base'] ?? null;
-            
             if (!$idProducto || !$precioBase) {
-                echo json_encode(['success' => false, 'error' => 'Datos incompletos']);
+                echo json_encode([
+                    'success' => false, 
+                    'error' => 'Datos incompletos',
+                    'debug' => ['id_producto' => $idProducto, 'precio_base' => $precioBase]
+                ]);
                 exit;
             }
 
@@ -420,42 +427,12 @@ class ProductoController {
             error_log("Error en obtenerPrecioConDescuento: " . $e->getMessage());
             echo json_encode([
                 'success' => false, 
-                'error' => 'Error al calcular descuento',
-                'precioFinal' => $_POST['precio_base'] ?? 0,
+                'error' => 'Error al calcular descuento: ' . $e->getMessage(),
+                'precioFinal' => $precioBase ?? 0,
                 'tieneDescuento' => false
             ]);
         }
         exit;
-    }
-
-    // =======================================================
-    // ❤️ FAVORITOS
-    // =======================================================
-    public function toggleFavorito() {
-        if (!isset($_SESSION['ID_Usuario'])) {
-            header("Location: " . BASE_URL . "?c=Usuario&a=login");
-            exit;
-        }
-
-        $idProd = $_POST['id_producto'] ?? null;
-        $idArticulo = $_POST['id_articulo'] ?? null;
-
-        if (!$idProd && !$idArticulo) {
-            header("Location: " . BASE_URL);
-            exit;
-        }
-
-        $fav = new Favorito($this->db);
-        $fav->ID_Usuario = $_SESSION['ID_Usuario'];
-        $fav->ID_Producto = (int)($idProd ?? 0);
-
-        if (method_exists($fav, 'exists') && $fav->exists()) {
-            if (method_exists($fav, 'remove')) $fav->remove();
-        } else {
-            if (method_exists($fav, 'add')) $fav->add();
-        }
-
-        header("Location: " . BASE_URL . "?c=Producto&a=ver&id=" . (int)($idArticulo ?? 0));
     }
 
     // =======================================================

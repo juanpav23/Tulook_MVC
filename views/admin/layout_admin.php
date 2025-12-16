@@ -209,14 +209,6 @@ $tipoUsuario = $esAdministrador ? 'Administrador' : ($esEditor ? 'Editor' : 'Usu
                   </a>
               </li>
 
-              <!-- Gestión de Tallas (Admin y Editor) -->
-              <li class="nav-item mb-1">
-                  <a class="nav-link <?php echo ($_GET['c'] ?? '') === 'Tallas' ? 'active' : ''; ?>" 
-                    href="<?php echo BASE_URL; ?>?c=Tallas&a=index">
-                      <i class="fa fa-ruler me-2"></i> Gestión de Tallas
-                  </a>
-              </li>
-
               <!-- Gestión de Atributos (Admin y Editor) -->
               <li class="nav-item mb-1">
                   <a class="nav-link <?php echo ($_GET['c'] ?? '') === 'Atributo' ? 'active' : ''; ?>" 
@@ -345,14 +337,6 @@ $tipoUsuario = $esAdministrador ? 'Administrador' : ($esEditor ? 'Editor' : 'Usu
                   'variantes' => 'variantes.php',
                   'buscarProductos' => 'productos.php',
                   'buscarVariantes' => 'variantes.php'
-              ],
-              'Tallas' => [
-                  'index' => 'talla/index.php',
-                  'crear' => 'talla/form.php',
-                  'editar' => 'talla/form.php',
-                  'guardar' => 'talla/index.php',
-                  'actualizar' => 'talla/index.php',
-                  'cambiarEstado' => 'talla/index.php'
               ],
               'Precio' => [
                   'index' => 'precio/index.php',

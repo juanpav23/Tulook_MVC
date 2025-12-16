@@ -84,7 +84,6 @@ require_once "controllers/UsuarioController.php";
 require_once "controllers/PedidoController.php";
 require_once "controllers/AdminController.php";
 require_once "controllers/FavoritoController.php";
-require_once "controllers/TallasController.php";
 require_once "controllers/PrecioController.php";
 require_once "controllers/UsuarioAdminController.php";
 require_once "controllers/DescuentoController.php";
@@ -121,11 +120,7 @@ switch ($controlador) {
         $controller = new AdminController();
         break;
     case 'Favorito':
-    case 'MeGusta':
         $controller = new FavoritoController($db);
-        break;
-    case 'Tallas':
-        $controller = new TallasController($db);
         break;
     case 'Precio':
         $controller = new PrecioController($db);

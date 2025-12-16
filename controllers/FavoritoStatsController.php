@@ -69,9 +69,9 @@ class FavoritoStatsController {
         $estadisticas = $this->statsModel->obtenerEstadisticasGenerales($soloActivos);
         $distribucionCategoria = $this->statsModel->obtenerDistribucionPorCategoria($soloActivos);
         $distribucionGenero = $this->statsModel->obtenerDistribucionPorGenero($soloActivos);
-        $distribucionSubcategoria = $this->statsModel->obtenerDistribucionPorSubcategoria($soloActivos); // 🔥 NUEVO
+        $distribucionSubcategoria = $this->statsModel->obtenerDistribucionPorSubcategoria($soloActivos);
         
-        // Búsqueda si hay términos (CONDICIÓN CORREGIDA)
+        // Búsqueda si hay términos
         if (!empty($termino) || !empty($filtroCategoria) || !empty($filtroGenero) || !empty($filtroSubcategoria) || !empty($filtroEstado)) {
             $resultadosBusqueda = $this->statsModel->buscar($termino, $filtroCategoria, $filtroGenero, $filtroSubcategoria, $soloActivos, $filtroEstado);
             $modoBusqueda = true;
@@ -80,18 +80,21 @@ class FavoritoStatsController {
             $modoBusqueda = false;
         }
 
+        // NO incluir la vista directamente aquí
+        // En su lugar, incluir el layout que manejará la vista
         include "views/admin/layout_admin.php";
     }
 
     // 📈 VISTA SOLO DE ESTADÍSTICAS (GRAFICOS)
-    public function estadisticas() {
-        $soloActivos = isset($_GET['incluir_inactivos']) ? !((bool)$_GET['incluir_inactivos']) : true;
-        
-        $estadisticas = $this->statsModel->obtenerEstadisticasGenerales($soloActivos);
-        $distribucionCategoria = $this->statsModel->obtenerDistribucionPorCategoria($soloActivos);
-        $distribucionGenero = $this->statsModel->obtenerDistribucionPorGenero($soloActivos);
-        
-        include "views/admin/layout_admin.php";
-    }
+    //public function estadisticas() {
+    //    $soloActivos = isset($_GET['incluir_inactivos']) ? !((bool)$_GET['incluir_inactivos']) : true;
+    //   
+    //    $estadisticas = $this->statsModel->obtenerEstadisticasGenerales($soloActivos);
+    //    $distribucionCategoria = $this->statsModel->obtenerDistribucionPorCategoria($soloActivos);
+    //    $distribucionGenero = $this->statsModel->obtenerDistribucionPorGenero($soloActivos);
+    //    $distribucionSubcategoria = $this->statsModel->obtenerDistribucionPorSubcategoria($soloActivos);
+    //    
+    //    include "views/admin/favoritos/estadisticas.php";
+    //}
 }
 ?>

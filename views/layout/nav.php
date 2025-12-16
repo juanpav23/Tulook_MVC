@@ -137,13 +137,18 @@ $textoPanel = $esAdministrador ? 'Panel Admin' : ($esEditor ? 'Panel Editor' : '
       <!-- Iconos de usuario -->
       <div class="d-flex">
         <!-- Favoritos -->
-        <a class="btn btn-outline-light me-2" href="<?php echo BASE_URL; ?>index.php?c=Favorito&a=index" title="Mis favoritos">
-          <i class="fas fa-heart"></i>
-          <?php if (isset($_SESSION['ID_Usuario'])): ?>
-            <span class="badge bg-danger" style="font-size: 0.6rem; position: relative; top: -8px; left: -8px;">❤️</span>
-          <?php endif; ?>
-        </a>
-
+        <?php if (isset($usuario)): ?>
+            <a class="btn btn-outline-light me-2 position-relative" 
+              href="<?php echo BASE_URL; ?>?c=Favorito&a=index" 
+              title="Mis Favoritos"
+              id="nav-favoritos">
+                <i class="fas fa-heart"></i>
+                <span id="favoritos-count" class="badge bg-danger" 
+                      style="font-size: 0.6rem; position: absolute; top: -8px; right: -8px; display: none;">
+                    0
+                </span>
+            </a>
+        <?php endif; ?>
         <!-- Carrito -->
         <a class="btn btn-outline-light me-2" href="<?php echo BASE_URL; ?>index.php?c=Carrito&a=carrito" title="Carrito">
           <i class="fas fa-shopping-cart"></i>

@@ -16,7 +16,7 @@ $total_descuentos = 0;
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
   <style>
-    /* Tus estilos actuales se mantienen igual */
+    /* Estilos existentes se mantienen */
     body {
       background-color: #f8f9fa;
       padding-top: 80px;
@@ -143,6 +143,14 @@ $total_descuentos = 0;
         font-size: 2rem;
       }
     }
+    /* Nuevo estilo para IVA */
+    .iva-badge {
+      background: linear-gradient(135deg, #17a2b8 0%, #138496 100%);
+      color: white;
+      padding: 4px 10px;
+      border-radius: 4px;
+      font-size: 0.85rem;
+    }
   </style>
 </head>
 <body>
@@ -154,6 +162,9 @@ $total_descuentos = 0;
   <div class="d-flex justify-content-between align-items-center mb-4">
     <h1 class="mb-0">
       <i class="fas fa-shopping-cart text-primary me-2"></i>Mi Carrito
+      <?php if (!empty($carrito)): ?>
+        <span class="badge bg-primary ms-2"><?php echo count($carrito); ?> productos</span>
+      <?php endif; ?>
     </h1>
     <a href="<?php echo BASE_URL; ?>" class="btn btn-outline-primary">
       <i class="fas fa-arrow-left me-2"></i>Seguir Comprando
@@ -181,18 +192,20 @@ $total_descuentos = 0;
     <!-- Lista de productos -->
     <div class="col-lg-8">
       <?php if (!empty($carrito)): ?>
-        <?php foreach ($carrito as $index => $item): 
+        <?php 
+        $subtotal_carrito = 0;
+        $descuentos_carrito = 0;
+        $total_items = 0;
+        
+        foreach ($carrito as $index => $item): 
           $precio_original = floatval($item['Precio_Original'] ?? $item['Precio']);
           $precio_final = floatval($item['Precio']);
           $subtotal = $precio_final * intval($item['Cantidad']);
           $subtotal_original = $precio_original * intval($item['Cantidad']);
 
-          // DEBUG para verificar
-          error_log("🛒 Vista carrito - precio_final: " . $precio_final . " subtotal: " . $subtotal);
-          $ahorro_item = $subtotal_original - $subtotal;
-          
-          $total += $subtotal;
-          $total_descuentos += $ahorro_item;
+          $subtotal_carrito += $subtotal;
+          $descuentos_carrito += ($subtotal_original - $subtotal);
+          $total_items += $item['Cantidad'];
           
           $tiene_descuento = isset($item['Descuento']) && !empty($item['Descuento']['Codigo']);
           $porcentaje_descuento = $tiene_descuento ? (($precio_original - $precio_final) / $precio_original * 100) : 0;
@@ -300,7 +313,8 @@ $total_descuentos = 0;
                           <span class="h5 text-dark mb-0">$<?php echo number_format($precio_final, 0, ',', '.'); ?></span>
                         <?php endif; ?>
                       <?php endif; ?>
-</div>
+                    </div>
+                  </div>
                   
                   <!-- Cantidad y subtotal -->
                   <div class="col-md-4 text-center text-md-end">
@@ -323,7 +337,7 @@ $total_descuentos = 0;
                     <!-- Subtotal -->
                     <div class="mb-3">
                       <span class="h6">Subtotal:</span><br>
-                      <?php if ($ahorro_item > 0): ?>
+                      <?php if ($subtotal_original > $subtotal): ?>
                         <span class="precio-original">$<?php echo number_format($subtotal_original, 0, ',', '.'); ?></span><br>
                         
                         <!-- ✅ MOSTRAR "GRATIS" CUANDO EL SUBTOTAL ES 0 -->
@@ -334,7 +348,7 @@ $total_descuentos = 0;
                         <?php endif; ?>
                         
                         <small class="text-success">
-                          <i class="fas fa-savings"></i> Ahorras $<?php echo number_format($ahorro_item, 0, ',', '.'); ?>
+                          <i class="fas fa-savings"></i> Ahorras $<?php echo number_format($subtotal_original - $subtotal, 0, ',', '.'); ?>
                         </small>
                       <?php else: ?>
                         <!-- ✅ MOSTRAR "GRATIS" TAMBIÉN PARA PRODUCTOS SIN DESCUENTO PERO CON PRECIO 0 -->
@@ -379,39 +393,54 @@ $total_descuentos = 0;
     </div>
     
     <!-- Resumen de compra -->
-    <?php if (!empty($carrito)): ?>
+    <?php if (!empty($carrito)): 
+      // Calcular IVA
+      $iva_porcentaje = 19;
+      $iva_monto = $subtotal_carrito * ($iva_porcentaje / 100);
+      $total_con_iva = $subtotal_carrito + $iva_monto;
+    ?>
     <div class="col-lg-4">
       <div class="resumen-compra mb-4">
         <h3 class="mb-4"><i class="fas fa-receipt me-2"></i>Resumen de Compra</h3>
         
         <div class="d-flex justify-content-between mb-2">
-          <span>Subtotal:</span>
-          <span>$<?php echo number_format($total + $total_descuentos, 0, ',', '.'); ?></span>
+          <span>Subtotal (<?php echo $total_items; ?> productos):</span>
+          <span>$<?php echo number_format($subtotal_carrito, 0, ',', '.'); ?></span>
         </div>
         
-        <?php if ($total_descuentos > 0): ?>
-        <div class="d-flex justify-content-between mb-3 text-warning">
+        <?php if ($descuentos_carrito > 0): ?>
+        <div class="d-flex justify-content-between mb-2 text-warning">
           <span>Descuentos:</span>
-          <span>-$<?php echo number_format($total_descuentos, 0, ',', '.'); ?></span>
+          <span>-$<?php echo number_format($descuentos_carrito, 0, ',', '.'); ?></span>
         </div>
         <?php endif; ?>
+        
+        <div class="d-flex justify-content-between mb-2">
+          <span>Envío:</span>
+          <span class="text-success">Gratis</span>
+        </div>
+        
+        <div class="d-flex justify-content-between mb-3">
+          <span>IVA (<?php echo $iva_porcentaje; ?>%):</span>
+          <span class="text-info">$<?php echo number_format($iva_monto, 0, ',', '.'); ?></span>
+        </div>
         
         <hr class="bg-white">
         
         <div class="d-flex justify-content-between align-items-center mb-4">
           <span class="h4 mb-0">Total:</span>
           <!-- ✅ MOSTRAR "GRATIS" CUANDO EL TOTAL ES 0 -->
-          <?php if ($total == 0 || $total == 0.00): ?>
+          <?php if ($total_con_iva == 0 || $total_con_iva == 0.00): ?>
             <span class="total-grande text-success">GRATIS</span>
           <?php else: ?>
-            <span class="total-grande">$<?php echo number_format($total, 0, ',', '.'); ?></span>
+            <span class="total-grande">$<?php echo number_format($total_con_iva, 0, ',', '.'); ?></span>
           <?php endif; ?>
         </div>
         
-        <?php if ($total_descuentos > 0): ?>
+        <?php if ($descuentos_carrito > 0): ?>
         <div class="alert alert-light mb-0">
           <i class="fas fa-piggy-bank me-2 text-primary"></i>
-          <strong>¡Estás ahorrando $<?php echo number_format($total_descuentos, 0, ',', '.'); ?>!</strong>
+          <strong>¡Estás ahorrando $<?php echo number_format($descuentos_carrito, 0, ',', '.'); ?>!</strong>
         </div>
         <?php endif; ?>
       </div>
@@ -419,8 +448,8 @@ $total_descuentos = 0;
       <!-- Botones de acción -->
       <div class="d-grid gap-3">
         <form id="formCompra" action="<?php echo BASE_URL . '?c=Checkout&a=index'; ?>" method="POST">
-          <button type="submit" class="btn btn-checkout w-100 py-3">
-            <?php if ($total == 0 || $total == 0.00): ?>
+          <button type="submit" class="btn btn-checkout w-100 py-3" id="btn-proceder-pago">
+            <?php if ($total_con_iva == 0 || $total_con_iva == 0.00): ?>
               <i class="fas fa-check-circle me-2"></i>Confirmar Pedido Gratuito
             <?php else: ?>
               <i class="fas fa-credit-card me-2"></i>Proceder al Pago
@@ -431,83 +460,37 @@ $total_descuentos = 0;
         <button id="vaciarCarrito" class="btn btn-outline-danger w-100 py-3">
           <i class="fas fa-trash-alt me-2"></i>Vaciar Carrito
         </button>
+        
+        <a href="<?php echo BASE_URL; ?>" class="btn btn-outline-primary w-100 py-3">
+          <i class="fas fa-store me-2"></i>Seguir Comprando
+        </a>
       </div>
     </div>
     <?php endif; ?>
   </div>
 </div>
 
+<!-- Scripts -->
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 
+<!-- Incluir funciones del carrito -->
+<script src="<?php echo BASE_URL; ?>assets/js/carrito-functions.js"></script>
+
+<!-- Pasar datos al JavaScript -->
 <script>
-// Confirmación al eliminar producto
-document.querySelectorAll('.eliminar-btn').forEach(btn => {
-  btn.addEventListener('click', e => {
-    e.preventDefault();
-    const url = btn.dataset.url;
-    const producto = btn.dataset.producto;
-    
-    Swal.fire({
-      title: '¿Eliminar producto?',
-      html: `¿Estás seguro de eliminar <strong>"${producto}"</strong> del carrito?`,
-      icon: 'warning',
-      showCancelButton: true,
-      confirmButtonColor: '#d33',
-      cancelButtonColor: '#6c757d',
-      confirmButtonText: 'Sí, eliminar',
-      cancelButtonText: 'Cancelar'
-    }).then(result => {
-      if (result.isConfirmed) {
-        window.location.href = url;
-      }
-    });
-  });
-});
+// Variables globales para el carrito
+window.carritoItems = <?php echo json_encode($carrito); ?>;
+window.BASE_URL = '<?php echo BASE_URL; ?>';
+window.IVA_PORCENTAJE = 19;
 
-// Confirmación al vaciar carrito
-const vaciar = document.getElementById('vaciarCarrito');
-if (vaciar) {
-  vaciar.addEventListener('click', e => {
-    e.preventDefault();
-    Swal.fire({
-      title: '¿Vaciar carrito?',
-      text: "Se eliminarán todos los productos del carrito.",
-      icon: 'warning',
-      showCancelButton: true,
-      confirmButtonColor: '#d33',
-      cancelButtonColor: '#6c757d',
-      confirmButtonText: 'Sí, vaciar',
-      cancelButtonText: 'Cancelar'
-    }).then(result => {
-      if (result.isConfirmed) {
-        window.location.href = '<?php echo BASE_URL . "?c=Carrito&a=vaciar"; ?>';
-      }
-    });
-  });
-}
-
-// Confirmación al proceder al pago
-const formCompra = document.getElementById('formCompra');
-if (formCompra) {
-  formCompra.addEventListener('submit', function(e) {
-    e.preventDefault();
-    
-    Swal.fire({
-      title: '¿Proceder al pago?',
-      html: `Total a pagar: <strong>$<?php echo number_format($total, 0, ',', '.'); ?></strong>`,
-      icon: 'question',
-      showCancelButton: true,
-      confirmButtonColor: '#28a745',
-      cancelButtonColor: '#6c757d',
-      confirmButtonText: 'Continuar',
-      cancelButtonText: 'Seguir comprando'
-    }).then(result => {
-      if (result.isConfirmed) {
-        this.submit();
-      }
-    });
-  });
-}
+// Datos para cálculos
+window.carritoData = {
+    subtotal: <?php echo $subtotal_carrito; ?>,
+    descuentos: <?php echo $descuentos_carrito; ?>,
+    ivaMonto: <?php echo $iva_monto; ?>,
+    totalConIVA: <?php echo $total_con_iva; ?>,
+    totalItems: <?php echo $total_items; ?>
+};
 </script>
 
 </body>
