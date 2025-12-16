@@ -339,30 +339,68 @@ document.addEventListener('DOMContentLoaded', function() {
         // Mostrar typing indicator
         showTypingIndicator();
         
+        // Construir URL - usando ubicación actual del documento
+        const currentPath = window.location.pathname;
+        let apiUrl = window.location.origin;
+        
+        // Si estamos en /Tulook_MVC/... extraer la ruta base
+        if (currentPath.includes('/Tulook_MVC/')) {
+            apiUrl = window.location.origin + '/Tulook_MVC/api/chatbot.php';
+        } else {
+            // Alternativa: obtener de la ruta actual
+            const pathParts = currentPath.split('/').filter(Boolean);
+            if (pathParts.length > 0) {
+                apiUrl = window.location.origin + '/' + pathParts[0] + '/api/chatbot.php';
+            } else {
+                apiUrl = window.location.origin + '/api/chatbot.php';
+            }
+        }
+        
+        console.log('URL del API:', apiUrl);
+        
         // Enviar al servidor
-        fetch('<?php echo BASE_URL; ?>index.php?c=Chatbot&a=handleMessage', {
+        fetch(apiUrl, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
+                'X-Requested-With': 'XMLHttpRequest'
             },
             body: JSON.stringify({
                 message: message
             })
         })
-        .then(response => response.json())
-        .then(data => {
-            removeTypingIndicator();
-            if (data.success) {
-                addMessage(data.response, 'bot');
-            } else {
-                addMessage('Error al procesar tu mensaje. Intenta nuevamente.', 'bot');
+        .then(response => {
+            console.log('Response status:', response.status);
+            if (!response.ok) {
+                throw new Error('HTTP error, status=' + response.status);
+            }
+            return response.text();
+        })
+        .then(text => {
+            console.log('Respuesta raw del servidor:', text);
+            try {
+                const data = JSON.parse(text);
+                console.log('Respuesta parseada:', data);
+                removeTypingIndicator();
+                if (data.success) {
+                    addMessage(data.response, 'bot');
+                } else {
+                    addMessage('Error al procesar tu mensaje. Intenta nuevamente.', 'bot');
+                }
+            } catch(e) {
+                console.error('Error parseando JSON:', e);
+                console.error('Texto recibido:', text.substring(0, 500));
+                removeTypingIndicator();
+                addMessage('Error de conexión. Intenta nuevamente.', 'bot');
             }
         })
         .catch(error => {
+            console.error('Error en fetch:', error);
             removeTypingIndicator();
             addMessage('Error de conexión. Intenta nuevamente.', 'bot');
         });
     }
+    
     
     // Agregar mensaje al chat
     function addMessage(text, sender) {

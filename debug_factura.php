@@ -1,100 +1,100 @@
 <?php
-// debug_pdf_problem.php
-define('DB_DSN', 'mysql:host=localhost;dbname=tulook;charset=utf8');
-define('DB_USER', 'root');
-define('DB_PASS', '');
+// prueba_criticos.php
+echo "=== VERIFICACIÓN PROBLEMAS CRÍTICOS ===\n\n";
 
-try {
-    $db = new PDO(DB_DSN, DB_USER, DB_PASS);
-    echo "✅ Conexión a BD exitosa\n\n";
-} catch (PDOException $e) {
-    die("❌ Error conectando a BD: " . $e->getMessage());
-}
+// 1. Problemas de seguridad - PASSWORD_DEFAULT
+echo "1. 🔴 PROBLEMAS SEGURIDAD CRÍTICOS:\n";
+$archivos_problema = [
+    'controllers/AdminController.php',
+    'models/UsuarioAdmin.php'
+];
 
-$id_factura = 133; // Cambia por tu factura actual
-
-echo "🔍 DEBUG DEL PROBLEMA DEL PDF - Factura #$id_factura\n\n";
-
-// 1. Verificar si el controlador existe
-echo "=== VERIFICANDO CONTROLADOR ===\n";
-if (file_exists('controllers/FacturaPDFController.php')) {
-    echo "✅ FacturaPDFController.php existe\n";
-    
-    // Leer el contenido para verificar
-    $content = file_get_contents('controllers/FacturaPDFController.php');
-    if (strpos($content, 'class FacturaPDFController') !== false) {
-        echo "✅ La clase FacturaPDFController existe en el archivo\n";
-    } else {
-        echo "❌ No se encuentra la clase en el archivo\n";
-    }
-} else {
-    echo "❌ FacturaPDFController.php NO existe\n";
-}
-
-// 2. Verificar configuración de rutas
-echo "\n=== VERIFICANDO CONFIGURACIÓN ===\n";
-if (defined('BASE_URL')) {
-    echo "BASE_URL: " . BASE_URL . "\n";
-} else {
-    echo "❌ BASE_URL no está definida\n";
-}
-
-// 3. Verificar si la factura existe
-echo "\n=== VERIFICANDO FACTURA ===\n";
-require_once "models/Compra.php";
-$compra = new Compra($db);
-$factura = $compra->obtenerFacturaDetalle($id_factura);
-
-if ($factura) {
-    echo "✅ Factura #$id_factura existe\n";
-    echo "   Cliente: " . ($factura['Nombre'] ?? '') . " " . ($factura['Apellido'] ?? '') . "\n";
-    echo "   Total: $" . ($factura['Monto_Total'] ?? 0) . "\n";
-} else {
-    echo "❌ Factura #$id_factura NO existe\n";
-}
-
-// 4. Probar el controlador directamente
-echo "\n=== PROBANDO CONTROLADOR DIRECTAMENTE ===\n";
-require_once "controllers/FacturaPDFController.php";
-
-try {
-    $controller = new FacturaPDFController($db);
-    echo "✅ Controlador instanciado correctamente\n";
-    
-    // Probar el método generar
-    echo "🔧 Probando método generar()...\n";
-    
-    // Simular la llamada GET
-    $_GET['id'] = $id_factura;
-    
-    // Capturar la salida
-    ob_start();
-    $controller->generar();
-    $output = ob_get_clean();
-    
-    if (!empty($output)) {
-        echo "✅ El método generar() produjo salida\n";
-        echo "   Tamaño de salida: " . strlen($output) . " bytes\n";
-        
-        // Verificar si es PDF
-        if (strpos($output, '%PDF') === 0) {
-            echo "✅ ¡SALIDA ES UN PDF VÁLIDO!\n";
+foreach($archivos_problema as $archivo) {
+    if(file_exists($archivo)) {
+        $content = file_get_contents($archivo);
+        if(strpos($content, 'PASSWORD_DEFAULT') !== false) {
+            echo "   ❌ $archivo: USA PASSWORD_DEFAULT (INSEGURO)\n";
             
-            // Guardar para verificar
-            file_put_contents("debug_pdf_output_$id_factura.pdf", $output);
-            echo "📄 PDF guardado en: debug_pdf_output_$id_factura.pdf\n";
+            // Contar ocurrencias
+            $ocurrencias = substr_count($content, 'PASSWORD_DEFAULT');
+            echo "      📍 $ocurrencias ocurrencias encontradas\n";
         } else {
-            echo "❌ La salida NO es un PDF válido\n";
-            echo "   Primeros 100 caracteres: " . substr($output, 0, 100) . "\n";
+            echo "   ✅ $archivo: NO USA PASSWORD_DEFAULT\n";
         }
-    } else {
-        echo "❌ El método generar() no produjo salida\n";
     }
-    
-} catch (Exception $e) {
-    echo "❌ Error al ejecutar el controlador: " . $e->getMessage() . "\n";
-    echo "📋 Stack trace:\n" . $e->getTraceAsString() . "\n";
 }
 
-echo "\n🎯 URL DE PRUEBA: http://localhost/Tulook_MVC/?c=FacturaPDF&a=generar&id=$id_factura\n";
+// 2. Verificar si Usuario.php tiene encriptación
+echo "\n2. 🔒 Usuario.php - Encriptación:\n";
+if(file_exists('models/Usuario.php')) {
+    $content = file_get_contents('models/Usuario.php');
+    
+    if(strpos($content, 'password_hash') !== false) {
+        echo "   ✅ password_hash: IMPLEMENTADO\n";
+    } else {
+        echo "   ❌ password_hash: NO IMPLEMENTADO\n";
+    }
+    
+    if(strpos($content, 'password_verify') !== false) {
+        echo "   ✅ password_verify: IMPLEMENTADO\n";
+    } else {
+        echo "   ❌ password_verify: NO IMPLEMENTADO\n";
+    }
+    
+    if(strpos($content, 'PASSWORD_BCRYPT') !== false) {
+        echo "   ✅ ALGORITMO: PASSWORD_BCRYPT (SEGURO)\n";
+    } else {
+        echo "   ❌ ALGORITMO: NO USA PASSWORD_BCRYPT\n";
+    }
+}
+
+// 3. Verificar persistencia carrito
+echo "\n3. 💾 Carrito - Persistencia:\n";
+if(file_exists('controllers/CarritoController.php')) {
+    $content = file_get_contents('controllers/CarritoController.php');
+    
+    // Buscar uso de sesión vs BD
+    $uso_sesion = substr_count($content, '$_SESSION');
+    $uso_bd = substr_count($content, 'INSERT') + substr_count($content, 'UPDATE') + substr_count($content, 'SELECT');
+    
+    echo "   📊 Sesiones usadas: $uso_sesion veces\n";
+    echo "   📊 Consultas BD: $uso_bd veces\n";
+    
+    if($uso_sesion > 2 && $uso_bd < 2) {
+        echo "   ❌ PERSISTENCIA: SOLO SESIÓN (SE PIERDEN DATOS)\n";
+    } elseif($uso_bd > 2) {
+        echo "   ✅ PERSISTENCIA: USA BASE DE DATOS\n";
+    } else {
+        echo "   ⚠️ PERSISTENCIA: MIXTA O INDETERMINADA\n";
+    }
+}
+
+// 4. Verificar CRUD ProductoController
+echo "\n4. 🛠️ ProductoController - CRUD Completo:\n";
+if(file_exists('controllers/ProductoController.php')) {
+    $content = file_get_contents('controllers/ProductoController.php');
+    
+    $metodos_crud = [
+        'index' => 'Listar',
+        'crear' => 'Crear', 
+        'guardar' => 'Guardar',
+        'editar' => 'Editar',
+        'actualizar' => 'Actualizar',
+        'eliminar' => 'Eliminar'
+    ];
+    
+    $encontrados = 0;
+    foreach($metodos_crud as $metodo => $desc) {
+        if(strpos($content, "function $metodo") !== false) {
+            echo "   ✅ $desc ($metodo): EXISTE\n";
+            $encontrados++;
+        } else {
+            echo "   ❌ $desc ($metodo): NO EXISTE\n";
+        }
+    }
+    echo "   📊 CRUD Completo: $encontrados/6 métodos\n";
+}
+
+echo "\n=== RESUMEN PROBLEMAS CRÍTICOS ===\n";
+echo "Se necesitan correcciones inmediatas en los items marcados con ❌\n";
 ?>
