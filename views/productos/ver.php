@@ -503,7 +503,7 @@ $precioInicial = ($infoDescuento && is_array($infoDescuento) && ($infoDescuento[
       <!-- SECCIÓN DE ATRIBUTOS DINÁMICOS -->
       <?php if (!empty($atributosRequeridos) && !empty($opcionesAtributos)): ?>
         <div id="seleccion-atributos" class="mb-4">
-          <h5 class="fw-bold mb-3">📋 Personaliza tu producto:</h5>
+          <h5 class="fw-bold mb-3">Personaliza tu producto:</h5>
           
           <div id="atributos-container">
             <?php foreach ($atributosRequeridos as $index => $idTipoAtributo): ?>

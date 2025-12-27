@@ -197,7 +197,7 @@ $tipoUsuario = $esAdministrador ? 'Administrador' : ($esEditor ? 'Editor' : 'Usu
               <li class="nav-item mb-1">
                   <a class="nav-link <?php echo (($_GET['c'] ?? '') === 'Admin' && ($_GET['a'] ?? '') === 'variantes') ? 'active' : ''; ?>" 
                     href="<?php echo BASE_URL; ?>?c=Admin&a=variantes">
-                      <i class="fa fa-palette me-2"></i> Variantes / Imágenes
+                      <i class="fa fa-palette me-2"></i> Variantes
                   </a>
               </li>
 

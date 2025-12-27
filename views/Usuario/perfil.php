@@ -336,7 +336,7 @@
          ACCIONES ADICIONALES
     ================================ -->
     <div class="d-flex justify-content-between mt-4">
-        <a href="#" class="btn btn-outline-primary"><i class="fas fa-history me-1"></i> Historial de Pedidos</a>
+        <a href="<?= BASE_URL ?>?c=Checkout&a=historial" class="btn btn-outline-primary"><i class="fas fa-history me-1"></i> Historial de Pedidos</a>
 
         <a href="<?= BASE_URL ?>?c=Favorito&a=index" class="btn btn-outline-primary">
             <i class="fas fa-heart me-1"></i> Mis Favoritos
