@@ -28,12 +28,9 @@ $stats = [
     'editores' => (int)$this->db->query("SELECT COUNT(*) FROM usuario WHERE ID_Rol = 2")->fetchColumn(),
     'clientes' => (int)$this->db->query("SELECT COUNT(*) FROM usuario WHERE ID_Rol = 3")->fetchColumn(),
     
-    // Estadísticas de categorías
+    // Estadísticas de categorías (solo tablas que existen)
     'total_categorias' => (int)$this->db->query("SELECT COUNT(*) FROM categoria")->fetchColumn(),
     'total_subcategorias' => (int)$this->db->query("SELECT COUNT(*) FROM subcategoria")->fetchColumn(),
-    'total_colores' => (int)$this->db->query("SELECT COUNT(*) FROM color")->fetchColumn(),
-    'total_tallas' => (int)$this->db->query("SELECT COUNT(*) FROM talla")->fetchColumn(),
-    'total_precios' => (int)$this->db->query("SELECT COUNT(*) FROM precio")->fetchColumn(),
 ];
 
 // Obtener productos más populares (basado en stock y actividad)
@@ -150,28 +147,37 @@ $ultimasVariantes = $this->db->query("
                 </div>
                 <div class="card-body">
                     <div class="row text-center">
+                        <!-- Solo mostrar estadísticas de tablas que existen -->
+                        <?php if (isset($stats['total_colores'])): ?>
                         <div class="col-md-3 mb-3">
                             <div class="border-end">
                                 <h4 class="text-primary fw-bold"><?= $stats['total_colores'] ?></h4>
                                 <small class="text-muted">Colores Disponibles</small>
                             </div>
                         </div>
-                        <div class="col-md-3 mb-3">
-                            <div class="border-end">
-                                <h4 class="text-success fw-bold"><?= $stats['total_tallas'] ?></h4>
-                                <small class="text-muted">Tallas Configuradas</small>
-                            </div>
-                        </div>
+                        <?php endif; ?>
+                        
+                        <?php if (isset($stats['total_precios'])): ?>
                         <div class="col-md-3 mb-3">
                             <div class="border-end">
                                 <h4 class="text-warning fw-bold"><?= $stats['total_precios'] ?></h4>
                                 <small class="text-muted">Precios Base</small>
                             </div>
                         </div>
+                        <?php endif; ?>
+                        
                         <div class="col-md-3 mb-3">
                             <div>
                                 <h4 class="text-danger fw-bold"><?= $stats['variantes_sin_stock'] ?></h4>
                                 <small class="text-muted">Variantes Sin Stock</small>
+                            </div>
+                        </div>
+                        
+                        <!-- Agregar otras estadísticas relevantes -->
+                        <div class="col-md-3 mb-3">
+                            <div>
+                                <h4 class="text-success fw-bold"><?= $stats['variantes_con_stock'] ?></h4>
+                                <small class="text-muted">Variantes con Stock</small>
                             </div>
                         </div>
                     </div>
@@ -336,12 +342,6 @@ $ultimasVariantes = $this->db->query("
                             <a href="<?= BASE_URL ?>?c=Admin&a=variantes" class="btn btn-info w-100 h-100 py-3">
                                 <i class="fas fa-palette fa-2x mb-2"></i><br>
                                 Variantes
-                            </a>
-                        </div>
-                        <div class="col-xl-2 col-md-4 col-sm-6">
-                            <a href="<?= BASE_URL ?>?c=Tallas&a=index" class="btn btn-warning w-100 h-100 py-3">
-                                <i class="fas fa-ruler fa-2x mb-2"></i><br>
-                                Gestión Tallas
                             </a>
                         </div>
                         <?php if ($_SESSION['rol'] == 1): ?>

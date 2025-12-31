@@ -18,7 +18,6 @@ class CarritoController {
     // =======================================================
     private function verificarAutenticacion() {
         if (!isset($_SESSION['ID_Usuario']) || empty($_SESSION['ID_Usuario'])) {
-            $_SESSION['mensaje_error'] = "🔐 Debes iniciar sesión para acceder al carrito.";
             $_SESSION['redirect_url'] = $_SERVER['REQUEST_URI'] ?? BASE_URL . '?c=Carrito&a=carrito';
             header("Location: " . BASE_URL . "?c=Usuario&a=login");
             exit;

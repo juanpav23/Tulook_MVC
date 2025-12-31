@@ -197,7 +197,7 @@ $tipoUsuario = $esAdministrador ? 'Administrador' : ($esEditor ? 'Editor' : 'Usu
               <li class="nav-item mb-1">
                   <a class="nav-link <?php echo (($_GET['c'] ?? '') === 'Admin' && ($_GET['a'] ?? '') === 'variantes') ? 'active' : ''; ?>" 
                     href="<?php echo BASE_URL; ?>?c=Admin&a=variantes">
-                      <i class="fa fa-palette me-2"></i> Variantes / Imágenes
+                      <i class="fa fa-palette me-2"></i> Variantes
                   </a>
               </li>
 
@@ -206,14 +206,6 @@ $tipoUsuario = $esAdministrador ? 'Administrador' : ($esEditor ? 'Editor' : 'Usu
                   <a class="nav-link <?php echo ($_GET['c'] ?? '') === 'FavoritoStats' ? 'active' : ''; ?>" 
                     href="<?php echo BASE_URL; ?>?c=FavoritoStats&a=index">
                       <i class="fa fa-heart me-2"></i> Estadísticas Favoritos
-                  </a>
-              </li>
-
-              <!-- Gestión de Tallas (Admin y Editor) -->
-              <li class="nav-item mb-1">
-                  <a class="nav-link <?php echo ($_GET['c'] ?? '') === 'Tallas' ? 'active' : ''; ?>" 
-                    href="<?php echo BASE_URL; ?>?c=Tallas&a=index">
-                      <i class="fa fa-ruler me-2"></i> Gestión de Tallas
                   </a>
               </li>
 
@@ -345,14 +337,6 @@ $tipoUsuario = $esAdministrador ? 'Administrador' : ($esEditor ? 'Editor' : 'Usu
                   'variantes' => 'variantes.php',
                   'buscarProductos' => 'productos.php',
                   'buscarVariantes' => 'variantes.php'
-              ],
-              'Tallas' => [
-                  'index' => 'talla/index.php',
-                  'crear' => 'talla/form.php',
-                  'editar' => 'talla/form.php',
-                  'guardar' => 'talla/index.php',
-                  'actualizar' => 'talla/index.php',
-                  'cambiarEstado' => 'talla/index.php'
               ],
               'Precio' => [
                   'index' => 'precio/index.php',

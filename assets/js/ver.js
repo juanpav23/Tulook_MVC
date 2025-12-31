@@ -2,7 +2,7 @@
 // Archivo: ver.js (SISTEMA DE ATRIBUTOS DINÁMICOS CON CÓDIGO DE DESCUENTO)
 // ===============================
 document.addEventListener("DOMContentLoaded", () => {
-  const { usuarioLogueado, variantes, variantesAgrupadas, productoBase, baseUrl, esFavorito, infoDescuento, todosDescuentos, atributosRequeridos } = PRODUCTO_DATA;
+  const { usuarioLogueado, variantes, variantesAgrupadas, productoBase, baseUrl, infoDescuento, todosDescuentos, atributosRequeridos } = PRODUCTO_DATA;
 
   // === Elementos DOM ===
   const atributoContainers = document.querySelectorAll('.atributo-container');
@@ -15,10 +15,7 @@ document.addEventListener("DOMContentLoaded", () => {
   const formIdProducto = document.getElementById('form-id-producto');
   const formCantidad = document.getElementById('form-cantidad');
   const formPrecioFinal = document.getElementById('form-precio-final');
-  const favForm = document.getElementById('fav-form');
-  const favIdProd = document.getElementById('fav-id-prod');
   const btnAddCart = document.getElementById('btn-add-cart');
-  const btnFavorito = document.querySelector('#fav-form button[type="submit"]');
   const btnPlus = document.getElementById('qty-plus');
   const btnMinus = document.getElementById('qty-minus');
   
@@ -42,7 +39,6 @@ document.addEventListener("DOMContentLoaded", () => {
     varianteSeleccionada: null,
     stockDisponible: 0,
     productoId: null,
-    esFavorito: esFavorito || false,
     precioBase: 0,
     precioFinal: 0,
     descuentoAplicado: 0,
@@ -439,95 +435,6 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   }
 
-  // ---------- SISTEMA DE FAVORITOS ----------
-  function actualizarEstadoFavorito(esFav) {
-    seleccionActual.esFavorito = esFav;
-  
-    if (btnFavorito) {
-      if (esFav) {
-        btnFavorito.classList.remove('btn-outline-danger');
-        btnFavorito.classList.add('btn-danger');
-        btnFavorito.innerHTML = '<i class="fa fa-heart"></i> Quitar de Me Gusta';
-      } else {
-        btnFavorito.classList.remove('btn-danger');
-        btnFavorito.classList.add('btn-outline-danger');
-        btnFavorito.innerHTML = '<i class="fa fa-heart"></i> Añadir a Me Gusta';
-      }
-    }
-  }
-
-  async function verificarEstadoFavorito() {
-    if (!usuarioLogueado) return;
-
-    try {
-      const formData = new FormData();
-      const idProductoActual = formIdProducto.value;
-      
-      formData.append('id_producto', idProductoActual);
-
-      const response = await fetch(`${baseUrl}?c=Favorito&a=verificarEstado`, {
-        method: 'POST',
-        body: formData
-      });
-      
-      if (!response.ok) return;
-      
-      const texto = await response.text();
-      let data;
-      
-      try {
-        data = JSON.parse(texto);
-      } catch (parseError) {
-        return;
-      }
-      
-      if (data.success) {
-        actualizarEstadoFavorito(data.esFavorito);
-      }
-    } catch (error) {
-      console.warn('Error verificando favorito:', error.message);
-    }
-  }
-
-  function setupFavoritosAJAX() {
-    if (!favForm || !usuarioLogueado) return;
-
-    favForm.addEventListener('submit', async function (e) {
-      e.preventDefault();
-
-      try {
-        const formData = new FormData(this);
-        btnFavorito.disabled = true;
-        btnFavorito.innerHTML = '<i class="fa fa-spinner fa-spin"></i> Procesando...';
-
-        const response = await fetch(`${baseUrl}?c=Favorito&a=toggleAjax`, {
-          method: 'POST',
-          body: formData
-        });
-
-        const data = await response.json();
-
-        if (data.success) {
-          actualizarEstadoFavorito(data.esFavorito);
-
-          Swal.fire({
-            icon: 'success',
-            title: data.action === 'added' ? '❤️ Agregado a favoritos' : '❌ Eliminado de favoritos',
-            showConfirmButton: false,
-            timer: 1000
-          });
-        }
-      } catch (error) {
-        console.error('Error en favoritos:', error);
-      } finally {
-        btnFavorito.disabled = false;
-        btnFavorito.innerHTML = seleccionActual.esFavorito ?
-          '<i class="fa fa-heart"></i> Quitar de Me Gusta' :
-          '<i class="fa fa-heart"></i> Añadir a Me Gusta';
-      }
-    });
-  }
-
   // ---------- SISTEMA DE ATRIBUTOS DINÁMICOS ----------
   function inicializarSelectoresAtributos() {
     console.log('🔄 Inicializando sistema de atributos dependientes...');
@@ -782,10 +689,6 @@ document.addEventListener("DOMContentLoaded", () => {
 
     // Actualizar formulario
     formTipo.value = 'variante';
-    
-    if (favIdProd) {
-      favIdProd.value = variante.ID_Producto;
-    }
 
     // Actualizar imagen si tiene una específica
     if (variante.Foto && variante.Foto !== productoBase.Foto) {
@@ -827,7 +730,6 @@ document.addEventListener("DOMContentLoaded", () => {
     // Actualizar información de stock
     actualizarInfoStock(seleccionActual.stockDisponible);
     actualizarBotonCarrito();
-    verificarEstadoFavorito();
 
     console.log('✅ Variante seleccionada correctamente. ID_Producto:', seleccionActual.productoId);
   }
@@ -1013,8 +915,6 @@ document.addEventListener("DOMContentLoaded", () => {
 
   // ---------- INICIALIZACIÓN ----------
   async function inicializar() {
-    actualizarEstadoFavorito(seleccionActual.esFavorito);
-    setupFavoritosAJAX();
     inicializarSistemaDescuentos();  // Cambiado de inicializarSelectorDescuentos()
     inicializarSelectoresAtributos();
   
@@ -1025,8 +925,6 @@ document.addEventListener("DOMContentLoaded", () => {
     stockInfo.className = 'text-muted';
     btnAddCart.disabled = true;
     btnAddCart.innerHTML = '<i class="fa fa-shopping-cart"></i> Selecciona todas las opciones';
-
-    setTimeout(verificarEstadoFavorito, 300);
   }
 
   // 🔍 DEBUG: Verificar datos del producto

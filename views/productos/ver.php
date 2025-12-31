@@ -1,7 +1,7 @@
 <?php
-// =======================
+// ========================
 // views/productos/ver.php (ACTUALIZADO CON CAMPO DE CÓDIGO DE DESCUENTO)
-// =======================
+// ========================
 
 if (!isset($producto)) {
   header("Location: " . BASE_URL);
@@ -14,49 +14,48 @@ $usuario_logueado = isset($_SESSION['ID_Usuario']);
 $variantes = $variantes ?? [];
 $infoDescuento = $infoDescuento ?? null;
 
-// Verificar si ya es favorito
-$esFavorito = false;
-if ($usuario_logueado) {
-    global $db;
-    if ($db) {
-        require_once "models/Favorito.php";
-        $favoritoModel = new Favorito($db);
-        $esFavorito = $favoritoModel->existsFor(
-            $_SESSION['ID_Usuario'], 
-            isset($producto->ID_Producto) ? $producto->ID_Producto : null, 
-            $producto->ID_Articulo
-        );
-    }
-}
-
 // OBTENER TODOS LOS DESCUENTOS DISPONIBLES
 $todosDescuentos = [];
 if ($usuario_logueado) {
     try {
-        require_once "models/Descuento.php";
-        $descuentoModel = new Descuento($db);
-        $descuentosVigentes = $descuentoModel->obtenerDescuentosVigentes();
-        
-        foreach ($descuentosVigentes as $descuento) {
-            $aplica = false;
-            
-            if ($descuento['ID_Articulo'] == $producto->ID_Articulo) {
-                $aplica = true;
+        // Si $db no está definido, intentar obtener la conexión de forma global
+        if (!isset($db)) {
+            if (isset($GLOBALS['db'])) {
+                $db = $GLOBALS['db'];
+            } else {
+                // Intentar crear una nueva conexión
+                require_once "models/Database.php";
+                $database = new Database();
+                $db = $database->getConnection();
             }
-            elseif ($descuento['ID_Producto'] !== null) {
-                foreach ($variantes as $variante) {
-                    if ($variante['ID_Producto'] == $descuento['ID_Producto']) {
-                        $aplica = true;
-                        break;
+        }
+        
+        if ($db) {
+            require_once "models/Descuento.php";
+            $descuentoModel = new Descuento($db);
+            $descuentosVigentes = $descuentoModel->obtenerDescuentosVigentes();
+            
+            foreach ($descuentosVigentes as $descuento) {
+                $aplica = false;
+                
+                if ($descuento['ID_Articulo'] == $producto->ID_Articulo) {
+                    $aplica = true;
+                }
+                elseif ($descuento['ID_Producto'] !== null) {
+                    foreach ($variantes as $variante) {
+                        if ($variante['ID_Producto'] == $descuento['ID_Producto']) {
+                            $aplica = true;
+                            break;
+                        }
                     }
                 }
-            }
-            elseif ($descuento['ID_Categoria'] == $producto->ID_Categoria) {
-                $aplica = true;
-            }
-            
-            if ($aplica) {
-                $todosDescuentos[] = $descuento;
+                elseif ($descuento['ID_Categoria'] == $producto->ID_Categoria) {
+                    $aplica = true;
+                }
+                
+                if ($aplica) {
+                    $todosDescuentos[] = $descuento;
+                }
             }
         }
         
@@ -383,6 +382,27 @@ $precioInicial = ($infoDescuento && is_array($infoDescuento) && ($infoDescuento[
     <!-- Información del producto -->
     <div class="col-md-6">
       <h2 id="nombre-producto" class="mb-2"><?= htmlspecialchars($producto->N_Articulo); ?></h2>
+        <!-- Botón de Favoritos -->
+        <?php if (isset($_SESSION['ID_Usuario'])): ?>
+            <div class="mb-3">
+                <button id="btn-favorito" class="btn btn-outline-danger btn-sm" 
+                        data-articulo-id="<?= htmlspecialchars((string)(int)$producto->ID_Articulo); ?>">
+                    <i class="far fa-heart"></i> Agregar a favoritos
+                </button>
+                <span id="favorito-mensaje" class="small text-muted ms-2" style="display: none;"></span>
+                
+                <!-- Debug info (solo para testing) -->
+                <small class="text-muted d-block mt-1">
+                    Artículo ID: <?= (int)$producto->ID_Articulo; ?>
+                </small>
+            </div>
+        <?php else: ?>
+            <div class="mb-3">
+                <a href="<?= BASE_URL; ?>?c=Usuario&a=login" class="btn btn-outline-secondary btn-sm">
+                    <i class="far fa-heart"></i> Inicia sesión para guardar en favoritos
+                </a>
+            </div>
+        <?php endif; ?>
 
       <!-- $$$ SECCIÓN DE PRECIOS $$$ -->
       <div class="price-container mb-3">
@@ -391,8 +411,7 @@ $precioInicial = ($infoDescuento && is_array($infoDescuento) && ($infoDescuento[
             <span id="precio-original" class="precio-original me-2" style="display: none;"></span>
             <span id="precio-final" class="precio-final">
               <?php 
-              // ✅ CORRECCIÓN: Solo mostrar "GRATIS" si el precio base realmente es 0
-              // y NO cuando es por un descuento que aún no se ha seleccionado
+              //Solo mostrar "GRATIS" si el precio base realmente es 0
               $precioBase = $producto->Precio ?? 0;
               $precioConDescuento = $infoDescuento['tiene_descuento'] ? 
                                     ($infoDescuento['precio_final'] ?? $precioBase) : 
@@ -479,30 +498,12 @@ $precioInicial = ($infoDescuento && is_array($infoDescuento) && ($infoDescuento[
         </div>
       <?php endif; ?>
 
-      <!-- Favoritos -->
-      <div class="mb-3">
-        <?php if ($usuario_logueado): ?>
-          <form id="fav-form" method="post" action="<?= BASE_URL; ?>?c=Favorito&a=toggle" style="display:inline-block">
-            <input type="hidden" name="id_articulo" value="<?= (int)$producto->ID_Articulo; ?>">
-            <input type="hidden" name="id_producto" id="fav-id-prod" value="<?= isset($producto->ID_Producto) ? (int)$producto->ID_Producto : $producto->ID_Articulo; ?>">
-            <input type="hidden" name="return_url" value="<?= urlencode($_SERVER['REQUEST_URI']); ?>">
-            <button type="submit" class="btn <?= ($esFavorito ? 'btn-danger' : 'btn-outline-danger'); ?>">
-              <i class="fas fa-heart me-1"></i> <?= ($esFavorito ? 'Quitar de Me Gusta' : 'Añadir a Me Gusta'); ?>
-            </button>
-          </form>
-        <?php else: ?>
-          <a href="<?= BASE_URL; ?>?c=Usuario&a=login" class="btn btn-outline-secondary">
-            <i class="fas fa-heart me-1"></i> Inicia sesión para favoritos
-          </a>
-        <?php endif; ?>
-      </div>
-
       <hr class="my-3">
 
       <!-- SECCIÓN DE ATRIBUTOS DINÁMICOS -->
       <?php if (!empty($atributosRequeridos) && !empty($opcionesAtributos)): ?>
         <div id="seleccion-atributos" class="mb-4">
-          <h5 class="fw-bold mb-3">📋 Personaliza tu producto:</h5>
+          <h5 class="fw-bold mb-3">Personaliza tu producto:</h5>
           
           <div id="atributos-container">
             <?php foreach ($atributosRequeridos as $index => $idTipoAtributo): ?>
@@ -677,6 +678,10 @@ $precioInicial = ($infoDescuento && is_array($infoDescuento) && ($infoDescuento[
   </div>
 </div>
 
+<?php if (isset($_GET['test'])): ?>
+    <script src="<?= BASE_URL ?>assets/js/favoritos-final.js"></script>
+<?php endif; ?>
+
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 
 <script>
@@ -691,7 +696,6 @@ $precioInicial = ($infoDescuento && is_array($infoDescuento) && ($infoDescuento[
       id_categoria: <?= json_encode($producto->ID_Categoria ?? null); ?>
     },
     baseUrl: <?= json_encode(BASE_URL); ?>,
-    esFavorito: <?= json_encode($esFavorito); ?>,
     infoDescuento: <?= json_encode($infoDescuento, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES); ?>,
     todosDescuentos: <?= json_encode($todosDescuentos, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES); ?>,
     atributosRequeridos: <?= json_encode($atributosRequeridos, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES); ?>
@@ -699,6 +703,56 @@ $precioInicial = ($infoDescuento && is_array($infoDescuento) && ($infoDescuento[
 </script>
            
 <script src="<?= BASE_URL ?>assets/js/ver.js"></script>
+<!-- Incluir JavaScript de favoritos -->
+<script src="<?= BASE_URL ?>assets/js/favoritos.js"></script>
+
+<!-- Script para verificar estado inicial del favorito -->
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Si hay un botón de favoritos y el usuario está logueado
+    const btnFavorito = document.getElementById('btn-favorito');
+    if (btnFavorito && <?= isset($_SESSION['ID_Usuario']) ? 'true' : 'false'; ?>) {
+        const articuloId = btnFavorito.getAttribute('data-articulo-id');
+        
+        // Verificar estado inicial
+        fetch('<?= BASE_URL; ?>?c=Favorito&a=verificarEstado', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/x-www-form-urlencoded',
+            },
+            body: new URLSearchParams({
+                id_articulo: articuloId
+            })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                // Actualizar contador en navbar
+                const countElement = document.getElementById('favoritos-count');
+                if (countElement && data.totalFavoritos > 0) {
+                    countElement.textContent = data.totalFavoritos;
+                    countElement.style.display = 'block';
+                }
+                
+                // Actualizar botón según estado
+                if (data.esFavorito) {
+                    btnFavorito.innerHTML = '<i class="fas fa-heart"></i> En favoritos';
+                    btnFavorito.classList.remove('btn-outline-danger');
+                    btnFavorito.classList.add('btn-danger');
+                }
+            }
+        })
+        .catch(error => {
+            console.error('Error al verificar estado de favorito:', error);
+        });
+    }
+});
+// Asegurar que BASE_URL esté definida
+if (typeof window.BASE_URL === 'undefined') {
+    window.BASE_URL = '<?= BASE_URL ?>';
+}
+console.log('BASE_URL definida:', window.BASE_URL);
+</script>
 
 </body>
 </html>

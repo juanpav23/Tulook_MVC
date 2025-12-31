@@ -149,9 +149,9 @@
                                                         </div>
                                                     <?php endif; ?>
                                                 </td>
-                                                <td><?= htmlspecialchars($producto['N_Categoria'] ?? $producto['categoria'] ?? 'N/A') ?></td>
-                                                <td><?= htmlspecialchars($producto['SubCategoria'] ?? $producto['subcategoria'] ?? 'N/A') ?></td>
-                                                <td><?= htmlspecialchars($producto['N_Genero'] ?? $producto['genero'] ?? 'N/A') ?></td>
+                                                <td><?= htmlspecialchars($producto['N_Categoria'] ?? 'N/A') ?></td>
+                                                <td><?= htmlspecialchars($producto['SubCategoria'] ?? 'N/A') ?></td>
+                                                <td><?= htmlspecialchars($producto['N_Genero'] ?? 'N/A') ?></td>
                                                 <td>
                                                     <span class="badge bg-<?= $producto['total_favoritos'] > 0 ? 'success' : 'secondary' ?>">
                                                         <?= $producto['total_favoritos'] ?> ❤️

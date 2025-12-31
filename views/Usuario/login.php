@@ -83,6 +83,15 @@ if (isset($_SESSION['usuario'])) {
                         <button type="submit">Entrar</button>
                         <button type="button" onclick="limpiarFormularioLogin()">Limpiar</button>
                     </div>
+
+                    <!-- ENLACE OLVIDO CONTRASEÑA -->
+                    <div class="text-center mt-3">
+                        <a href="<?php echo BASE_URL; ?>?c=Usuario&a=olvidoContrasena" 
+                        style="color: #2f3e53; text-decoration: none; font-size: 14px;">
+                            <i class="fas fa-key me-1"></i> ¿Olvidaste tu contraseña?
+                        </a>
+                    </div>
+
                 </form>
 
                 <!-- REGISTRO -->
