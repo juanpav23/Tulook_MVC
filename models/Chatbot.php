@@ -14,7 +14,7 @@ class Chatbot {
         ],
         'productos' => [
             'keywords' => ['productos', 'qué venden', 'qué tienen', 'mercancía', 'artículos'],
-            'response' => 'En TuLook tenemos:  Ropa (jeans, camisetas, camisas, sudaderas, bóxers) 👟 Calzado (tenis, zapatos, sandalias) 🕶️ Accesorios (relojes, gafas, perfumes, morrales) para Hombre, Mujer y Niños.'
+            'response' => 'En TuLook tenemos: Ropa (jeans, camisetas, camisas, sudaderas, bóxers) Calzado (tenis, zapatos, sandalias) Accesorios (relojes, gafas, perfumes, morrales) para Hombre, Mujer y Niños.'
         ],
         'categorias' => [
             'keywords' => ['categorías', 'tipos de ropa', 'qué ropa', 'clases'],
@@ -75,7 +75,7 @@ class Chatbot {
         
         'ofertas' => [
             'keywords' => ['oferta', 'promoción', 'descuento', 'rebaja', 'liquidación', 'barato'],
-            'response' => ' ¡Tenemos ofertas especiales! • Descuentos del 20%-50% en temporada • 2x1 en accesorios seleccionados • Envío gratis en compras superiores a $150,000 • Síguenos en redes para más promociones'
+            'response' => 'Tenemos ofertas especiales! Descuentos del 20%-50% en temporada 2x1 en accesorios seleccionados Envio gratis en compras superiores a $150,000 Siguenos en redes para mas promociones'
         ],
         
         'nuevos_productos' => [
@@ -107,27 +107,27 @@ class Chatbot {
         
         'ayuda' => [
             'keywords' => ['ayuda', 'auxilio', 'me ayudas', 'necesito', 'por favor', 'urgente'],
-            'response' => ' ¡Claro que te ayudo! Soy tu asistente de moda favorito. Cuéntame qué necesitas y haré lo posible por dejarte ver como una estrella de cine 🌟'
+            'response' => ' ¡Claro que te ayudo! Soy tu asistente de moda favorito. Cuéntame qué necesitas y haré lo posible por dejarte ver como una estrella de cine'
         ],
         
         'talle_perfecto' => [
             'keywords' => ['qué talla', 'cuál talla', 'mi talla', 'me queda bien', 'me ajusta'],
-            'response' => ' La talla perfecta es la que te hace sentir cómodo y seguro. Revisa nuestra guía de tallas detallada en cada producto. Si no estás seguro, siempre puedes contactarnos y te asesoramos sin problema 😉'
+            'response' => ' La talla perfecta es la que te hace sentir cómodo y seguro. Revisa nuestra guía de tallas detallada en cada producto. Si no estás seguro, siempre puedes contactarnos y te asesoramos sin problema'
         ],
         
         'eres_bot' => [
             'keywords' => ['eres bot', 'eres robot', 'no eres humano', 'eres inteligencia artificial', 'quién eres'],
-            'response' => ' Sí, soy un bot (asistente virtual), pero te ayudo con la misma pasión que un humano. Aunque no puedo probarte ropa, ¡puedo darte los mejores consejos de moda! 😄'
+            'response' => ' Sí, soy un bot (asistente virtual), pero te ayudo con la misma pasión que un humano. Aunque no puedo probarte ropa, ¡puedo darte los mejores consejos de moda!'
         ],
         
         'broma' => [
             'keywords' => ['chiste', 'broma', 'jajaja', 'reír', 'chistoso', 'gracioso'],
-            'response' => ' Me encanta tu sentido del humor. Aunque no soy comediante (estoy enfocado en moda), aquí va uno: ¿Por qué los jeans nunca van al cine? ¡Porque siempre se sientan solos! 👖 Bueno, eso fue terrible... mejor déjame ayudarte con algo de moda 😅'
+            'response' => ' Me encanta tu sentido del humor. Aunque no soy comediante (estoy enfocado en moda), aquí va uno: ¿Por qué los jeans nunca van al cine? ¡Porque siempre se sientan solos! Bueno, eso fue terrible... mejor déjame ayudarte con algo de moda'
         ],
         
         'amor' => [
             'keywords' => ['amor', 'quiero', 'enamorado', 'pareja', 'novia', 'novio', 'amor de mi vida'],
-            'response' => ' ¡Ah, el amor! Bueno, quizás no pueda ayudarte con eso, pero SÍ puedo ayudarte a verte tan bien que esa persona especial no pueda resistirse. ¿Quieres que te recomendemos un atuendo para impresionar? 😉'
+            'response' => ' ¡Ah, el amor! Bueno, quizás no pueda ayudarte con eso, pero SÍ puedo ayudarte a verte tan bien que esa persona especial no pueda resistirse. ¿Quieres que te recomendemos un atuendo para impresionar?'
         ],
         
         'fiesta' => [
@@ -142,7 +142,7 @@ class Chatbot {
         
         'gym' => [
             'keywords' => ['gym', 'ejercicio', 'deportivo', 'deporte', 'actividad física', 'entrenamiento'],
-            'response' => ' ¡Activo, me encanta! Tenemos ropa deportiva que combina comodidad y estilo. Porque ir al gym no significa verse mal. Con TuLook te veras fit en la caminadora 🏃‍♀️'
+            'response' => ' ¡Activo, me encanta! Tenemos ropa deportiva que combina comodidad y estilo. Porque ir al gym no significa verse mal. Con TuLook te veras fit en la caminadora'
         ],
         
         'lluvia' => [
@@ -152,37 +152,37 @@ class Chatbot {
         
         'frio' => [
             'keywords' => ['frío', 'invierno', 'sudadera', 'abrigo', 'chaqueta', 'bufanda'],
-            'response' => ' Cuando el frío llega, la moda no se va. Tenemos sudaderas cómodas, abrigos elegantes y capas que te mantienen caliente sin verte como abominable hombre de las nieves 🧊'
+            'response' => ' Cuando el frío llega, la moda no se va. Tenemos sudaderas cómodas, abrigos elegantes y capas que te mantienen caliente sin verte como abominable hombre de las nieves'
         ],
         
         'calor' => [
             'keywords' => ['calor', 'verano', 'shorts', 'bermudas', 'ligero', 'tintorería'],
-            'response' => ' ¡Es tiempo de lucir las piernas! En TuLook tenemos: • Shorts y bermudas de todos los colores • Camisetas frescas • Sandalias cómodas • Todo lo que necesitas para vencer el calor con estilo 🔥'
+            'response' => ' ¡Es tiempo de lucir las piernas! En TuLook tenemos: • Shorts y bermudas de todos los colores • Camisetas frescas • Sandalias cómodas • Todo lo que necesitas para vencer el calor con estilo'
         ],
         
         'cansado' => [
             'keywords' => ['cansado', 'agotado', 'cansancio', 'tirado', 'sin energía'],
-            'response' => ' Entiendo perfectamente. Pero mira, un atuendo perfecto puede cambiar tu día. Ponte ropa que te haga sentir bien y verás cómo tu energía sube. ¡La ropa adecuada es lo mejor para el alma! 💫'
+            'response' => ' Entiendo perfectamente. Pero mira, un atuendo perfecto puede cambiar tu día. Ponte ropa que te haga sentir bien y verás cómo tu energía sube. ¡La ropa adecuada es lo mejor para el alma!'
         ],
         
         'pobre' => [
             'keywords' => ['pobre', 'sin dinero', 'quebrado', 'sin plata', 'estoy pelado'],
-            'response' => ' Hey, no te preocupes. En TuLook tenemos opciones para todos los presupuestos. Especialmente nuestras secciones de ofertas y liquidaciones. ¡Verse bien no siempre tiene que ser caro! 😎'
+            'response' => ' Hey, no te preocupes. En TuLook tenemos opciones para todos los presupuestos. Especialmente nuestras secciones de ofertas y liquidaciones. ¡Verse bien no siempre tiene que ser caro!'
         ],
         
         'rico' => [
             'keywords' => ['rico', 'millonario', 'dinero', 'plata', 'riqueza', 'gastador'],
-            'response' => ' ¡Alguien con poder de compra! Perfectamente, tenemos desde piezas premium hasta colecciones exclusivas. En TuLook satisfacemos todos los gustos y presupuestos. ¿Buscas algo especial? 👑'
+            'response' => ' ¡Alguien con poder de compra! Perfectamente, tenemos desde piezas premium hasta colecciones exclusivas. En TuLook satisfacemos todos los gustos y presupuestos. ¿Buscas algo especial?'
         ],
         
         'feo' => [
             'keywords' => ['feo', 'horrible', 'desastre', 'sin estilo', 'fuera de moda'],
-            'response' => ' ¡Nada que un buen atuendo no pueda arreglar! Créeme, todo el mundo tiene potencial. En TuLook te ayudamos a brillar y encontrar ese estilo que hace que te sientas increíble. ¡No hay personas sin estilo, solo personas sin inspiración! ✨'
+            'response' => ' ¡Nada que un buen atuendo no pueda arreglar! Créeme, todo el mundo tiene potencial. En TuLook te ayudamos a brillar y encontrar ese estilo que hace que te sientas increíble. ¡No hay personas sin estilo, solo personas sin inspiración!'
         ],
         
         'covid' => [
             'keywords' => ['covid', 'pandemia', 'confinamiento', 'cuarentena', 'mascarilla'],
-            'response' => ' Tiempos difíciles, pero TuLook sigue contigo. Ropa cómoda para estar en casa, cuidados especiales para mantener la higiene... ¡Juntos saldremos adelante! 💪'
+            'response' => ' Tiempos difíciles, pero TuLook sigue contigo. Ropa cómoda para estar en casa, cuidados especiales para mantener la higiene... ¡Juntos saldremos adelante!'
         ],
         
         'cambios' => [
@@ -239,224 +239,224 @@ class Chatbot {
         
         'espejo' => [
             'keywords' => ['espejo', 'me veo', 'como me veo', 'reflejo', 'aspecto'],
-            'response' => ' Ah, buscas verse bien, ¿verdad? Ese es nuestro trabajo. Con la ropa adecuada, el espejo será tu mejor amigo. ¡Vamos, elije algo que te haga brillar! ✨'
+            'response' => ' Ah, buscas verte bien, ¿verdad? Ese es nuestro trabajo. Con la ropa adecuada, el espejo será tu mejor amigo. ¡Vamos, elije algo que te haga brillar!'
         ],
         
         'aburrido' => [
             'keywords' => ['aburrido', 'aburrimiento', 'sin nada que hacer', 'me aburro'],
-            'response' => ' Perfectamente, aquí viene el remedio: navega nuestro catálogo, descubre nuevos estilos, planifica tu próximo look... ¡La moda nunca es aburrida! 🎨'
+            'response' => ' Perfectamente, aquí viene el remedio: navega nuestro catálogo, descubre nuevos estilos, planifica tu próximo look... ¡La moda nunca es aburrida!'
         ],
         
         'triste' => [
             'keywords' => ['triste', 'tristeza', 'deprimido', 'me siento mal', 'mal día'],
-            'response' => ' Hey, la terapia del retail es real. Un atuendo nuevo puede subir tus ánimos como nada. En TuLook te aseguro que algo del catálogo te hará sonreír 💚'
+            'response' => ' Hey, la terapia del retail es real. Un atuendo nuevo puede subir tus ánimos como nada. En TuLook te aseguro que algo del catálogo te hará sonreír'
         ],
         
         'feliz' => [
             'keywords' => ['feliz', 'felicidad', 'alegre', 'contento', 'emocionado'],
-            'response' => ' ¡Esa es la actitud! La felicidad + un buen outfit = receta para el éxito. Celébra ese buen humor con algo nuevo en TuLook. ¡La vida es una pasarela! 🌟'
+            'response' => ' ¡Esa es la actitud! La felicidad + un buen outfit = receta para el éxito. Celébra ese buen humor con algo nuevo en TuLook. ¡La vida es una pasarela!'
         ],
         
         'viaje' => [
             'keywords' => ['viaje', 'viajar', 'vacaciones', 'turismo', 'aventura'],
-            'response' => ' ¡Las aventuras esperan! En TuLook tenemos ropa de viaje: • Cómoda pero elegante • Duradera • Práctica para todo clima • ¡Queda bien en cada foto del viaje! 📸'
+            'response' => ' ¡Las aventuras esperan! En TuLook tenemos ropa de viaje: • Cómoda pero elegante • Duradera • Práctica para todo clima • ¡Queda bien en cada foto del viaje!'
         ],
         
         'playa' => [
             'keywords' => ['playa', 'arena', 'mar', 'swimwear', 'bikini', 'traje de baño'],
-            'response' => ' Arena, sol, mar... y TuLook. Tenemos: • Trajes de baño trendy • Pareos coloridos • Sandalias cómodas • Gafas de sol • ¡Todo lo necesario para ser la reina/rey de la playa! 👑'
+            'response' => ' Arena, sol, mar... y TuLook. Tenemos: • Trajes de baño trendy • Pareos coloridos • Sandalias cómodas • Gafas de sol • ¡Todo lo necesario para ser la reina/rey de la playa!'
         ],
         
         'montaña' => [
             'keywords' => ['montaña', 'senderismo', 'trekking', 'camping', 'naturaleza'],
-            'response' => ' Para los aventureros que aman la naturaleza: • Ropa cómoda y resistente • Capas para diferentes temperaturas • Calzado apropiado • ¡Disfruta la montaña con estilo! 🏔️'
+            'response' => ' Para los aventureros que aman la naturaleza: • Ropa cómoda y resistente • Capas para diferentes temperaturas • Calzado apropiado • ¡Disfruta la montaña con estilo!'
         ],
         
         'instinto' => [
             'keywords' => ['instinto', 'intuición', 'qué me recomiendas', 'cuál escojo'],
-            'response' => ' Mi instinto de asistente de moda dice: sigue tu corazón. Cada pieza en TuLook está elegida para hacerte feliz. ¿Cuál te llama la atención? ¡Eso es lo correcto! 🎯'
+            'response' => ' Mi instinto de asistente de moda dice: sigue tu corazón. Cada pieza en TuLook está elegida para hacerte feliz. ¿Cuál te llama la atención? ¡Eso es lo correcto!'
         ],
         
         'tiempo' => [
             'keywords' => ['tiempo', 'hora', 'qué hora', 'cuál es la hora'],
-            'response' => ' La hora de verte increíble es AHORA. Olvida el reloj, ¡vamos a comprar! 😄 Pero si preguntas en serio, puedes ver la hora en tu dispositivo.'
+            'response' => ' La hora de verte increíble es AHORA. Olvida el reloj, ¡vamos a comprar! Pero si preguntas en serio, puedes ver la hora en tu dispositivo.'
         ],
         
         'futuro' => [
             'keywords' => ['futuro', 'mañana', 'después', 'próximo', 'siguiente'],
-            'response' => ' El futuro es brillante, especialmente si lo enfrentas con un atuendo que te haga sentir confiado. En TuLook preparamos tu guardarropa para todas tus aventuras futuras 🚀'
+            'response' => ' El futuro es brillante, especialmente si lo enfrentas con un atuendo que te hace sentir confiado. En TuLook preparamos tu guardarropa para todas tus aventuras futuras'
         ],
         
         'retro' => [
             'keywords' => ['retro', 'vintage', 'nostalgia', 'años 80', 'años 90', 'clásico'],
-            'response' => ' ¡Amante del retro! Tenemos colecciones vintage-inspired que traen esos vibes clásicos con un toque moderno. Lo mejor de ambos mundos 😎'
+            'response' => ' ¡Amante del retro! Tenemos colecciones vintage-inspired que traen esos vibes clásicos con un toque moderno. Lo mejor de ambos mundos'
         ],
         
         'futuristico' => [
             'keywords' => ['futurista', 'moderno', 'innovación', 'tecnológico', 'high-tech'],
-            'response' => ' ¡El futuro es ahora! Contamos con diseños cutting-edge y tecnologías innovadoras en nuestras prendas. Porque la moda evoluciona constantemente. ¡Sé parte del futuro! 🤖'
+            'response' => ' ¡El futuro es ahora! Contamos con diseños cutting-edge y tecnologías innovadoras en nuestras prendas. Porque la moda evoluciona constantemente. ¡Sé parte del futuro!'
         ],
         
         'artista' => [
             'keywords' => ['artista', 'artístico', 'creativo', 'arte', 'pintura', 'música'],
-            'response' => '¡Qué grande! Los artistas merecen ropa que refleje su creatividad. Tenemos piezas únicas con diseños que cuentan historias. Tu guardarropa puede ser tu galería 🖼️'
+            'response' => '¡Qué grande! Los artistas merecen ropa que refleje su creatividad. Tenemos piezas únicas con diseños que cuentan historias. Tu guardarropa puede ser tu galería'
         ],
         
         'naturaleza' => [
             'keywords' => ['naturaleza', 'ecología', 'sostenible', 'verde', 'orgánico', 'ambiental'],
-            'response' => ' Nos importa el planeta. Tenemos opciones sustentables y eco-friendly en nuestro catálogo. Porque verse bien no significa dañar la tierra 🌍💚'
+            'response' => ' Nos importa el planeta. Tenemos opciones sustentables y eco-friendly en nuestro catálogo. Porque verse bien no significa dañar la tierra'
         ],
         
         // 🛍️ RESPUESTAS ESPECÍFICAS DE LA TIENDA 🛍️
         
         'camiseta' => [
             'keywords' => ['camiseta', 'playera', 't-shirt', 'remera', 'musculosa'],
-            'response' => ' Las camisetas son la base de cualquier look. Tenemos: • Oversize • Slim fit • Con gráficos • Lisas • Estampadas • Manga corta • Manga larga • Para todos los gustos. ¿Cuál necesitas? 🎨'
+            'response' => ' Las camisetas son la base de cualquier look. Tenemos: • Oversize • Slim fit • Con gráficos • Lisas • Estampadas • Manga corta • Manga larga • Para todos los gustos. ¿Cuál necesitas?'
         ],
         
         'botas' => [
             'keywords' => ['botas', 'bota', 'botina'],
-            'response' => ' Las botas son versátiles y elegantes. Ofrecemos: • Botas al tobillo • Botas altas • Botas de cuero • Botas deportivas • Para invierno o cualquier temporada • ¡Comodidad garantizada! 👞'
+            'response' => ' Las botas son versátiles y elegantes. Ofrecemos: • Botas al tobillo • Botas altas • Botas de cuero • Botas deportivas • Para invierno o cualquier temporada • ¡Comodidad garantizada!'
         ],
         
         'accesorios' => [
             'keywords' => ['accesorios', 'gorras', 'sombreros', 'relojes', 'gafas', 'mochilas', 'billeteras', 'correas'],
-            'response' => ' Los accesorios son los detalles que elevan cualquier look. En TuLook encontrarás: • Gorras y sombreros • Relojes elegantes • Gafas de sol • Morrales • Billeteras • Correas • Llaveros • Perfumes • ¡El toque final perfecto! ✨'
+            'response' => ' Los accesorios son los detalles que elevan cualquier look. En TuLook encontrarás: • Gorras y sombreros • Relojes elegantes • Gafas de sol • Morrales • Billeteras • Correas • Llaveros • Perfumes • ¡El toque final perfecto!'
         ],
         
         'ropa_mujer_especial' => [
             'keywords' => ['ropa mujer', 'femenina', 'para mujeres', 'damas', 'chicas'],
-            'response' => ' Nuestra colección femenina es espectacular: • Vestidos • Blusas • Faldas • Leggins • Jeans • Accesorios • Toda con estilo y comodidad. ¡Explora y encuentra tu favorita! 💃'
+            'response' => ' Nuestra colección femenina es espectacular: • Vestidos • Blusas • Faldas • Leggins • Jeans • Accesorios • Toda con estilo y comodidad. ¡Explora y encuentra tu favorita!'
         ],
         
         'ropa_hombre_especial' => [
             'keywords' => ['ropa hombre', 'masculina', 'para hombres', 'caballeros', 'chicos'],
-            'response' => ' La colección para caballeros incluye: • Camisas • Camisetas • Pantalones • Jeans • Sudaderas • Chaquetas • Accesorios premium • ¡Elegancia y comodidad garantizadas! 💪'
+            'response' => ' La colección para caballeros incluye: • Camisas • Camisetas • Pantalones • Jeans • Sudaderas • Chaquetas • Accesorios premium • ¡Elegancia y comodidad garantizadas!'
         ],
         
         'ropa_infantil' => [
             'keywords' => ['ropa niños', 'infantil', 'bebés', 'pequeñitos', 'para niños'],
-            'response' => ' Los más pequeños también merecen estilo. Tenemos ropa infantil: • Cómoda y segura • Diseños coloridos • Tallas variadas • Materiales suaves • Perfecta para el juego y la escuela • ¡Los niños lucirán increíbles! 🌈'
+            'response' => ' Los más pequeños también merecen estilo. Tenemos ropa infantil: • Cómoda y segura • Diseños coloridos • Tallas variadas • Materiales suaves • Perfecta para el juego y la escuela • ¡Nuestros peques estarán felices!'
         ],
         
         'hoodie' => [
             'keywords' => ['sudadera', 'hoodie', 'capucha', 'sweatshirt', 'sueter'],
-            'response' => ' Las sudaderas son comodidad pura. Ofrecemos: • Sudaderas con capucha • Sin capucha • Diferentes colores • Estampadas • Lisas • Ideales para el invierno o casual diario • ¡Tu nueva favorita está aquí! 🤗'
+            'response' => ' Las sudaderas son comodidad pura. Ofrecemos: • Sudaderas con capucha • Sin capucha • Diferentes colores • Estampadas • Lisas • Ideales para el invierno o casual diario • ¡Tu nueva favorita está aquí!'
         ],
         
         'faldas_minifaldas' => [
             'keywords' => ['falda', 'minifalda', 'falda larga', 'pollera'],
-            'response' => ' Las faldas son feminidad y elegancia. Tenemos: • Faldas cortas • Faldas midi • Faldas maxi • Plisadas • Ajustadas • Acampanadas • De todos los colores • ¡El complemento perfecto! 💫'
+            'response' => ' Las faldas son feminidad y elegancia. Tenemos: • Faldas cortas • Faldas midi • Faldas maxi • Plisadas • Ajustadas • Acampanadas • De todos los colores • ¡El complemento perfecto!'
         ],
         
         'vestidos_especiales' => [
             'keywords' => ['vestido', 'dress', 'vestidito'],
-            'response' => ' Los vestidos son protagonistas absolutos. Descubre: • Vestidos casuales • Elegantes • De fiesta • Estampados • Lisos • Cortos • Largos • Para cualquier ocasión • ¡Te verás hermosa! 👰'
+            'response' => ' Los vestidos son protagonistas absolutos. Descubre: • Vestidos casuales • Elegantes • De fiesta • Estampados • Lisos • Cortos • Largos • Para cualquier ocasión • ¡Te verás hermosa!'
         ],
         
         'carrito' => [
             'keywords' => ['carrito', 'carrito compras', 'carro de compras', 'compra', 'agregar'],
-            'response' => ' ¿Listo para comprar? En TuLook es muy fácil: 1) Selecciona los productos que te gustan 2) Agrégalos al carrito 3) Procede al checkout 4) Elige tu método de pago 5) ¡Confirmado! Recibirás tu pedido en 2-5 días. ¡Que disfrutes! 😊'
+            'response' => ' ¿Listo para comprar? En TuLook es muy fácil: 1) Selecciona los productos que te gustan 2) Agrégalos al carrito 3) Procede al checkout 4) Elige tu método de pago 5) ¡Confirmado! Recibirás tu pedido en 2-5 días. ¡Que disfrutes!'
         ],
         
         'bienvenida_nuevos' => [
             'keywords' => ['soy nuevo', 'primera compra', 'recién llegué', 'primer pedido'],
-            'response' => ' ¡Bienvenido a TuLook! Estamos felices de que te unas. Como nuevo cliente: • Puedes navegar nuestro catálogo sin crear cuenta • Necesitarás crear una al checkout • Es muy rápido • Recibirás novedades en tu email • ¡Prepárate para una experiencia increíble! 🌟'
+            'response' => ' ¡Bienvenido a TuLook! Estamos felices de que te unas. Como nuevo cliente: • Puedes navegar nuestro catálogo sin crear cuenta • Necesitarás crear una al checkout • Es muy rápido • Recibirás novedades en tu email • ¡Prepárate para una experiencia increíble!'
         ],
         
         'mi_cuenta' => [
             'keywords' => ['mi cuenta', 'perfil', 'usuario', 'acceso', 'login'],
-            'response' => ' Tu cuenta en TuLook: • Guarda tus compras favoritas • Acceso rápido al checkout • Historial de pedidos • Ofertas personalizadas • Cambiar datos en cualquier momento • ¡Tu espacio personal! 👤'
+            'response' => ' Tu cuenta en TuLook: • Guarda tus compras favoritas • Acceso rápido al checkout • Historial de pedidos • Ofertas personalizadas • Cambiar datos en cualquier momento • ¡Tu espacio personal!'
         ],
         
         'me_encanta' => [
             'keywords' => ['favoritos', 'guardar', 'me encanta', 'likes', 'wishlist'],
-            'response' => ' ¡La función de favoritos es genial! Puedes: • Guardar productos que ames • Crear tu wishlist • Compartir con amigos • Recibir notificaciones si hay cambios de precio • ¡Nunca pierdas esa prenda que amaste! 💕'
+            'response' => ' ¡La función de favoritos es genial! Puedes: • Guardar productos que ames • Crear tu wishlist • Compartir con amigos • Recibir notificaciones si hay cambios de precio • ¡Nunca pierdas esa prenda que amaste!'
         ],
         
         'reseñas' => [
             'keywords' => ['comentarios', 'reseña', 'opinión', 'crítica', 'puntuación', 'rating'],
-            'response' => ' Las opiniones de nuestros clientes son oro. En TuLook: • Puedes dejar reseñas de tus compras • Ver opiniones de otros clientes • Calificar con estrellas • Ayudar a otros a elegir bien • ¡Tu voz importa! 🗣️'
+            'response' => ' Las opiniones de nuestros clientes son oro. En TuLook: • Puedes dejar reseñas de tus compras • Ver opiniones de otros clientes • Calificar con estrellas • Ayudar a otros a elegir bien • ¡Tu voz importa!'
         ],
         
         'buscar_filtrar' => [
             'keywords' => ['filtro', 'buscar', 'búsqueda', 'criterio'],
-            'response' => ' Usa nuestros filtros para encontrar exactamente lo que quieres: • Por categoría • Por talla • Por color • Por precio • Por género • Por marca • ¡La búsqueda perfecta en segundos! 🎯'
+            'response' => ' Usa nuestros filtros para encontrar exactamente lo que quieres: • Por categoría • Por talla • Por color • Por precio • Por género • Por marca • ¡La búsqueda perfecta en segundos!'
         ],
         
         'carrito_lleno' => [
             'keywords' => ['carrito lleno', 'carrito completo', 'muchos items'],
-            'response' => ' ¡Tu carrito tiene cantidad! Perfecto, eso significa que encontraste lo que te encanta. Continúa agregando o procede al checkout cuando estés listo. ¡Vamos a hacerlo realidad! 🎉'
+            'response' => ' ¡Tu carrito tiene cantidad! Perfecto, eso significa que encontraste lo que te encanta. Continúa agregando o procede al checkout cuando estés listo. ¡Vamos a hacerlo realidad!'
         ],
         
         'descuentos_codigos' => [
             'keywords' => ['código', 'cupón', 'voucher', 'código descuento'],
-            'response' => ' ¿Tienes un código de descuento? Excelente: • Agrégalo en el checkout • Se aplicará automáticamente • Verás el ahorro en tu total • Algunos códigos tienen restricciones especiales • ¡Ahorra más con TuLook! 💰'
+            'response' => ' ¿Tienes un código de descuento? Excelente: • Agrégalo en el checkout • Se aplicará automáticamente • Verás el ahorro en tu total • Algunos códigos tienen restricciones especiales • ¡Ahorra más con TuLook!'
         ],
         
         'rastrear_pedido' => [
             'keywords' => ['rastrear', 'dónde está', 'estado pedido', 'seguimiento'],
-            'response' => ' Para rastrear tu pedido: 1) Entra a Tu Cuenta 2) Ve a Mis Pedidos 3) Selecciona el pedido 4) Verás el número de guía 5) Usa ese número en el transportista • Tendrás updates por email también • ¡Conocerás exactamente dónde está tu compra! 🚚'
+            'response' => ' Para rastrear tu pedido: 1) Entra a Tu Cuenta 2) Ve a Mis Pedidos 3) Selecciona el pedido 4) Verás el número de guía 5) Usa ese número en el transportista • Tendrás updates por email también • ¡Conocerás exactamente dónde está tu compra!'
         ],
         
         'encontrar_talla' => [
             'keywords' => ['cuál es mi talla', 'no sé talla', 'guía tallas'],
-            'response' => ' Para encontrar tu talla perfecta: 1) Abre la guía de tallas del producto 2) Mide según las instrucciones 3) Compara con la tabla 4) Si dudas, contacta soporte • En cada producto hay instrucciones claras • ¡Nunca más una talla incorrecta! ✅'
+            'response' => ' Para encontrar tu talla perfecta: 1) Abre la guía de tallas del producto 2) Mide según las instrucciones 3) Compara con la tabla 4) Si dudas, contacta soporte • En cada producto hay instrucciones claras • ¡Nunca más una talla incorrecta!'
         ],
         
         'metodos_pago' => [
             'keywords' => ['formas pago', 'métodos de pago', 'cómo pagar'],
-            'response' => ' En TuLook aceptamos múltiples formas de pago: • Tarjeta de Crédito/Débito • PSE (Pagos Seguros en Línea) • Efectivo contra entrega • Transferencia bancaria • Billeteras digitales • ¡Elige la que prefieras! 💰'
+            'response' => ' En TuLook aceptamos múltiples formas de pago: • Tarjeta de Crédito/Débito • PSE (Pagos Seguros en Línea) • Efectivo contra entrega • Transferencia bancaria • Billeteras digitales • ¡Elige la que prefieras!'
         ],
         
         'seguridad_datos' => [
             'keywords' => ['segura', 'seguridad', 'confianza', 'protección', 'datos seguros'],
-            'response' => ' Tu seguridad es prioridad: • Encriptación SSL de 128 bits • Protección de datos personales • Plataforma certificada • Privacidad garantizada • Políticas claras • ¡Compra con total confianza! 🛡️'
+            'response' => ' Tu seguridad es prioridad: • Encriptación SSL de 128 bits • Protección de datos personales • Plataforma certificada • Privacidad garantizada • Políticas claras • ¡Compra con total confianza!'
         ],
         
         'mis_compras' => [
             'keywords' => ['historial', 'compras anteriores', 'pedidos anteriores'],
-            'response' => ' Tu historial de compras: • Acceso en cualquier momento • Detalles de cada pedido • Recibos digitales • Reordenar productos anteriores • Seguimiento completo • ¡Todo tu histórico en un lugar! 📑'
+            'response' => ' Tu historial de compras: • Acceso en cualquier momento • Detalles de cada pedido • Recibos digitales • Reordenar productos anteriores • Seguimiento completo • ¡Todo tu histórico en un lugar!'
         ],
         
         'cambio_producto' => [
             'keywords' => ['devolver', 'cambiar producto', 'no me gusta', 'llegó mal'],
-            'response' => ' Proceso de cambio/devolución: 1) Contacta soporte en 30 días 2) Explica el motivo 3) Envía la prenda en perfectas condiciones 4) Recibe tu reembolso o cambio • Envío de retorno pagado • ¡Sin complicaciones! ✅'
+            'response' => ' Proceso de cambio/devolución: 1) Contacta soporte en 30 días 2) Explica el motivo 3) Envía la prenda en perfectas condiciones 4) Recibe tu reembolso o cambio • Envío de retorno pagado • ¡Sin complicaciones!'
         ],
         
         'envio_rapido' => [
             'keywords' => ['express', 'urgente', 'rápido', 'mismo día'],
-            'response' => ' ¿Necesitas tu compra rápido? Ofrecemos: • Envío express (24 horas) • Envío standard (2-5 días) • Entrega en ciudades principales • Rastreo en tiempo real • ¡Llega cuando la necesitas! 🚀'
+            'response' => ' ¿Necesitas tu compra rápido? Ofrecemos: • Envío express (24 horas) • Envío standard (2-5 días) • Entrega en ciudades principales • Rastreo en tiempo real • ¡Llega cuando la necesitas!'
         ],
         
         'regalo_especial' => [
             'keywords' => ['regalo', 'regalar', 'cumpleaños', 'navidad', 'aniversario'],
-            'response' => ' TuLook es perfecto para regalos: • Envoltorio especial gratuito • Tarjeta personalizada • Opción de regalar directo • Gift cards disponibles • Empaque premium • ¡Sorprende a alguien especial! 💝'
+            'response' => ' TuLook es perfecto para regalos: • Envoltorio especial gratuito • Tarjeta personalizada • Opción de regalar directo • Gift cards disponibles • Empaque premium • ¡Sorprende a alguien especial!'
         ],
         
         'eventos_corporativos' => [
             'keywords' => ['bodas', 'graduación', 'eventos', 'colección limitada'],
-            'response' => ' Para eventos especiales: • Colecciones exclusivas • Diseños limitados • Prendas premium • Asesoría personalizada • Entregas a tiempo • ¡Sé la estrella del evento! 🌟'
+            'response' => ' Para eventos especiales: • Colecciones exclusivas • Diseños limitados • Prendas premium • Asesoría personalizada • Entregas a tiempo • ¡Sé la estrella del evento!'
         ],
         
         'app_movil' => [
             'keywords' => ['app', 'celular', 'móvil', 'android', 'ios'],
-            'response' => ' ¡Descarga nuestra app! • Compra desde tu celular • Notificaciones de ofertas • Acceso rápido a favoritos • Mejor experiencia visual • Descuentos exclusivos en app • ¡Disponible en iOS y Android! 📲'
+            'response' => ' ¡Descarga nuestra app! • Compra desde tu celular • Notificaciones de ofertas • Acceso rápido a favoritos • Mejor experiencia visual • Descuentos exclusivos en app • ¡Disponible en iOS y Android!'
         ],
         
         'redes' => [
             'keywords' => ['instagram', 'facebook', 'redes', 'twitter', 'tiktok', 'síguenos'],
-            'response' => ' ¡Síguenos en redes! Encontrarás: • Contenido exclusivo • Consejos de moda • Fotos de clientes • Concursos • Promociones especiales • Novedades antes que nadie • @TuLook en Instagram, Facebook y TikTok 💫'
+            'response' => ' ¡Síguenos en redes! Encontrarás: • Contenido exclusivo • Consejos de moda • Fotos de clientes • Concursos • Promociones especiales • Novedades antes que nadie • @TuLook en Instagram, Facebook y TikTok'
         ],
         
         'email_ofertas' => [
             'keywords' => ['newsletter', 'suscribir', 'email', 'notificaciones'],
-            'response' => ' ¡Suscríbete a nuestro newsletter! Recibe: • Ofertas exclusivas • Novedades primero • Cupones especiales • Consejos de moda • Solo lo que importa • Sin spam, promesa • ¡Tu inbox será mejor! 💌'
+            'response' => ' ¡Suscríbete a nuestro newsletter! Recibe: • Ofertas exclusivas • Novedades primero • Cupones especiales • Consejos de moda • Solo lo que importa • Sin spam, promesa • ¡Tu inbox será mejor!'
         ],
         
         'tallas_ninos' => [
             'keywords' => ['talla niños', 'infantil niños', 'pequeñitos talla'],
-            'response' => ' Tallas para niños en TuLook: • 8, 10, 12, 14, 16 años • Cómodas y seguras • Diseños coloridos • Materiales suaves • Perfectas para crecer • ¡Nuestros peques estarán felices! 🎨'
+            'response' => ' Tallas para niños en TuLook: • 8, 10, 12, 14, 16 años • Cómodas y seguras • Diseños coloridos • Materiales suaves • Perfectas para crecer • ¡Nuestros peques estarán felices!'
         ]
     ];
 
@@ -495,7 +495,7 @@ class Chatbot {
         }
         
         // Respuesta por defecto mejorada
-        return "🤔 No estoy seguro de entender tu pregunta. Puedo ayudarte con: productos, tallas, precios, envíos, devoluciones, ofertas, crédito, cambios, materiales, cuidados de ropa, ropa deportiva/formal, y mucho más. ¿Podrías reformular tu pregunta?";
+        return "No estoy seguro de entender tu pregunta. Puedo ayudarte con: productos, tallas, precios, envíos, devoluciones, ofertas, crédito, cambios, materiales, cuidados de ropa, ropa deportiva/formal, y mucho más. ¿Podrías reformular tu pregunta?";
     }
 }
 ?>

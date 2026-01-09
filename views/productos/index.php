@@ -347,5 +347,8 @@ document.addEventListener('DOMContentLoaded', function() {
     background-color: #f8f9fa;
 }
 </style>
+
+<?php include 'views/chatbot/chat.php'; ?>
+
 </body>
 </html>
