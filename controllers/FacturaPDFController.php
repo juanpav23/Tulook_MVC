@@ -13,10 +13,9 @@ class FacturaPDFController {
     }
 
     public function generar() {
-        // ✅ LIMPIAR CUALQUIER SALIDA ANTES DE ENVIAR HEADERS
+        // Limpiar buffer
         if (ob_get_length()) ob_clean();
         
-        // Obtener ID de la factura
         $id = (int)($_GET['id'] ?? 0);
         
         if (!$id) {
@@ -25,76 +24,58 @@ class FacturaPDFController {
         }
 
         try {
-            // Obtener datos de la factura
+            // Obtener datos
             $factura = $this->compra->obtenerFacturaDetalle($id);
             
             if (!$factura) {
-                $this->redirigirInicio();
-                return;
+                throw new Exception("Factura no encontrada");
             }
 
             $items = $this->compra->obtenerFacturaItems($id);
+            
+            if (empty($items)) {
+                throw new Exception("No hay items en la factura");
+            }
 
-            // ✅ PREPARAR ITEMS PARA EL PDF CON ATRIBUTOS DINÁMICOS
+            // Preparar items para PDF
             $itemsParaPdf = [];
+            $descuento_total = 0;
+            
             foreach ($items as $item) {
-                // ✅ USAR EL MÉTODO AUXILIAR PARA OBTENER ESPECIFICACIONES
-                $especificaciones = $this->formatearEspecificacionesItem($item);
+                // Obtener especificaciones limpias
+                $especificaciones = $this->obtenerEspecificacionesLimpias($item);
                 
-                // ✅ CREAR ESPECIFICACIONES CLARAS
-                $especificacionesStr = '';
+                // Calcular precios
+                $cantidad = intval($item['Cantidad'] ?? 1);
+                $precio_unitario = floatval($item['Precio_Unitario'] ?? 0);
+                $descuento_item = floatval($item['Descuento_Aplicado'] ?? 0);
                 
-                // Construir especificaciones limpias
-                foreach ($especificaciones as $esp) {
-                    if (!empty($esp)) {
-                        if (!empty($especificacionesStr)) {
-                            $especificacionesStr .= ' | ';
-                        }
-                        $especificacionesStr .= $esp;
-                    }
+                // Calcular precio original antes de descuento
+                $precio_original = $precio_unitario;
+                if ($descuento_item > 0 && $cantidad > 0) {
+                    $precio_original = $precio_unitario + ($descuento_item / $cantidad);
                 }
                 
-                // Si no hay especificaciones, usar "—"
-                if (empty($especificacionesStr)) {
-                    $especificacionesStr = '—';
-                }
+                // Acumular descuento total
+                $descuento_total += $descuento_item;
                 
                 $itemsParaPdf[] = [
-                    'Nombre_Producto' => $item['Nombre_Final'] ?? $item['N_Articulo'] ?? 'Producto',
-                    'Producto' => $item['Nombre_Final'] ?? $item['N_Articulo'] ?? 'Producto',
-                    'Especificaciones' => $especificacionesStr,  // ✅ SOLO ESTE CAMPO
-                    'Cantidad' => (int)($item['Cantidad'] ?? 1),
-                    'Precio_Unitario' => floatval($item['Precio_Unitario'] ?? $item['Subtotal'] / max(1, $item['Cantidad'])),
-                    'Precio' => floatval($item['Precio_Unitario'] ?? $item['Subtotal'] / max(1, $item['Cantidad'])),
-                    'Subtotal' => floatval($item['Subtotal'] ?? 0)
+                    'Nombre_Producto' => $this->obtenerNombreProducto($item),
+                    'Producto' => $this->obtenerNombreProducto($item),
+                    'Especificaciones' => $especificaciones,
+                    'Cantidad' => $cantidad,
+                    'Precio_Unitario' => $precio_unitario,
+                    'Precio_Original' => $precio_original,
+                    'Precio' => $precio_unitario,
+                    'Subtotal' => floatval($item['Subtotal'] ?? 0),
+                    'Descuento_Aplicado' => $descuento_item
                 ];
             }
 
-            // CONVERTIR MÉTODO DE PAGO
-            $metodos_map = [1 => 'Tarjeta', 2 => 'Efectivo', 3 => 'PSE'];
-            $metodo_pago_nombre = $metodos_map[$factura['ID_Metodo_Pago']] ?? 'No especificado';
+            // Preparar datos de factura para PDF
+            $facturaParaPdf = $this->prepararDatosFactura($factura, $descuento_total);
 
-            // Preparar factura para el PDF
-            $facturaParaPdf = [
-                'ID_Factura' => $factura['ID_Factura'] ?? $id,
-                'Nombre_Cliente' => trim(($factura['Nombre'] ?? '') . ' ' . ($factura['Apellido'] ?? '')),
-                'Email_Cliente' => $factura['Correo'] ?? 'No especificado',
-                'Telefono_Cliente' => 'No especificado',
-                'Fecha_Factura' => $factura['Fecha_Factura'] ?? date('Y-m-d H:i:s'),
-                'Metodo_Pago' => $metodo_pago_nombre,
-                'Total' => floatval($factura['Monto_Total'] ?? 0),
-                'Direccion_Completa' => ($factura['Direccion'] ?? '') . ', ' . 
-                                       ($factura['Ciudad'] ?? '') . ', ' . 
-                                       ($factura['Departamento'] ?? ''),
-                // CAMPOS COMPATIBILIDAD
-                'CodigoPostal' => $factura['CodigoPostal'] ?? '155201',
-                'Nombre' => $factura['Nombre'] ?? '',
-                'Apellido' => $factura['Apellido'] ?? '',
-                'Correo' => $factura['Correo'] ?? '',
-                'Monto_Total' => $factura['Monto_Total'] ?? 0,
-                'T_Pago' => $metodo_pago_nombre
-            ];
-
+            // Generar PDF
             $mailer = new Mailer();
             $pdfPath = $mailer->generarPdfFactura([
                 'factura' => $facturaParaPdf,
@@ -105,56 +86,143 @@ class FacturaPDFController {
                 throw new Exception("No se pudo generar el archivo PDF");
             }
 
-            // ✅ ENVIAR HEADERS ANTES DE CUALQUIER SALIDA
-            header("Content-Type: application/pdf");
-            header("Content-Disposition: attachment; filename=factura_$id.pdf");
-            header("Content-Length: " . filesize($pdfPath));
-            header("Cache-Control: no-cache, must-revalidate");
-            header("Expires: 0");
-            header("Pragma: no-cache");
-
-            // ✅ LEER Y ENVIAR EL ARCHIVO
-            readfile($pdfPath);
-            
-            // ✅ LIMPIAR ARCHIVO TEMPORAL
-            unlink($pdfPath);
-            exit;
+            // Enviar PDF al navegador
+            $this->enviarPDF($pdfPath, $facturaParaPdf['ID_Factura']);
 
         } catch (Exception $e) {
-            // ✅ MANEJAR ERRORES SIN ENVIAR SALIDA
             error_log("Error generando PDF: " . $e->getMessage());
-            $this->redirigirConError($id, 'Error al generar el PDF');
+            $this->redirigirConError($id, $e->getMessage());
         }
     }
 
-    // ✅ MÉTODO AUXILIAR PARA FORMATEAR ATRIBUTOS (COPIADO DE Compra.php)
-    private function formatearEspecificacionesItem($item) {
+    // =======================================================
+    // MÉTODOS AUXILIARES
+    // =======================================================
+    
+    private function obtenerNombreProducto($item) {
+    // ✅ CORRECCIÓN: USAR EL MISMO LÓGICA QUE EN exito.php
+    
+    $nombre_base = $item['N_Articulo'] ?? 'Producto';
+    $nombre_variante = $item['Nombre_Producto'] ?? '';
+    
+    // Decidir qué nombre mostrar
+    if (!empty($nombre_variante) && trim($nombre_variante) !== '') {
+        // ✅ SIEMPRE mostrar el nombre de la variante si existe
+        $nombre = $nombre_variante;
+    } else {
+        // Si no hay nombre de variante, mostrar el base con atributos
         $especificaciones = [];
         
-        // Verificar si hay atributos dinámicos
-        if (!empty($item['ID_Atributo1']) && !empty($item['ValorAtributo1'])) {
-            $nombre = !empty($item['Nombre_Atributo1']) ? $item['Nombre_Atributo1'] : 'Especificación';
-            $especificaciones[] = $nombre . ': ' . $item['ValorAtributo1'];
+        for ($i = 1; $i <= 3; $i++) {
+            $valor = $item["ValorAtributo{$i}"] ?? '';
+            if (!empty($valor) && $valor !== '—' && $valor !== 'NO' && $valor !== 'NULL') {
+                $especificaciones[] = $valor;
+            }
         }
         
-        if (!empty($item['ID_Atributo2']) && !empty($item['ValorAtributo2'])) {
-            $nombre = !empty($item['Nombre_Atributo2']) ? $item['Nombre_Atributo2'] : 'Especificación';
-            $especificaciones[] = $nombre . ': ' . $item['ValorAtributo2'];
+        $nombre = $nombre_base;
+        if (!empty($especificaciones)) {
+            $nombre .= " (" . implode(", ", $especificaciones) . ")";
         }
-        
-        if (!empty($item['ID_Atributo3']) && !empty($item['ValorAtributo3'])) {
-            $nombre = !empty($item['Nombre_Atributo3']) ? $item['Nombre_Atributo3'] : 'Especificación';
-            $especificaciones[] = $nombre . ': ' . $item['ValorAtributo3'];
-        }
-        
-        return $especificaciones;
     }
-
+    
+    // ✅ Formatear igual que en exito.php
+    return ucwords(strtolower(trim($nombre)));
+}
+    
+    private function obtenerEspecificacionesLimpias($item) {
+    // ✅ Si ya usamos el Nombre_Producto completo, no necesitamos duplicar atributos
+    // Solo mostrar información adicional que no esté en el nombre
+    
+    $especificaciones = [];
+    
+    // Podrías mostrar aquí información técnica o específica
+    // Por ejemplo: código del producto, sku, etc.
+    $codigo = $item['Codigo'] ?? $item['Codigo_Producto'] ?? '';
+    if (!empty($codigo)) {
+        $especificaciones[] = "Código: $codigo";
+    }
+    
+    // O mostrar solo los atributos 2 y 3 si el 1 ya está en el nombre
+    for ($i = 2; $i <= 3; $i++) {
+        $valor = $item["ValorAtributo{$i}"] ?? '';
+        if (!empty($valor) && $valor != 'NO' && $valor != '—') {
+            $especificaciones[] = $valor;
+        }
+    }
+    
+    return empty($especificaciones) ? '—' : implode(' | ', $especificaciones);
+}
+    
+    private function prepararDatosFactura($factura, $descuento_total) {
+        // Mapear métodos de pago según tu BD
+        $metodos_map = [
+            1 => 'Tarjeta de Crédito',
+            2 => 'Tarjeta de Débito', 
+            3 => 'Efectivo',
+            4 => 'PSE',
+            5 => 'Transferencia'
+        ];
+        
+        $metodo_pago_id = $factura['ID_Metodo_Pago'] ?? 0;
+        $metodo_pago_nombre = $metodos_map[$metodo_pago_id] ?? 'No especificado';
+        
+        // Construir dirección completa
+        $direccion_parts = [];
+        if (!empty($factura['Direccion'])) $direccion_parts[] = $factura['Direccion'];
+        if (!empty($factura['Ciudad'])) $direccion_parts[] = $factura['Ciudad'];
+        if (!empty($factura['Departamento'])) $direccion_parts[] = $factura['Departamento'];
+        $direccion_completa = implode(', ', $direccion_parts);
+        
+        return [
+            'ID_Factura' => $factura['ID_Factura'] ?? 0,
+            'Nombre_Cliente' => trim(($factura['Nombre'] ?? '') . ' ' . ($factura['Apellido'] ?? '')),
+            'Email_Cliente' => $factura['Correo'] ?? 'No especificado',
+            'Telefono_Cliente' => $factura['Celular'] ?? 'No especificado',
+            'Celular' => $factura['Celular'] ?? 'No especificado',
+            'Fecha_Factura' => $factura['Fecha_Factura'] ?? date('Y-m-d H:i:s'),
+            'Metodo_Pago' => $metodo_pago_nombre,
+            'Monto_Total' => floatval($factura['Monto_Total'] ?? 0),
+            'Subtotal' => floatval($factura['Subtotal'] ?? 0),
+            'IVA' => floatval($factura['IVA'] ?? 0),
+            'Direccion_Completa' => $direccion_completa ?: 'No especificada',
+            'CodigoPostal' => $factura['CodigoPostal'] ?? '',
+            'Nombre' => $factura['Nombre'] ?? '',
+            'Apellido' => $factura['Apellido'] ?? '',
+            'Correo' => $factura['Correo'] ?? '',
+            'N_Documento' => $factura['N_Documento'] ?? '',
+            'Tipo_Documento' => $factura['Tipo_Documento'] ?? '',
+            'T_Pago' => $metodo_pago_nombre,
+            'Estado' => $factura['Estado'] ?? '',
+            'Descuento_Total' => $descuento_total,
+            'IVA_Porcentaje' => 19
+        ];
+    }
+    
+    private function enviarPDF($pdfPath, $facturaId) {
+        header("Content-Type: application/pdf");
+        header("Content-Disposition: attachment; filename=Factura_TuLook_" . 
+               str_pad($facturaId, 6, '0', STR_PAD_LEFT) . ".pdf");
+        header("Content-Length: " . filesize($pdfPath));
+        header("Cache-Control: no-cache, must-revalidate");
+        header("Expires: 0");
+        header("Pragma: no-cache");
+        
+        readfile($pdfPath);
+        
+        // Limpiar archivo temporal
+        if (file_exists($pdfPath)) {
+            unlink($pdfPath);
+        }
+        
+        exit;
+    }
+    
     private function redirigirInicio() {
         header("Location: " . BASE_URL);
         exit;
     }
-
+    
     private function redirigirConError($id_factura, $mensaje = '') {
         $url = BASE_URL . "?c=Checkout&a=exito&id=$id_factura";
         if ($mensaje) {

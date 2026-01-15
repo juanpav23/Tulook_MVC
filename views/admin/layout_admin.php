@@ -356,7 +356,9 @@ $tipoUsuario = $esAdministrador ? 'Administrador' : ($esEditor ? 'Editor' : 'Usu
                   'ver' => 'descuentos/ver.php',
                   'guardar' => 'descuentos/index.php',
                   'actualizar' => 'descuentos/index.php',
-                  'eliminar' => 'descuentos/index.php'
+                  'eliminar' => 'descuentos/index.php',
+                  'estadisticas' => 'descuentos/estadisticas.php'
+                  
               ],
               'UsuarioAdmin' => [
                   'index' => 'usuario/index.php',
