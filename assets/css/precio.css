@@ -1,0 +1,248 @@
+/* precio.css - Estilos específicos para gestión de precios */
+:root {
+    --primary-dark: #1B202D;
+    --primary-blue: #2A3448;
+    --accent-blue: #3A4A6B;
+    --secondary-blue: #4A5B7D;
+    --dark-gray: #6c757d;
+    --light-gray: #e9ecef;
+    --light-bg: #f8f9fa;
+    --text-dark: #2c3e50;
+    --text-light: #6c757d;
+    --border-radius: 12px;
+    --card-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+    --transition: all 0.3s ease;
+    --danger-color: #dc3545;
+    --danger-light: #f8d7da;
+    --danger-dark: #721c24;
+}
+
+/* Colores personalizados basados en #1B202D */
+.bg-primary-dark { background-color: var(--primary-dark) !important; }
+.bg-primary { background-color: var(--primary-blue) !important; }
+.bg-primary-light { background-color: var(--accent-blue) !important; }
+
+.text-primary-dark { color: var(--primary-dark) !important; }
+.text-primary { color: var(--primary-blue) !important; }
+.text-primary-light { color: var(--accent-blue) !important; }
+
+.border-primary { border-color: var(--primary-dark) !important; }
+.border-primary-light { border-color: var(--accent-blue) !important; }
+
+/* Botones */
+.btn-primary {
+    background-color: var(--primary-dark) !important;
+    border-color: var(--primary-dark) !important;
+    color: white !important;
+    transition: var(--transition) !important;
+}
+
+.btn-primary:hover, .btn-primary:focus {
+    background-color: var(--primary-blue) !important;
+    border-color: var(--primary-blue) !important;
+    color: white !important;
+}
+
+.btn-outline-primary {
+    color: var(--primary-dark) !important;
+    border-color: var(--primary-dark) !important;
+    background-color: transparent !important;
+    transition: var(--transition) !important;
+}
+
+.btn-outline-primary:hover {
+    background-color: var(--primary-dark) !important;
+    border-color: var(--primary-dark) !important;
+    color: white !important;
+}
+
+.btn-outline-primary-light {
+    color: var(--accent-blue) !important;
+    border-color: var(--accent-blue) !important;
+    background-color: transparent !important;
+    transition: var(--transition) !important;
+}
+
+.btn-outline-primary-light:hover {
+    background-color: var(--accent-blue) !important;
+    border-color: var(--accent-blue) !important;
+    color: white !important;
+}
+
+/* Botón de peligro/eliminar */
+.btn-danger {
+    background-color: var(--danger-color) !important;
+    border-color: var(--danger-color) !important;
+    color: white !important;
+    transition: var(--transition) !important;
+}
+
+.btn-danger:hover {
+    background-color: #bb2d3b !important;
+    border-color: #b02a37 !important;
+    color: white !important;
+}
+
+.btn-outline-danger {
+    color: var(--danger-color) !important;
+    border-color: var(--danger-color) !important;
+    background-color: transparent !important;
+    transition: var(--transition) !important;
+}
+
+.btn-outline-danger:hover {
+    background-color: var(--danger-color) !important;
+    border-color: var(--danger-color) !important;
+    color: white !important;
+}
+
+/* Botón deshabilitado */
+.btn-outline-secondary {
+    color: var(--dark-gray) !important;
+    border-color: var(--dark-gray) !important;
+    background-color: transparent !important;
+    cursor: not-allowed !important;
+}
+
+/* Cards con diseño específico */
+.stats-card {
+    border-left: 4px solid var(--accent-blue) !important;
+    background: white !important;
+    box-shadow: var(--card-shadow) !important;
+    transition: var(--transition) !important;
+    border-radius: var(--border-radius) !important;
+    overflow: hidden !important;
+}
+
+.stats-card:hover {
+    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.12) !important;
+}
+
+.card-header.bg-gradient-primary {
+    background: linear-gradient(135deg, var(--primary-blue) 0%, var(--primary-dark) 100%) !important;
+    color: white !important;
+    border-radius: var(--border-radius) var(--border-radius) 0 0 !important;
+}
+
+/* Efectos hover para filas de tabla */
+.hover-shadow-detalle:hover {
+    background-color: rgba(27, 32, 45, 0.02) !important;
+    transition: var(--transition) !important;
+}
+
+/* Badges específicos */
+.badge.bg-primary {
+    background-color: var(--primary-dark) !important;
+    color: white !important;
+}
+
+.badge.bg-primary-light {
+    background-color: var(--accent-blue) !important;
+    color: white !important;
+}
+
+.badge.bg-secondary {
+    background-color: var(--dark-gray) !important;
+    color: white !important;
+}
+
+.badge.bg-danger {
+    background-color: var(--danger-color) !important;
+    color: white !important;
+}
+
+/* Tabla específica */
+.table-primary-dark {
+    background-color: var(--primary-dark) !important;
+    color: white !important;
+}
+
+.table-primary-dark th {
+    color: white !important;
+    border-color: var(--accent-blue) !important;
+}
+
+/* Formularios */
+.form-control:focus, .form-select:focus {
+    border-color: var(--accent-blue) !important;
+    box-shadow: 0 0 0 0.25rem rgba(58, 74, 107, 0.25) !important;
+}
+
+.border-primary {
+    border-color: var(--primary-dark) !important;
+}
+
+/* Alertas con tema */
+.alert-primary-light {
+    background-color: rgba(58, 74, 107, 0.1) !important;
+    border-color: var(--accent-blue) !important;
+    color: var(--primary-dark) !important;
+}
+
+/* Sin resultados */
+.no-results {
+    background: linear-gradient(135deg, var(--light-bg) 0%, var(--light-gray) 100%) !important;
+    border-radius: var(--border-radius) !important;
+    padding: 3rem 1rem !important;
+}
+
+/* Inputs con borde temático */
+.form-control.border-primary, .form-select.border-primary {
+    border-color: var(--primary-dark) !important;
+}
+
+.input-group-text.bg-primary-light {
+    background-color: var(--accent-blue) !important;
+    color: white !important;
+    border-color: var(--primary-dark) !important;
+}
+
+/* Etiquetas de uso */
+.uso-tag {
+    display: inline-flex;
+    align-items: center;
+    padding: 0.25rem 0.5rem;
+    border-radius: 4px;
+    font-size: 0.85rem;
+    font-weight: 500;
+}
+
+.uso-si {
+    background-color: rgba(27, 32, 45, 0.1);
+    color: var(--primary-dark);
+    border: 1px solid rgba(27, 32, 45, 0.2);
+}
+
+.uso-no {
+    background-color: rgba(108, 117, 125, 0.1);
+    color: var(--dark-gray);
+    border: 1px solid rgba(108, 117, 125, 0.2);
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    .stats-card .row > div {
+        margin-bottom: 1rem !important;
+    }
+    
+    .stats-card .row > div:last-child {
+        margin-bottom: 0 !important;
+    }
+    
+    .btn-group {
+        flex-wrap: wrap !important;
+    }
+    
+    .btn-group .btn {
+        margin-bottom: 0.25rem !important;
+        margin-right: 0.25rem !important;
+    }
+    
+    .table-responsive {
+        font-size: 0.9rem !important;
+    }
+    
+    .table th, .table td {
+        padding: 0.5rem !important;
+    }
+}

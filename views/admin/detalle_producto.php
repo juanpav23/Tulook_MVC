@@ -120,104 +120,103 @@ $totalColumnas = 7 + count($atributosData);
                         $porcentaje = floatval($v['Porcentaje']);
                         $precioFinal = $precioBase + ($precioBase * ($porcentaje / 100));
 
-                        // Construir nombre basado en atributos
-                        $nombrePartes = [$articulo['N_Articulo']];
-                        if (!empty($v['ValorAtributo1'])) $nombrePartes[] = $v['ValorAtributo1'];
-                        if (!empty($v['ValorAtributo2'])) $nombrePartes[] = $v['ValorAtributo2'];
-                        if (!empty($v['ValorAtributo3'])) $nombrePartes[] = $v['ValorAtributo3'];
-                        
-                        $nombreVariante = !empty($v['Nombre_Producto']) 
-                            ? $v['Nombre_Producto'] 
-                            : implode(' ', $nombrePartes);
-                        ?>
-                        <tr class="hover-shadow-detalle">
-                            <td>
-                                <?php if ($rutaVar && $rutaVar != BASE_URL . 'assets/img/sin_imagen.png'): ?>
-                                    <img src="<?= htmlspecialchars($rutaVar); ?>" 
-                                        class="product-image"
-                                        style="width: 70px; height: 70px; object-fit: cover; border: 1px solid #dee2e6; border-radius: 0.375rem; box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);" 
-                                        alt="Imagen variante">
-                                <?php else: ?>
-                                    <div style="width: 70px; height: 70px; border: 1px solid #dee2e6; border-radius: 0.375rem; box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075); display: flex; align-items: center; justify-content: center; background-color: #f8f9fa;">
-                                        <span class="text-muted small">Sin imagen</span>
-                                    </div>
-                                <?php endif; ?>
-                            </td>
-                            <td class="text-start"><?= htmlspecialchars($nombreVariante); ?></td>
+                            // Construir nombre basado en atributos
+                            $nombrePartes = [$articulo['N_Articulo']];
+                            if (!empty($v['ValorAtributo1'])) $nombrePartes[] = $v['ValorAtributo1'];
+                            if (!empty($v['ValorAtributo2'])) $nombrePartes[] = $v['ValorAtributo2'];
+                            if (!empty($v['ValorAtributo3'])) $nombrePartes[] = $v['ValorAtributo3'];
                             
-                            <!-- Mostrar SOLO los atributos que existen -->
-                            <?php foreach ($atributosData as $index => $atributo): ?>
-                                <?php $numero = $index + 1; ?>
+                            $nombreVariante = !empty($v['Nombre_Producto']) 
+                                ? $v['Nombre_Producto'] 
+                                : implode(' ', $nombrePartes);
+                            ?>
+                            <tr>
                                 <td>
-                                    <?php 
-                                    $valorAtributo = $v["ValorAtributo{$numero}"] ?? '';
-                                    if (!empty($valorAtributo)): ?>
-                                        <span class="badge bg-light text-primary-dark border">
-                                            <?= htmlspecialchars($valorAtributo) ?>
-                                        </span>
+                                    <?php if ($rutaVar && $rutaVar != BASE_URL . 'assets/img/sin_imagen.png'): ?>
+                                        <img src="<?= htmlspecialchars($rutaVar); ?>" 
+                                            style="width: 70px; height: 70px; object-fit: cover; border: 1px solid #dee2e6; border-radius: 0.375rem; box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);" 
+                                            alt="Imagen variante">
                                     <?php else: ?>
-                                        <span class="text-muted">—</span>
+                                        <div style="width: 70px; height: 70px; border: 1px solid #dee2e6; border-radius: 0.375rem; box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075); display: flex; align-items: center; justify-content: center; background-color: #f8f9fa;">
+                                            <span class="text-muted small">Sin imagen</span>
+                                        </div>
                                     <?php endif; ?>
                                 </td>
-                            <?php endforeach; ?>
-                            
-                            <!-- COLUMNA % VARIACIÓN -->
-                            <td>
-                                <?php if ($v['Porcentaje'] >= 0): ?>
-                                    <span class="badge bg-primary text-light">
-                                        +<?= htmlspecialchars($v['Porcentaje']); ?>%
-                                    </span>
-                                <?php else: ?>
-                                    <span class="badge bg-primary-light text-primary-dark">
-                                        <?= htmlspecialchars($v['Porcentaje']); ?>%
-                                    </span>
-                                <?php endif; ?>
-                            </td>
-                            
-                            <!-- COLUMNA PRECIO FINAL -->
-                            <td>
-                                <strong class="text-primary-dark"><?= formatoPrecio($precioFinal); ?></strong>
-                            </td>
-                            
-                            <!-- COLUMNA CANTIDAD -->
-                            <td>
-                                <?php if ($v['Cantidad'] > 0): ?>
-                                    <span class="badge bg-primary text-light">
-                                        <?= htmlspecialchars($v['Cantidad']); ?>
-                                    </span>
-                                <?php else: ?>
-                                    <span class="badge bg-primary-light text-primary-dark">
-                                        <?= htmlspecialchars($v['Cantidad']); ?>
-                                    </span>
-                                <?php endif; ?>
-                            </td>
-                            
-                            <!-- COLUMNA ESTADO -->
-                            <td>
-                                <span class="badge <?= $v['Activo'] ? 'bg-primary text-light' : 'bg-primary-light text-primary-dark' ?>">
-                                    <?= $v['Activo'] ? '✅ Activa' : '❌ Inactiva' ?>
-                                </span>
-                            </td>
-                            
-                            <!-- COLUMNA ACCIONES -->
-                            <td>
-                                <div class="btn-group btn-group-sm">
-                                    <!-- BOTÓN ACTIVAR/DESACTIVAR -->
-                                    <?php if ($v['Activo']): ?>
-                                        <a href="<?= BASE_URL ?>?c=Admin&a=toggleVariante&id=<?= $v['ID_Producto'] ?>&articulo=<?= $articulo['ID_Articulo'] ?>" 
-                                        class="btn btn-detalle-outline-primary-light"
-                                        onclick="return confirm('¿Desactivar esta variante?')"
-                                        title="Desactivar variante">
-                                            <i class="fas fa-pause"></i>
-                                        </a>
+                                <td class="text-start"><?= htmlspecialchars($nombreVariante); ?></td>
+                                
+                                <!-- Mostrar SOLO los atributos que existen -->
+                                <?php foreach ($atributosData as $index => $atributo): ?>
+                                    <?php $numero = $index + 1; ?>
+                                    <td>
+                                        <?php 
+                                        $valorAtributo = $v["ValorAtributo{$numero}"] ?? '';
+                                        if (!empty($valorAtributo)): ?>
+                                            <span class="badge bg-light text-dark border">
+                                                <?= htmlspecialchars($valorAtributo) ?>
+                                            </span>
+                                        <?php else: ?>
+                                            <span class="text-muted">—</span>
+                                        <?php endif; ?>
+                                    </td>
+                                <?php endforeach; ?>
+                                
+                                <!-- COLUMNA % VARIACIÓN (con colores) -->
+                                <td>
+                                    <?php if ($v['Porcentaje'] >= 0): ?>
+                                        <span class="badge bg-success text-white">
+                                            +<?= htmlspecialchars($v['Porcentaje']); ?>%
+                                        </span>
                                     <?php else: ?>
-                                        <a href="<?= BASE_URL ?>?c=Admin&a=toggleVariante&id=<?= $v['ID_Producto'] ?>&articulo=<?= $articulo['ID_Articulo'] ?>" 
-                                        class="btn btn-detalle-outline-primary"
-                                        onclick="return confirm('¿Activar esta variante?')"
-                                        title="Activar variante">
-                                            <i class="fas fa-play"></i>
-                                        </a>
+                                        <span class="badge bg-danger text-white">
+                                            <?= htmlspecialchars($v['Porcentaje']); ?>%
+                                        </span>
                                     <?php endif; ?>
+                                </td>
+                                
+                                <!-- COLUMNA PRECIO FINAL -->
+                                <td>
+                                    <strong><?= formatoPrecio($precioFinal); ?></strong>
+                                </td>
+                                
+                                <!-- COLUMNA CANTIDAD -->
+                                <td>
+                                    <?php if ($v['Cantidad'] > 0): ?>
+                                        <span class="badge bg-success">
+                                            <?= htmlspecialchars($v['Cantidad']); ?>
+                                        </span>
+                                    <?php else: ?>
+                                        <span class="badge bg-danger">
+                                            <?= htmlspecialchars($v['Cantidad']); ?>
+                                        </span>
+                                    <?php endif; ?>
+                                </td>
+                                
+                                <!-- COLUMNA ESTADO -->
+                                <td>
+                                    <span class="badge <?= $v['Activo'] ? 'bg-success' : 'bg-secondary' ?>">
+                                        <?= $v['Activo'] ? '✅ Activa' : '❌ Inactiva' ?>
+                                    </span>
+                                </td>
+                                
+                                <!-- COLUMNA ACCIONES -->
+                                <td>
+                                    <div class="btn-group btn-group-sm">
+                                        <!-- BOTÓN ACTIVAR/DESACTIVAR -->
+                                        <?php if ($v['Activo']): ?>
+                                            <a href="<?= BASE_URL ?>?c=Admin&a=toggleVariante&id=<?= $v['ID_Producto'] ?>&articulo=<?= $articulo['ID_Articulo'] ?>" 
+                                            class="btn btn-outline-warning"
+                                            onclick="return confirm('¿Desactivar esta variante?')"
+                                            title="Desactivar variante">
+                                                <i class="fas fa-pause"></i>
+                                            </a>
+                                        <?php else: ?>
+                                            <a href="<?= BASE_URL ?>?c=Admin&a=toggleVariante&id=<?= $v['ID_Producto'] ?>&articulo=<?= $articulo['ID_Articulo'] ?>" 
+                                            class="btn btn-outline-success"
+                                            onclick="return confirm('¿Activar esta variante?')"
+                                            title="Activar variante">
+                                                <i class="fas fa-play"></i>
+                                            </a>
+                                        <?php endif; ?>
 
                                     <!-- Botón editar -->
                                     <button type="button" class="btn btn-detalle-outline-primary" 
@@ -321,15 +320,15 @@ $totalColumnas = 7 + count($atributosData);
             <small class="form-text text-muted">Máximo: 99,999 unidades</small>
         </div>
 
-        <!-- ESTADO -->
-        <div class="col-md-2">
-            <label class="form-label fw-bold text-primary-dark">Estado</label>
-            <select name="Activo" class="form-select" required>
-                <option value="0">❌ Inactiva</option>
-                <option value="1" selected>✅ Activa</option>
-            </select>
-            <small class="form-text text-muted">Las variantes inactivas no se mostrarán en la tienda</small>
-        </div>
+            <!-- ESTADO -->
+            <div class="col-md-2">
+                <label class="form-label fw-bold">Estado</label>
+                <select name="Activo" class="form-select" required>
+                    <option value="0">❌ Inactiva</option>
+                    <option value="1" selected>✅ Activa</option>
+                </select>
+                <small class="form-text text-muted">Las variantes inactivas no se mostrarán en la tienda</small>
+            </div>
 
         <!-- Sistema automático de subida de imagen -->
         <div class="col-md-12 mb-3">
@@ -475,8 +474,8 @@ $totalColumnas = 7 + count($atributosData);
                             <div class="mb-3">
                                 <label class="form-label fw-bold text-primary-dark">Estado</label>
                                 <select name="Activo" class="form-select" id="edit_Activo" required>
-                                    <option value="1">✅ Activa</option>
-                                    <option value="0">❌ Inactiva</option>
+                                    <option value="1">Activa</option>
+                                    <option value="0">Inactiva</option>
                                 </select>
                                 <small class="form-text text-muted">Las variantes inactivas no se mostrarán en el catálogo</small>
                             </div>
