@@ -1,0 +1,584 @@
+/* variantesAdmin.css - Estilos exclusivos para gestión de variantes con color #1B202D */
+
+:root {
+    --primary-color: #1B202D;
+    --primary-dark: #141821;
+    --primary-light: #242a3a;
+    --primary-lighter: #2d3447;
+    --light-bg: #f5f7fa;
+    --text-dark: #2c3e50;
+    --text-light: #6c757d;
+    --border-radius: 12px;
+    --card-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+    --transition: all 0.3s ease;
+    --danger-color: #dc3545;
+    --danger-dark: #c82333;
+}
+
+/* Alertas con gradiente oscuro */
+.alert-gradient-variante {
+    background: linear-gradient(135deg, var(--primary-light) 0%, var(--primary-color) 100%);
+    color: white;
+    border: none;
+    border-radius: var(--border-radius);
+}
+
+/* Alertas generales para variantes */
+.alert-variante {
+    border-radius: var(--border-radius);
+    border: none;
+    box-shadow: var(--card-shadow);
+}
+
+.alert-variante.alert-success {
+    background-color: rgba(27, 32, 45, 0.1);
+    border-left: 4px solid var(--primary-color);
+    color: var(--text-dark);
+}
+
+.alert-variante.alert-danger {
+    background-color: rgba(220, 53, 69, 0.1);
+    border-left: 4px solid var(--danger-color);
+    color: var(--text-dark);
+}
+
+.alert-variante.alert-warning {
+    background-color: rgba(255, 193, 7, 0.1);
+    border-left: 4px solid #ffc107;
+    color: var(--text-dark);
+}
+
+.alert-variante.alert-info {
+    background-color: rgba(27, 32, 45, 0.1);
+    border-left: 4px solid var(--primary-color);
+    color: var(--text-dark);
+}
+
+/* Cards con diseño moderno para variantes */
+.card-variante {
+    border-radius: var(--border-radius);
+    border: none;
+    overflow: hidden;
+    transition: var(--transition);
+}
+
+.card-variante:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+}
+
+.card-variante .card-header.bg-gradient-primary {
+    background: linear-gradient(135deg, var(--primary-light) 0%, var(--primary-color) 100%) !important;
+    color: white;
+}
+
+.card-variante .card-header.bg-primary {
+    background-color: var(--primary-color) !important;
+    color: white !important;
+}
+
+/* Efectos hover para filas de tabla de variantes */
+.hover-shadow-variante:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+    transition: var(--transition);
+    background-color: rgba(27, 32, 45, 0.02);
+}
+
+/* Badges específicos para variantes */
+.badge.bg-primary {
+    background-color: var(--primary-color) !important;
+    color: white !important;
+}
+
+.badge.bg-info {
+    background-color: var(--primary-light) !important;
+    color: white !important;
+}
+
+.badge.bg-warning {
+    background-color: var(--primary-lighter) !important;
+    color: white !important;
+}
+
+.badge.bg-success {
+    background-color: var(--primary-color) !important;
+    color: white !important;
+}
+
+.badge.bg-secondary {
+    background-color: var(--text-light) !important;
+    color: white !important;
+}
+
+.badge.bg-danger {
+    background-color: var(--danger-color) !important;
+    color: white !important;
+}
+
+/* Badges con opacidad */
+.badge.bg-primary-light {
+    background-color: rgba(27, 32, 45, 0.1) !important;
+    color: var(--primary-color) !important;
+    border: 1px solid rgba(27, 32, 45, 0.25) !important;
+}
+
+/* Estadísticas para variantes */
+.stats-card-variante {
+    border-left: 4px solid var(--primary-color);
+    background: white;
+}
+
+.stats-card-variante .border-end {
+    border-right: 1px solid rgba(0,0,0,0.1) !important;
+}
+
+.stats-card-variante h2 {
+    font-family: 'Montserrat', sans-serif;
+}
+
+.stats-card-variante .text-primary {
+    color: var(--primary-color) !important;
+}
+
+.stats-card-variante .text-success {
+    color: #28a745 !important;
+}
+
+.stats-card-variante .text-warning {
+    color: #ffc107 !important;
+}
+
+.stats-card-variante .text-info {
+    color: var(--primary-color) !important;
+}
+
+/* Botones específicos para variantes */
+.btn-variante-primary {
+    background-color: var(--primary-color);
+    border-color: var(--primary-color);
+    color: white;
+}
+
+.btn-variante-primary:hover {
+    background-color: var(--primary-dark);
+    border-color: var(--primary-dark);
+    color: white;
+}
+
+.btn-variante-success {
+    background-color: var(--primary-color);
+    border-color: var(--primary-color);
+    color: white;
+}
+
+.btn-variante-success:hover {
+    background-color: var(--primary-dark);
+    border-color: var(--primary-dark);
+    color: white;
+}
+
+.btn-variante-outline-primary {
+    color: var(--primary-color);
+    border-color: var(--primary-color);
+}
+
+.btn-variante-outline-primary:hover {
+    background-color: var(--primary-color);
+    border-color: var(--primary-color);
+    color: white;
+}
+
+.btn-variante-outline-info {
+    color: var(--primary-light);
+    border-color: var(--primary-light);
+}
+
+.btn-variante-outline-info:hover {
+    background-color: var(--primary-light);
+    border-color: var(--primary-light);
+    color: white;
+}
+
+/* ÚNICO color diferente permitido: ROJO para eliminar */
+.btn-variante-outline-danger {
+    color: var(--danger-color);
+    border-color: var(--danger-color);
+}
+
+.btn-variante-outline-danger:hover {
+    background-color: var(--danger-color);
+    border-color: var(--danger-color);
+    color: white;
+}
+
+.btn-variante-outline-secondary {
+    color: var(--text-light);
+    border-color: var(--text-light);
+}
+
+.btn-variante-outline-secondary:hover {
+    background-color: var(--text-light);
+    border-color: var(--text-light);
+    color: white;
+}
+
+/* Botón outline para el color primario claro */
+.btn-variante-outline-primary-light {
+    color: var(--primary-light);
+    border-color: var(--primary-light);
+}
+
+.btn-variante-outline-primary-light:hover {
+    background-color: var(--primary-light);
+    border-color: var(--primary-light);
+    color: white;
+}
+
+/* Inputs y selects para formularios de variantes */
+.form-control-variante, .form-select-variante {
+    border-radius: 8px;
+    border: 1px solid #dee2e6;
+    transition: var(--transition);
+}
+
+.form-control-variante:focus, .form-select-variante:focus {
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 0.25rem rgba(27, 32, 45, 0.25);
+}
+
+/* Tabla de variantes */
+.table-variantes-dark {
+    background-color: var(--primary-color) !important;
+    color: white !important;
+}
+
+.table-variantes th {
+    font-weight: 600;
+    text-transform: uppercase;
+    font-size: 0.85rem;
+    letter-spacing: 0.5px;
+}
+
+.table-variantes td {
+    vertical-align: middle;
+    padding: 1rem 0.75rem;
+}
+
+/* Imágenes de variantes */
+.product-image-variante {
+    transition: var(--transition);
+}
+
+.product-image-variante:hover {
+    transform: scale(1.05);
+}
+
+/* Sin resultados para variantes */
+.no-results-variante {
+    background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+    border-radius: var(--border-radius);
+}
+
+/* Tooltips personalizados para variantes */
+.tooltip-variante .tooltip-inner {
+    background-color: var(--primary-color);
+    border-radius: 6px;
+    font-size: 0.85rem;
+    color: white;
+}
+
+.tooltip-variante.bs-tooltip-top .tooltip-arrow::before {
+    border-top-color: var(--primary-color);
+}
+
+.tooltip-variante.bs-tooltip-bottom .tooltip-arrow::before {
+    border-bottom-color: var(--primary-color);
+}
+
+.tooltip-variante.bs-tooltip-start .tooltip-arrow::before {
+    border-left-color: var(--primary-color);
+}
+
+.tooltip-variante.bs-tooltip-end .tooltip-arrow::before {
+    border-right-color: var(--primary-color);
+}
+
+/* Badges en la tabla de variantes */
+.table-variantes .badge.bg-info {
+    background-color: rgba(27, 32, 45, 0.1) !important;
+    color: var(--primary-color) !important;
+    border: 1px solid rgba(27, 32, 45, 0.25);
+}
+
+.table-variantes .badge.bg-warning {
+    background-color: rgba(45, 52, 71, 0.1) !important;
+    color: var(--primary-lighter) !important;
+    border: 1px solid rgba(45, 52, 71, 0.25);
+}
+
+.table-variantes .badge.bg-primary {
+    background-color: rgba(27, 32, 45, 0.1) !important;
+    color: var(--primary-color) !important;
+    border: 1px solid rgba(27, 32, 45, 0.25);
+}
+
+/* Precio en tabla de variantes */
+.fw-bold.text-success {
+    color: #28a745 !important;
+}
+
+.fw-bold.text-primary-dark {
+    color: var(--primary-color) !important;
+}
+
+/* Contenedor de atributos para variantes */
+.atributos-container-variante {
+    max-height: 200px;
+    overflow-y: auto;
+}
+
+.atributo-grupo-variante {
+    transition: var(--transition);
+    background-color: rgba(27, 32, 45, 0.02);
+    border-radius: 8px;
+    padding: 0.75rem;
+    margin-bottom: 0.5rem;
+}
+
+.atributo-grupo-variante:hover {
+    background-color: rgba(27, 32, 45, 0.05);
+    border-color: var(--primary-color);
+}
+
+/* Scrollbar personalizado para contenedores de atributos */
+.atributos-container-variante::-webkit-scrollbar {
+    width: 6px;
+}
+
+.atributos-container-variante::-webkit-scrollbar-track {
+    background: #f1f1f1;
+    border-radius: 3px;
+}
+
+.atributos-container-variante::-webkit-scrollbar-thumb {
+    background: rgba(27, 32, 45, 0.3);
+    border-radius: 3px;
+}
+
+.atributos-container-variante::-webkit-scrollbar-thumb:hover {
+    background: rgba(27, 32, 45, 0.5);
+}
+
+/* Modal de variantes */
+.modal-variante .modal-header {
+    background-color: var(--primary-color);
+    color: white;
+}
+
+.modal-variante .btn-close-white {
+    filter: invert(1) grayscale(100%) brightness(200%);
+}
+
+/* Vista previa de imágenes para variantes */
+.vista-previa-variante {
+    border-radius: 8px;
+    border: 1px solid #dee2e6;
+    background-color: #f8f9fa;
+    padding: 1rem;
+}
+
+.vista-previa-variante img {
+    object-fit: contain;
+    max-height: 150px;
+    border-radius: 6px;
+}
+
+/* Responsive específico para variantes */
+@media (max-width: 768px) {
+    .card-variante .card-body {
+        padding: 1rem !important;
+    }
+    
+    .table-variantes-responsive {
+        font-size: 0.9rem;
+    }
+    
+    .product-image-variante {
+        width: 60px !important;
+        height: 60px !important;
+    }
+    
+    .stats-card-variante .row > div {
+        border-right: none !important;
+        border-bottom: 1px solid rgba(0,0,0,0.1);
+        padding-bottom: 1rem;
+        margin-bottom: 1rem;
+    }
+    
+    .stats-card-variante .row > div:last-child {
+        border-bottom: none;
+        margin-bottom: 0;
+    }
+    
+    .atributos-container-variante {
+        max-height: 150px;
+    }
+}
+
+/* Animaciones para variantes */
+@keyframes fadeInVariante {
+    from {
+        opacity: 0;
+        transform: translateY(10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.card-variante-entrada {
+    animation: fadeInVariante 0.3s ease-out;
+}
+
+/* Estados para variantes */
+.variante-activa {
+    border-left: 4px solid #28a745;
+}
+
+.variante-inactiva {
+    border-left: 4px solid var(--text-light);
+}
+
+/* Porcentajes para variantes */
+.porcentaje-positivo {
+    color: #28a745;
+    font-weight: 600;
+}
+
+.porcentaje-negativo {
+    color: var(--danger-color);
+    font-weight: 600;
+}
+
+/* Grupos de botones para variantes */
+.btn-group-variantes .btn {
+    border-radius: 8px;
+}
+
+/* Efectos de hover para cards de variantes */
+.hover-lift-variante {
+    transition: var(--transition);
+}
+
+.hover-lift-variante:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 6px 20px rgba(0,0,0,0.1);
+}
+
+/* Texto para el tema */
+.text-primary-dark {
+    color: var(--primary-color) !important;
+}
+
+/* Fondo primario claro */
+.bg-primary-light {
+    background-color: var(--primary-light) !important;
+    color: white !important;
+}
+
+.bg-primary-light.text-primary-dark {
+    background-color: rgba(27, 32, 45, 0.1) !important;
+    color: var(--primary-color) !important;
+}
+
+/* Clase para íconos dentro de botones */
+.btn-variante-primary i,
+.btn-variante-success i,
+.btn-variante-outline-primary i,
+.btn-variante-outline-secondary i {
+    color: inherit;
+}
+
+/* Clase específica para íconos de botones de peligro (ROJO) */
+.btn-variante-outline-danger i {
+    color: var(--danger-color);
+}
+
+.btn-variante-outline-danger:hover i {
+    color: white;
+}
+
+/* Switch personalizado para variantes */
+.form-check-input:checked {
+    background-color: var(--primary-color);
+    border-color: var(--primary-color);
+}
+
+.form-check-input:focus {
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 0.25rem rgba(27, 32, 45, 0.25);
+}
+
+/* Botón rojo sólido (solo para eliminar) */
+.btn-danger {
+    background-color: var(--danger-color) !important;
+    border-color: var(--danger-color) !important;
+    color: white !important;
+}
+
+.btn-danger:hover {
+    background-color: var(--danger-dark) !important;
+    border-color: var(--danger-dark) !important;
+    color: white !important;
+}
+
+/* Header con color primario */
+.table-primary-dark {
+    background-color: var(--primary-color) !important;
+    color: white !important;
+}
+
+/* Clases de Bootstrap sobreescritas para variantes */
+.bg-primary {
+    background-color: var(--primary-color) !important;
+}
+
+.bg-primary-light {
+    background-color: rgba(27, 32, 45, 0.1) !important;
+}
+
+.text-primary {
+    color: var(--primary-color) !important;
+}
+
+.text-primary-light {
+    color: var(--primary-light) !important;
+}
+
+.text-danger {
+    color: var(--danger-color) !important;
+}
+
+/* Estilos específicos para la vista variantes.php */
+.variantes-info .border-end {
+    border-right: 1px solid rgba(0,0,0,0.1) !important;
+}
+
+.categorias-info .badge {
+    transition: var(--transition);
+}
+
+.categorias-info .badge:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--card-shadow);
+}
+
+.atributos-container .badge {
+    transition: var(--transition);
+}
+
+.atributos-container .badge:hover {
+    transform: scale(1.05);
+}

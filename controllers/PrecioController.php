@@ -32,48 +32,38 @@ class PrecioController {
         }
     }
 
-    // 📋 LISTAR PRECIOS CON BÚSQUEDA
+    // 📋 LISTAR PRECIOS CON FILTROS (como en colores)
     public function index() {
         $termino = $_GET['buscar'] ?? '';
-        $estado = $_GET['estado'] ?? '';
+        $estado = $_GET['estado'] ?? 'todos';
+        $enUso = $_GET['en_uso'] ?? 'todos';
         
-        // Validar y convertir estado
-        if ($estado === 'activo') {
-            $filtroEstado = 1;
-        } elseif ($estado === 'inactivo') {
-            $filtroEstado = 0;
-        } else {
-            $filtroEstado = '';
-        }
-
-        if (!empty($termino) || $filtroEstado !== '') {
-            $precios = $this->precioModel->buscar($termino, $filtroEstado);
-            $modoBusqueda = true;
-        } else {
-            $precios = $this->precioModel->obtenerTodos();
-            $modoBusqueda = false;
-        }
-
+        // Obtener precios según filtros
+        $precios = $this->precioModel->filtrarPrecios($termino, $estado, $enUso);
+        $modoBusqueda = (!empty($termino) || $estado !== 'todos' || $enUso !== 'todos');
+        
+        // Obtener estadísticas generales
+        $estadisticas = $this->precioModel->obtenerEstadisticas();
+        
         include "views/admin/layout_admin.php";
     }
 
-    // ➕ FORMULARIO NUEVO PRECIO
+    // ➕ FORMULARIO NUEVO PRECIO MEJORADO
     public function crear() {
+        // Obtener sugerencias de precios comunes
+        $preciosExistentes = $this->precioModel->obtenerTodosOrdenados();
+        
+        // Calcular rangos de precios para sugerencias
+        $sugerencias = $this->calcularSugerenciasPrecios($preciosExistentes);
+        
         include "views/admin/layout_admin.php";
     }
 
     // 💾 GUARDAR NUEVO PRECIO
     public function guardar() {
         try {
-            $valor = floatval($_POST['Valor'] ?? 0);
+            $valor = $this->validarValor($_POST['Valor'] ?? '');
             $activo = isset($_POST['Activo']) ? 1 : 0;
-
-            if ($valor <= 0) {
-                $_SESSION['mensaje'] = "❌ El valor debe ser mayor a 0";
-                $_SESSION['mensaje_tipo'] = "danger";
-                header("Location: " . BASE_URL . "?c=Precio&a=crear");
-                exit;
-            }
 
             $resultado = $this->precioModel->crear($valor, $activo);
 
@@ -114,6 +104,9 @@ class PrecioController {
             exit;
         }
 
+        // Obtener productos que usan este precio
+        $productosAsociados = $this->precioModel->obtenerProductosPorPrecio($id);
+        
         include "views/admin/layout_admin.php";
     }
 
@@ -121,20 +114,13 @@ class PrecioController {
     public function actualizar() {
         try {
             $id = (int)($_POST['ID_precio'] ?? 0);
-            $valor = floatval($_POST['Valor'] ?? 0);
+            $valor = $this->validarValor($_POST['Valor'] ?? '');
             $activo = isset($_POST['Activo']) ? 1 : 0;
 
             if ($id <= 0) {
                 $_SESSION['mensaje'] = "❌ ID de precio inválido";
                 $_SESSION['mensaje_tipo'] = "danger";
                 header("Location: " . BASE_URL . "?c=Precio&a=index");
-                exit;
-            }
-
-            if ($valor <= 0) {
-                $_SESSION['mensaje'] = "❌ El valor debe ser mayor a 0";
-                $_SESSION['mensaje_tipo'] = "danger";
-                header("Location: " . BASE_URL . "?c=Precio&a=editar&id=" . $id);
                 exit;
             }
 
@@ -171,47 +157,210 @@ class PrecioController {
             exit;
         }
 
-        $resultado = $this->precioModel->cambiarEstado($id, $estado);
+        try {
+            $resultado = $this->precioModel->cambiarEstado($id, $estado);
 
-        if ($resultado) {
-            $_SESSION['mensaje'] = $estado ? "✅ Precio activado correctamente" : "✅ Precio desactivado correctamente";
-            $_SESSION['mensaje_tipo'] = "success";
-        } else {
-            $_SESSION['mensaje'] = "❌ Error al cambiar el estado del precio";
-            $_SESSION['mensaje_tipo'] = "danger";
+            if ($resultado) {
+                $_SESSION['mensaje'] = $estado ? "✅ Precio activado correctamente" : "✅ Precio desactivado correctamente";
+                $_SESSION['mensaje_tipo'] = "success";
+            } else {
+                $_SESSION['mensaje'] = "❌ Error al cambiar el estado del precio";
+                $_SESSION['mensaje_tipo'] = "danger";
+            }
+        } catch (Exception $e) {
+            $_SESSION['mensaje'] = "⚠ " . $e->getMessage();
+            $_SESSION['mensaje_tipo'] = "warning";
         }
 
         header("Location: " . BASE_URL . "?c=Precio&a=index");
         exit;
     }
 
-    // 🗑 LIMPIAR PRECIOS DUPLICADOS
-    public function limpiarDuplicados() {
+    // 🗑 ELIMINAR PRECIO
+    public function eliminar() {
+        $id = (int)($_GET['id'] ?? 0);
+
+        if ($id <= 0) {
+            $_SESSION['mensaje'] = "❌ ID de precio inválido";
+            $_SESSION['mensaje_tipo'] = "danger";
+            header("Location: " . BASE_URL . "?c=Precio&a=index");
+            exit;
+        }
+
         try {
-            $resultados = $this->precioModel->limpiarDuplicados();
-            
-            $_SESSION['mensaje'] = "✅ Limpieza completada: " . 
-                                 $resultados['eliminados'] . " precios eliminados, " . 
-                                 $resultados['migrados'] . " productos migrados";
-            $_SESSION['mensaje_tipo'] = "success";
-            
-            if (!empty($resultados['errores'])) {
-                $_SESSION['mensaje_errores'] = $resultados['errores'];
+            $resultado = $this->precioModel->eliminar($id);
+
+            if ($resultado) {
+                $_SESSION['mensaje'] = "✅ Precio eliminado correctamente";
+                $_SESSION['mensaje_tipo'] = "success";
+            } else {
+                $_SESSION['mensaje'] = "❌ Error al eliminar el precio";
+                $_SESSION['mensaje_tipo'] = "danger";
             }
+        } catch (Exception $e) {
+            $_SESSION['mensaje'] = "⚠ " . $e->getMessage();
+            $_SESSION['mensaje_tipo'] = "warning";
+        }
+
+        header("Location: " . BASE_URL . "?c=Precio&a=index");
+        exit;
+    }
+
+    // 📊 OBTENER PRODUCTOS QUE USAN UN PRECIO (API JSON)
+    public function obtenerProductos() {
+        header('Content-Type: application/json');
+        
+        try {
+            $id = (int)($_GET['id'] ?? 0);
+            
+            if ($id <= 0) {
+                echo json_encode(['success' => false, 'message' => 'ID inválido']);
+                exit;
+            }
+
+            $productos = $this->precioModel->obtenerProductosPorPrecio($id);
+            
+            echo json_encode([
+                'success' => true, 
+                'articulos' => $productos['articulos'] ?? [],
+                'variantes' => $productos['variantes'] ?? []
+            ]);
             
         } catch (Exception $e) {
-            $_SESSION['mensaje'] = "❌ Error durante la limpieza: " . $e->getMessage();
-            $_SESSION['mensaje_tipo'] = "danger";
+            echo json_encode(['success' => false, 'message' => $e->getMessage()]);
         }
-        
-        header("Location: " . BASE_URL . "?c=Precio&a=index");
         exit;
     }
 
-    // 📊 VER DUPLICADOS (vista de diagnóstico)
-    public function duplicados() {
-        $duplicados = $this->precioModel->obtenerDuplicados();
-        include "views/admin/layout_admin.php";
+    // 🔄 MIGRAR PRODUCTOS DE UN PRECIO A OTRO (API JSON)
+    public function migrarProductos() {
+        header('Content-Type: application/json');
+        
+        try {
+            $origen = (int)($_GET['origen'] ?? 0);
+            $destino = (int)($_GET['destino'] ?? 0);
+            
+            if ($origen <= 0 || $destino <= 0) {
+                echo json_encode(['success' => false, 'message' => 'IDs inválidos']);
+                exit;
+            }
+
+            $resultado = $this->precioModel->migrarProductos($origen, $destino);
+            echo json_encode($resultado);
+            
+        } catch (Exception $e) {
+            echo json_encode(['success' => false, 'message' => $e->getMessage()]);
+        }
+        exit;
+    }
+
+    // 📋 OBTENER PRECIOS ACTIVOS PARA SELECT (API JSON)
+    public function obtenerPreciosActivos() {
+        header('Content-Type: application/json');
+        
+        try {
+            $excluir = (int)($_GET['excluir'] ?? 0);
+            $precios = $this->precioModel->obtenerPreciosActivos($excluir);
+            echo json_encode($precios);
+            
+        } catch (Exception $e) {
+            echo json_encode(['success' => false, 'message' => $e->getMessage()]);
+        }
+        exit;
+    }
+
+    // 📊 OBTENER ESTADÍSTICAS
+    public function obtenerEstadisticas() {
+        header('Content-Type: application/json');
+        
+        try {
+            $estadisticas = $this->precioModel->obtenerEstadisticas();
+            echo json_encode(['success' => true, 'estadisticas' => $estadisticas]);
+            
+        } catch (Exception $e) {
+            echo json_encode(['success' => false, 'message' => $e->getMessage()]);
+        }
+        exit;
+    }
+
+    // 🔧 VALIDAR VALOR DEL PRECIO
+    private function validarValor($valor) {
+        // Limpiar y convertir - IMPORTANTE: mantener todos los dígitos
+        $valor = str_replace(['$', ',', '.', ' '], '', $valor);
+        
+        // Validar que sea un número válido
+        if (!is_numeric($valor)) {
+            throw new Exception("El valor debe ser un número válido");
+        }
+        
+        // Convertir a float (puede tener decimales)
+        $valor = floatval($valor);
+        
+        if ($valor <= 0) {
+            throw new Exception("El valor debe ser mayor a 0");
+        }
+        
+        if ($valor > 1000000000) {
+            throw new Exception("El valor es demasiado grande (máximo: 1.000.000.000)");
+        }
+        
+        // Redondear a 2 decimales para evitar problemas de precisión
+        $valor = round($valor, 2);
+        
+        return $valor;
+    }
+
+
+    // 💡 CALCULAR SUGERENCIAS DE PRECIOS
+    private function calcularSugerenciasPrecios($preciosExistentes) {
+        $sugerencias = [
+            'bajos' => [],
+            'medios' => [],
+            'altos' => []
+        ];
+        
+        if (empty($preciosExistentes)) {
+            // Valores por defecto si no hay precios
+            $sugerencias['bajos'] = [5000, 10000, 15000, 20000];
+            $sugerencias['medios'] = [25000, 35000, 50000, 75000];
+            $sugerencias['altos'] = [100000, 150000, 200000, 300000];
+        } else {
+            // Calcular basado en precios existentes
+            $valores = array_column($preciosExistentes, 'Valor');
+            $promedio = array_sum($valores) / count($valores);
+            
+            $sugerencias['bajos'] = [
+                round($promedio * 0.25, -3),
+                round($promedio * 0.33, -3),
+                round($promedio * 0.5, -3),
+                round($promedio * 0.66, -3)
+            ];
+            
+            $sugerencias['medios'] = [
+                round($promedio * 0.8, -3),
+                round($promedio, -3),
+                round($promedio * 1.2, -3),
+                round($promedio * 1.5, -3)
+            ];
+            
+            $sugerencias['altos'] = [
+                round($promedio * 2, -3),
+                round($promedio * 3, -3),
+                round($promedio * 4, -3),
+                round($promedio * 5, -3)
+            ];
+        }
+        
+        // Asegurar valores únicos y ordenados
+        foreach ($sugerencias as &$categoria) {
+            $categoria = array_unique($categoria);
+            sort($categoria);
+            $categoria = array_values(array_filter($categoria, function($v) {
+                return $v > 0;
+            }));
+        }
+        
+        return $sugerencias;
     }
 }
 ?>
