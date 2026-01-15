@@ -30,27 +30,32 @@ class ColorController {
         }
     }
 
-    // 📋 LISTAR COLORES CON BÚSQUEDA
+    // 📋 LISTAR COLORES CON BÚSQUEDA Y FILTROS
     public function index() {
         $termino = $_GET['buscar'] ?? '';
+        $estado = $_GET['estado'] ?? 'todos';
+        $enUso = $_GET['en_uso'] ?? 'todos';
         
-        if (!empty($termino)) {
-            $colores = $this->colorModel->buscar($termino);
-            $modoBusqueda = true;
-        } else {
-            $colores = $this->colorModel->obtenerTodos();
-            $modoBusqueda = false;
-        }
-
+        // Obtener colores según filtros
+        $colores = $this->colorModel->filtrarColores($termino, $estado, $enUso);
+        $modoBusqueda = (!empty($termino) || $estado !== 'todos' || $enUso !== 'todos');
+        
+        // Obtener estadísticas generales (sin filtros)
         $estadisticas = $this->colorModel->obtenerEstadisticas();
         
-        // CAMBIO AQUÍ: Usar layout_admin.php en lugar de la vista directa
+        // Calcular estadísticas para la vista
+        $totalColores = $estadisticas['total'] ?? 0;
+        $coloresActivos = $estadisticas['activos'] ?? 0;
+        $coloresInactivos = $estadisticas['inactivos'] ?? 0;
+        $coloresEnUso = $estadisticas['en_uso'] ?? 0;
+        
+        // Incluir vista con todas las variables necesarias
         require "views/admin/layout_admin.php";
     }
 
     // ➕ FORMULARIO NUEVO COLOR
     public function crear() {
-        // CAMBIO AQUÍ: Usar layout_admin.php
+        // No necesita datos adicionales
         require "views/admin/layout_admin.php";
     }
 
@@ -59,40 +64,34 @@ class ColorController {
         try {
             $nombre = trim($_POST['N_Color'] ?? '');
             $codigoHex = trim($_POST['CodigoHex'] ?? '');
+            $activo = isset($_POST['Activo']) ? 1 : 0;
 
             // 🔍 VALIDACIONES
             if (empty($nombre)) {
                 throw new Exception("❌ El nombre del color es requerido");
             }
 
-            // ========== CORRECCIÓN AQUÍ ==========
-            // Asegurar que el código HEX tenga el formato correcto
             if (empty($codigoHex)) {
                 throw new Exception("❌ El código hexadecimal es requerido");
             }
 
-            // Si no empieza con #, agregarlo
             if (strpos($codigoHex, '#') !== 0) {
                 $codigoHex = '#' . $codigoHex;
             }
 
-            // Validar formato (ahora con #)
             if (!preg_match('/^#[0-9A-F]{6}$/i', $codigoHex)) {
-                throw new Exception("❌ El código hexadecimal es inválido. Use formato #RRGGBB o RRGGBB");
+                throw new Exception("El código hexadecimal es inválido. Use formato RRGGBB");
             }
-            // ========== FIN CORRECCIÓN ==========
 
-            // Validar que no contenga caracteres inválidos
             if (!preg_match('/^[a-zA-ZáéíóúÁÉÍÓÚñÑ\s\-]+$/', $nombre)) {
                 throw new Exception("❌ El nombre solo puede contener letras, espacios y guiones");
             }
 
-            // Verificar si ya existe
             if ($this->colorModel->existeColor($nombre, $codigoHex)) {
                 throw new Exception("❌ Ya existe un color con este nombre o código hexadecimal");
             }
 
-            $resultado = $this->colorModel->crear($nombre, $codigoHex);
+            $resultado = $this->colorModel->crear($nombre, $codigoHex, $activo);
 
             if ($resultado) {
                 $_SESSION['mensaje'] = "✅ Color creado correctamente";
@@ -129,7 +128,6 @@ class ColorController {
             exit;
         }
 
-        // CAMBIO AQUÍ: Usar layout_admin.php
         require "views/admin/layout_admin.php";
     }
 
@@ -139,38 +137,33 @@ class ColorController {
             $id = (int)($_POST['ID_Color'] ?? 0);
             $nombre = trim($_POST['N_Color'] ?? '');
             $codigoHex = trim($_POST['CodigoHex'] ?? '');
+            $activo = isset($_POST['Activo']) ? 1 : 0;
 
             if ($id <= 0) {
                 throw new Exception("❌ ID de color inválido");
             }
 
-            // 🔍 VALIDACIONES
             if (empty($nombre)) {
                 throw new Exception("❌ El nombre del color es requerido");
             }
 
-            // ========== CORRECCIÓN AQUÍ ==========
-            // Asegurar que el código HEX tenga el formato correcto
             if (empty($codigoHex)) {
                 throw new Exception("❌ El código hexadecimal es requerido");
             }
 
-            // Si no empieza con #, agregarlo
             if (strpos($codigoHex, '#') !== 0) {
                 $codigoHex = '#' . $codigoHex;
             }
 
-            // Validar formato (ahora con #)
             if (!preg_match('/^#[0-9A-F]{6}$/i', $codigoHex)) {
-                throw new Exception("❌ El código hexadecimal es inválido. Use formato #RRGGBB o RRGGBB");
+                throw new Exception("El código hexadecimal es inválido. Use formato RRGGBB");
             }
-            // ========== FIN CORRECCIÓN ==========
 
             if (!preg_match('/^[a-zA-ZáéíóúÁÉÍÓÚñÑ\s\-]+$/', $nombre)) {
                 throw new Exception("❌ El nombre solo puede contener letras, espacios y guiones");
             }
 
-            $resultado = $this->colorModel->actualizar($id, $nombre, $codigoHex);
+            $resultado = $this->colorModel->actualizar($id, $nombre, $codigoHex, $activo);
 
             if ($resultado) {
                 $_SESSION['mensaje'] = "✅ Color actualizado correctamente";
@@ -222,11 +215,57 @@ class ColorController {
         exit;
     }
 
-    // 📊 OBTENER COLORES (AJAX PARA FORMULARIOS)
-    public function obtenerColores() {
-        $colores = $this->colorModel->obtenerTodos();
+    // 🔄 ACTIVAR/DESACTIVAR COLOR (AJAX) - CORREGIDO
+    public function cambiarEstado() {
+        $id = (int)($_GET['id'] ?? 0);
+        $estado = (int)($_GET['estado'] ?? 0); // 0 para desactivar, 1 para activar
+        
+        if ($id <= 0) {
+            $_SESSION['mensaje'] = "❌ ID de color inválido";
+            $_SESSION['mensaje_tipo'] = "danger";
+            header("Location: " . BASE_URL . "?c=Color&a=index");
+            exit;
+        }
+
+        // Actualizar estado directamente
+        $resultado = $this->colorModel->actualizarEstado($id, $estado);
+
+        if ($resultado) {
+            $_SESSION['mensaje'] = $estado ? "✅ Color activado correctamente" : "✅ Color desactivado correctamente";
+            $_SESSION['mensaje_tipo'] = "success";
+        } else {
+            $_SESSION['mensaje'] = "❌ Error al cambiar el estado del color";
+            $_SESSION['mensaje_tipo'] = "danger";
+        }
+
+        header("Location: " . BASE_URL . "?c=Color&a=index");
+        exit;
+    }
+
+    // 📊 OBTENER PRODUCTOS QUE USAN UN COLOR (AJAX)
+    public function obtenerProductosPorColor() {
         header('Content-Type: application/json');
-        echo json_encode($colores);
+        
+        try {
+            $id = (int)($_GET['id'] ?? 0);
+            
+            if ($id <= 0) {
+                echo json_encode(['success' => false, 'message' => 'ID inválido']);
+                exit;
+            }
+
+            $productos = $this->colorModel->obtenerProductosPorColor($id);
+            
+            if ($productos) {
+                echo json_encode(['success' => true, 'productos' => $productos]);
+            } else {
+                echo json_encode(['success' => true, 'productos' => []]);
+            }
+            
+        } catch (Exception $e) {
+            echo json_encode(['success' => false, 'message' => $e->getMessage()]);
+        }
+        exit;
     }
 }
 ?>

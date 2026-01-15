@@ -1,0 +1,344 @@
+/* producto_form.css - Estilos para el formulario de productos */
+
+:root {
+    --primary-dark: #1B202D;
+    --primary-blue: #2A3448;
+    --accent-blue: #3A4A6B;
+    --secondary-blue: #4A5B7D;
+    --light-blue: #5B6E8F;
+    --light-bg: #f5f7fa;
+    --text-dark: #2c3e50;
+    --text-light: #6c757d;
+    --border-radius: 12px;
+    --card-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+    --transition: all 0.3s ease;
+    --success-color: #28a745;
+    --danger-color: #dc3545;
+    --warning-color: #ffc107;
+    --info-color: #17a2b8;
+}
+
+/* Alertas */
+.alert {
+    border-radius: var(--border-radius);
+    border: none;
+    box-shadow: var(--card-shadow);
+}
+
+.alert-success {
+    background-color: rgba(40, 167, 69, 0.1);
+    border-left: 4px solid var(--success-color);
+    color: var(--text-dark);
+}
+
+.alert-danger {
+    background-color: rgba(220, 53, 69, 0.1);
+    border-left: 4px solid var(--danger-color);
+    color: var(--text-dark);
+}
+
+.alert-warning {
+    background-color: rgba(255, 193, 7, 0.1);
+    border-left: 4px solid var(--warning-color);
+    color: var(--text-dark);
+}
+
+.alert-info {
+    background-color: rgba(23, 162, 184, 0.1);
+    border-left: 4px solid var(--info-color);
+    color: var(--text-dark);
+}
+
+/* Tarjetas con el tema */
+.card {
+    border-radius: var(--border-radius);
+    border: none;
+    box-shadow: var(--card-shadow);
+}
+
+.card-header.bg-primary {
+    background: var(--primary-dark) !important;
+    color: white;
+    border-radius: var(--border-radius) var(--border-radius) 0 0 !important;
+}
+
+.card-header.bg-success {
+    background: var(--secondary-blue) !important;
+    color: white;
+    border-radius: var(--border-radius) var(--border-radius) 0 0 !important;
+}
+
+/* Campos de formulario */
+.form-control, .form-select {
+    border-radius: 8px;
+    border: 1px solid #dee2e6;
+    transition: var(--transition);
+    padding: 0.75rem 1rem;
+}
+
+.form-control:focus, .form-select:focus {
+    border-color: var(--accent-blue);
+    box-shadow: 0 0 0 0.25rem rgba(58, 74, 107, 0.25);
+}
+
+.form-control:valid, .form-select:valid {
+    border-color: #198754;
+}
+
+.form-control:invalid, .form-select:invalid {
+    border-color: #dc3545;
+}
+
+/* Badges con colores del tema */
+.badge.bg-primary {
+    background-color: var(--primary-dark) !important;
+    color: white !important;
+}
+
+.badge.bg-info {
+    background-color: var(--accent-blue) !important;
+    color: white !important;
+}
+
+.badge.bg-warning {
+    background-color: var(--light-blue) !important;
+    color: white !important;
+}
+
+.badge.bg-secondary {
+    background-color: var(--text-light) !important;
+    color: white !important;
+}
+
+.badge.bg-success {
+    background-color: var(--secondary-blue) !important;
+    color: white !important;
+}
+
+.badge.bg-danger {
+    background-color: var(--danger-color) !important;
+    color: white !important;
+}
+
+/* Botones */
+.btn-primary {
+    background-color: var(--primary-dark);
+    border-color: var(--primary-dark);
+    color: white;
+}
+
+.btn-primary:hover {
+    background-color: var(--primary-blue);
+    border-color: var(--primary-blue);
+    color: white;
+}
+
+.btn-success {
+    background-color: var(--secondary-blue);
+    border-color: var(--secondary-blue);
+    color: white;
+}
+
+.btn-success:hover {
+    background-color: var(--light-blue);
+    border-color: var(--light-blue);
+    color: white;
+}
+
+.btn-outline-secondary {
+    color: var(--text-light);
+    border-color: var(--text-light);
+}
+
+.btn-outline-secondary:hover {
+    background-color: var(--text-light);
+    border-color: var(--text-light);
+    color: white;
+}
+
+/* Alertas mini */
+.mini-alerta {
+    font-size: 0.75rem;
+    padding: 0.25rem 0.5rem;
+    margin-bottom: 0;
+    border-radius: 0.25rem;
+    border: 1px solid transparent;
+}
+
+.mini-alerta.alert-success {
+    background-color: rgba(25, 135, 84, 0.1);
+    border-color: rgba(25, 135, 84, 0.2);
+    color: #198754;
+}
+
+.mini-alerta .btn-close {
+    padding: 0.5rem;
+    font-size: 0.7rem;
+}
+
+.btn-close-sm {
+    padding: 0.25rem !important;
+    font-size: 0.6rem !important;
+}
+
+/* Campos bloqueados */
+select:disabled, input:disabled {
+    background-color: #f8f9fa !important;
+    color: #6c757d !important;
+    border-color: #dee2e6 !important;
+    cursor: not-allowed !important;
+    opacity: 0.7 !important;
+}
+
+/* Indicador visual para campos bloqueados */
+.field-blocked {
+    position: relative;
+}
+
+.field-blocked::after {
+    content: "🔒";
+    position: absolute;
+    right: 35px;
+    top: 50%;
+    transform: translateY(-50%);
+    font-size: 1.2em;
+    z-index: 100;
+    color: var(--accent-blue);
+}
+
+/* Para el select bloqueado */
+select.field-blocked {
+    padding-right: 60px;
+}
+
+/* Información de subcategorías */
+#subcategoriaInfo.text-danger {
+    color: var(--accent-blue) !important;
+    font-weight: 600;
+}
+
+/* Vista previa de imagen */
+#vistaPreviaImg {
+    transition: var(--transition);
+    border: 2px solid #e9ecef;
+}
+
+#vistaPreviaImg:hover {
+    border-color: var(--accent-blue);
+    transform: scale(1.02);
+}
+
+/* Estado de ruta */
+#badgeEstado.bg-success {
+    background-color: var(--secondary-blue) !important;
+}
+
+#badgeEstado.bg-secondary {
+    background-color: var(--text-light) !important;
+}
+
+/* Mensajes de validación */
+#msgContainer .alert {
+    border-radius: var(--border-radius);
+    border: none;
+    box-shadow: var(--card-shadow);
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    .card-body {
+        padding: 1rem !important;
+    }
+    
+    .row.mb-4 .col-md-4,
+    .row.mb-4 .col-md-6 {
+        margin-bottom: 1rem;
+    }
+    
+    .btn-lg {
+        padding: 0.5rem 1rem;
+        font-size: 1rem;
+    }
+    
+    .d-flex.justify-content-between {
+        flex-direction: column;
+        gap: 1rem;
+    }
+    
+    .d-flex.justify-content-between > div {
+        width: 100%;
+        text-align: center;
+    }
+}
+
+/* Estilo para opciones deshabilitadas en selects */
+select option:disabled {
+    color: #6c757d;
+    background-color: #f8f9fa;
+    font-style: italic;
+}
+
+/* Indicador de campo obligatorio */
+.form-label.fw-bold::after {
+    content: " *";
+    color: #dc3545;
+}
+
+/* Input group personalizado */
+.input-group .input-group-text {
+    background-color: var(--light-bg);
+    border-color: #dee2e6;
+    color: var(--text-light);
+}
+
+/* Spinner de carga */
+.spinner-border.text-primary {
+    color: var(--accent-blue) !important;
+}
+
+/* Colores de texto */
+.text-primary {
+    color: var(--primary-dark) !important;
+}
+
+.text-success {
+    color: var(--secondary-blue) !important;
+}
+
+.text-warning {
+    color: var(--light-blue) !important;
+}
+
+.text-info {
+    color: var(--accent-blue) !important;
+}
+
+.text-danger {
+    color: var(--danger-color) !important;
+}
+
+/* INTERRUPTOR MEJORADO */
+.form-switch .form-check-input {
+    width: 3em;
+    height: 1.5em;
+    cursor: pointer;
+}
+
+.form-switch .form-check-input:checked {
+    background-color: var(--secondary-blue);
+    border-color: var(--secondary-blue);
+}
+
+.form-switch .form-check-input:focus {
+    border-color: var(--accent-blue);
+    box-shadow: 0 0 0 0.25rem rgba(58, 74, 107, 0.25);
+}
+
+/* Estado visual del interruptor */
+.form-switch .form-check-input:checked + .form-check-label .badge {
+    background-color: var(--secondary-blue) !important;
+}
+
+.form-switch .form-check-input:not(:checked) + .form-check-label .badge {
+    background-color: var(--text-light) !important;
+}

@@ -1,5 +1,5 @@
 <?php
-// views/layout/nav.php - VERSIÓN CORREGIDA
+// views/layout/nav.php - VERSIÓN CORREGIDA Y COMPLETA
 
 // Función para obtener BASE_URL de forma confiable
 function getBaseUrlForNav() {
@@ -91,6 +91,13 @@ $textoPanel = $esAdministrador ? 'Panel Admin' : ($esEditor ? 'Panel Editor' : '
           </ul>
         </li>
 
+        <!-- ENLACE DE SEGUIMIENTO DE PEDIDOS -->
+        <li class="nav-item">
+          <a class="nav-link" href="<?php echo BASE_URL; ?>views/seguimiento/consultar.php">
+            <i class="fas fa-truck"></i> Seguir Pedido
+          </a>
+        </li>
+
         <?php if ($tieneAccesoAdmin): ?>
           <li class="nav-item">
             <a class="nav-link text-warning fw-bold" href="<?php echo BASE_URL; ?>index.php?c=Admin&a=index">
@@ -137,13 +144,18 @@ $textoPanel = $esAdministrador ? 'Panel Admin' : ($esEditor ? 'Panel Editor' : '
       <!-- Iconos de usuario -->
       <div class="d-flex">
         <!-- Favoritos -->
-        <a class="btn btn-outline-light me-2" href="<?php echo BASE_URL; ?>index.php?c=Favorito&a=index" title="Mis favoritos">
-          <i class="fas fa-heart"></i>
-          <?php if (isset($_SESSION['ID_Usuario'])): ?>
-            <span class="badge bg-danger" style="font-size: 0.6rem; position: relative; top: -8px; left: -8px;">❤️</span>
-          <?php endif; ?>
-        </a>
-
+        <?php if (isset($usuario)): ?>
+            <a class="btn btn-outline-light me-2 position-relative" 
+              href="<?php echo BASE_URL; ?>?c=Favorito&a=index" 
+              title="Mis Favoritos"
+              id="nav-favoritos">
+                <i class="fas fa-heart"></i>
+                <span id="favoritos-count" class="badge bg-danger" 
+                      style="font-size: 0.6rem; position: absolute; top: -8px; right: -8px; display: none;">
+                    0
+                </span>
+            </a>
+        <?php endif; ?>
         <!-- Carrito -->
         <a class="btn btn-outline-light me-2" href="<?php echo BASE_URL; ?>index.php?c=Carrito&a=carrito" title="Carrito">
           <i class="fas fa-shopping-cart"></i>

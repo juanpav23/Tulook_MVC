@@ -132,6 +132,10 @@ if (!isset($categorias)) $categorias = [];
             $tipoDescuento = $infoDescuento['tipo_descuento'] ?? '';
         }
 
+        // Desactivar visualización de descuentos: usar siempre el precio base
+        $tieneDescuento = false;
+        $precioFinal = $precioBase;
+
       ?>
         <div class="col-md-4 mb-4">
           <div class="card product-card h-100">

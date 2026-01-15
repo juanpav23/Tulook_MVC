@@ -1,11 +1,17 @@
+<?php
+// Verificar si es el atributo "Única"
+$esUnica = isset($atributo) && ($atributo['ID_AtributoValor'] == 16 || strtolower($atributo['Valor']) === 'única');
+?>
+
+<link rel="stylesheet" href="<?= BASE_URL ?>assets/css/atributos.css">
 <div class="container-fluid">
     <!-- Encabezado -->
     <div class="d-flex justify-content-between align-items-center mb-4">
-        <h2>
+        <h2 class="text-primary-dark">
             <i class="fas fa-<?= isset($atributo) ? 'edit' : 'plus' ?> me-2"></i>
             <?= isset($atributo) ? 'Editar Atributo' : 'Nuevo Atributo' ?>
         </h2>
-        <a href="<?= BASE_URL ?>?c=Atributo&a=index" class="btn btn-secondary">
+        <a href="<?= BASE_URL ?>?c=Atributo&a=index" class="btn btn-outline-primary-light text-primary-dark">
             <i class="fas fa-arrow-left me-1"></i> Volver
         </a>
     </div>
@@ -20,9 +26,9 @@
     <?php endif; ?>
 
     <!-- Formulario -->
-    <div class="card">
+    <div class="card stats-card">
         <div class="card-header bg-light">
-            <h5 class="mb-0">
+            <h5 class="mb-0 text-primary-dark">
                 <i class="fas fa-cog me-2"></i>
                 Información del Atributo
             </h5>
@@ -37,21 +43,25 @@
                     <div class="col-md-6">
                         <div class="mb-3">
                             <label for="ID_TipoAtributo" class="form-label">
-                                <strong>Tipo de Atributo *</strong>
+                                <strong class="text-primary-dark">Tipo de Atributo *</strong>
                             </label>
-                            <select class="form-select" id="ID_TipoAtributo" name="ID_TipoAtributo" required>
+                            <select class="form-select" id="ID_TipoAtributo" name="ID_TipoAtributo" required 
+                                    <?= $esUnica ? 'disabled' : '' ?>>
                                 <option value="">Seleccionar tipo...</option>
                                 <?php foreach ($tipos as $tipo): ?>
                                     <option value="<?= $tipo['ID_TipoAtributo'] ?>"
                                         <?= (isset($atributo) && $atributo['ID_TipoAtributo'] == $tipo['ID_TipoAtributo']) ? 'selected' : '' ?>>
                                         <?= htmlspecialchars($tipo['Nombre']) ?>
                                         <?php if (!empty($tipo['Descripcion'])): ?>
-                                            <small class="text-muted"> - <?= htmlspecialchars($tipo['Descripcion']) ?></small>
+                                            <small class="text-primary-light"> - <?= htmlspecialchars($tipo['Descripcion']) ?></small>
                                         <?php endif; ?>
                                     </option>
                                 <?php endforeach; ?>
                             </select>
-                            <div class="form-text">
+                            <?php if ($esUnica): ?>
+                                <input type="hidden" name="ID_TipoAtributo" value="<?= $atributo['ID_TipoAtributo'] ?>">
+                            <?php endif; ?>
+                            <div class="form-text text-primary-light">
                                 Selecciona la categoría del atributo
                             </div>
                         </div>
@@ -60,10 +70,9 @@
                     <div class="col-md-6">
                         <div class="mb-3">
                             <label for="Valor" class="form-label">
-                                <strong>Valor del Atributo *</strong>
+                                <strong class="text-primary-dark">Valor del Atributo *</strong>
                             </label>
                             
-                            <!-- Campo de entrada simple -->
                             <input type="text" 
                                    class="form-control" 
                                    id="Valor" 
@@ -71,11 +80,11 @@
                                    required
                                    maxlength="50"
                                    value="<?= isset($atributo) ? htmlspecialchars($atributo['Valor']) : '' ?>"
-                                   placeholder="Ingresa el valor del atributo">
+                                   placeholder="Ingresa el valor del atributo"
+                                   <?= $esUnica ? 'readonly' : '' ?>>
                             
-                            <!-- Texto de ejemplo según el tipo seleccionado -->
                             <div class="form-text" id="ejemploTexto">
-                                <span id="ejemplo">Ej: M, 32, Mediano, 100 ml, etc.</span>
+                                <span id="ejemplo" class="text-primary-light">Ej: M, 32, Mediano, 100 ml, etc.</span>
                             </div>
                         </div>
                     </div>
@@ -85,7 +94,7 @@
                     <div class="col-md-6">
                         <div class="mb-3">
                             <label class="form-label">
-                                <strong>Estado del Atributo</strong>
+                                <strong class="text-primary-dark">Estado del Atributo</strong>
                             </label>
                             <div class="form-check form-switch">
                                 <input class="form-check-input" 
@@ -93,31 +102,38 @@
                                        id="Activo" 
                                        name="Activo" 
                                        value="1"
-                                       <?= (isset($atributo) && $atributo['Activo']) || !isset($atributo) ? 'checked' : '' ?>>
-                                <label class="form-check-label" for="Activo">
+                                       <?= (isset($atributo) && $atributo['Activo']) || !isset($atributo) ? 'checked' : '' ?>
+                                       <?= $esUnica ? 'disabled' : '' ?>>
+                                <label class="form-check-label text-primary-dark" for="Activo">
                                     Atributo Activo
                                 </label>
+                                <?php if ($esUnica): ?>
+                                    <input type="hidden" name="Activo" value="1">
+                                <?php endif; ?>
                             </div>
-                            <div class="form-text">
+                            <div class="form-text text-primary-light">
                                 Los atributos inactivos no estarán disponibles para nuevos productos
                             </div>
                         </div>
                     </div>
                     
                     <div class="col-md-6">
-                        <div class="alert alert-info">
+                        <div class="alert alert-<?= $esUnica ? 'warning' : 'primary-light' ?> border border-<?= $esUnica ? 'warning' : 'primary' ?>">
                             <small>
-                                <strong><i class="fas fa-info-circle me-1"></i>Información:</strong><br>
+                                <strong class="text-primary-dark"><i class="fas fa-info-circle me-1"></i>Información:</strong><br>
                                 <?php if (isset($atributo)): ?>
-                                    • ID: #<?= $atributo['ID_AtributoValor'] ?><br>
+                                    • ID: <span class="text-primary-dark">#<?= $atributo['ID_AtributoValor'] ?></span><br>
                                     • Tipo: <?= htmlspecialchars($atributo['TipoNombre']) ?><br>
-                                    • Orden: <span class="badge bg-info">Automático (<?= $atributo['Orden'] ?>)</span><br>
+                                    • Orden: <span class="badge bg-primary-light text-primary-dark border border-primary">Automático (<?= $atributo['Orden'] ?>)</span><br>
                                     • Estado: 
-                                    <span class="badge bg-<?= $atributo['Activo'] ? 'success' : 'secondary' ?>">
+                                    <span class="badge bg-<?= $atributo['Activo'] ? 'primary' : 'secondary' ?>">
                                         <?= $atributo['Activo'] ? 'Activo' : 'Inactivo' ?>
                                     </span>
+                                    <?php if ($esUnica): ?>
+                                        <br>• <span class="text-warning"><i class="fas fa-shield-alt me-1"></i> Valor universal del sistema</span>
+                                    <?php endif; ?>
                                 <?php else: ?>
-                                    • El <strong>orden es automático</strong><br>
+                                    • El <strong class="text-primary-dark">orden es automático</strong><br>
                                     • Se excluyen los colores (gestión separada)<br>
                                     • Valores únicos por tipo
                                 <?php endif; ?>
@@ -129,13 +145,22 @@
                 <!-- Botones -->
                 <div class="row mt-4">
                     <div class="col-md-12">
-                        <button type="submit" class="btn btn-success me-2">
+                        <button type="submit" class="btn btn-primary me-2" <?= $esUnica ? 'disabled' : '' ?>>
                             <i class="fas fa-save me-1"></i>
                             <?= isset($atributo) ? 'Actualizar Atributo' : 'Crear Atributo' ?>
                         </button>
-                        <a href="<?= BASE_URL ?>?c=Atributo&a=index" class="btn btn-secondary">
+                        <a href="<?= BASE_URL ?>?c=Atributo&a=index" class="btn btn-outline-primary-light text-primary-dark">
                             <i class="fas fa-times me-1"></i> Cancelar
                         </a>
+                        
+                        <?php if ($esUnica): ?>
+                            <div class="alert alert-warning mt-3 p-2">
+                                <small>
+                                    <i class="fas fa-exclamation-triangle me-1"></i>
+                                    Este valor universal no puede ser editado. Solo puede ser consultado.
+                                </small>
+                            </div>
+                        <?php endif; ?>
                     </div>
                 </div>
             </form>
@@ -143,42 +168,4 @@
     </div>
 </div>
 
-<script>
-// Ejemplos de valor por tipo
-const ejemplosPorTipo = {
-    'talla': 'Ej: M, 32, XL, S, 40, Única, etc.',
-    'medida': 'Ej: 18, 30, Ajuste Estándar, Correa Larga, etc.',
-    'volumen': 'Ej: 100 ml, 50 ml, 30 ml, 150 ml, etc.',
-    'tamaño': 'Ej: Mediano, Grande, Pequeño, Extra Grande'
-};
-
-// Actualizar el texto de ejemplo según el tipo seleccionado
-document.addEventListener('DOMContentLoaded', function() {
-    const tipoSelect = document.getElementById('ID_TipoAtributo');
-    const ejemploSpan = document.getElementById('ejemplo');
-    
-    function actualizarEjemplo() {
-        const selectedOption = tipoSelect.options[tipoSelect.selectedIndex];
-        const tipoNombre = selectedOption.textContent.toLowerCase();
-        
-        // Buscar qué tipo se seleccionó
-        for (const [tipo, ejemplo] of Object.entries(ejemplosPorTipo)) {
-            if (tipoNombre.includes(tipo)) {
-                ejemploSpan.textContent = ejemplo;
-                return;
-            }
-        }
-        
-        // Si no se encuentra, mostrar ejemplo general
-        ejemploSpan.textContent = 'Ej: M, 32, Mediano, 100 ml, etc.';
-    }
-    
-    // Actualizar al cambiar el tipo
-    tipoSelect.addEventListener('change', actualizarEjemplo);
-    
-    // Actualizar al cargar si ya hay un tipo seleccionado
-    if (tipoSelect.value) {
-        actualizarEjemplo();
-    }
-});
-</script>
+<script src="<?= BASE_URL ?>assets/js/atributo.js"></script>

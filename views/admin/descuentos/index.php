@@ -169,6 +169,19 @@ if (!isset($descuentos)) $descuentos = [];
         .table-secondary {
             background-color: rgba(108, 117, 125, 0.05);
         }
+        
+        .table-danger {
+            background-color: rgba(220, 53, 69, 0.05);
+        }
+        
+        .icon-circle {
+            width: 2.5rem;
+            height: 2.5rem;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
     </style>
 </head>
 <body>
@@ -336,6 +349,8 @@ if (!isset($descuentos)) $descuentos = [];
                                     <th class="border-0">Aplicación</th>
                                     <th class="border-0">Tipo</th>
                                     <th class="border-0">Valor</th>
+                                    <th class="border-0">Condiciones</th>
+                                    <th class="border-0">Usos</th>
                                     <th class="border-0">Vigencia</th>
                                     <th class="border-0">Estado</th>
                                     <th class="text-center pe-4 border-0">Acciones</th>
@@ -348,13 +363,18 @@ if (!isset($descuentos)) $descuentos = [];
                                     $isCurrent = $isActive && $d['FechaInicio'] <= $now && $d['FechaFin'] >= $now;
                                     $isFuture = $isActive && $d['FechaInicio'] > $now;
                                     $isExpired = $d['FechaFin'] < $now;
+                                    $isExhausted = $d['Max_Usos_Global'] > 0 && $d['Usos_Globales'] >= $d['Max_Usos_Global'];
+                                    $esAutomatico = $d['Monto_Minimo'] > 0;
                                     
-                                    // Determinar clase de estado
+                                    // Determinar clase de estado (CORREGIDO)
                                     $estadoClase = '';
                                     $estadoTexto = '';
                                     if (!$isActive) {
                                         $estadoClase = 'table-secondary';
                                         $estadoTexto = 'Inactivo';
+                                    } elseif ($isExhausted) {
+                                        $estadoClase = 'table-danger';
+                                        $estadoTexto = 'Agotado';
                                     } elseif ($isExpired) {
                                         $estadoClase = 'table-warning';
                                         $estadoTexto = 'Expirado';
@@ -363,15 +383,21 @@ if (!isset($descuentos)) $descuentos = [];
                                         $estadoTexto = 'Programado';
                                     } else {
                                         $estadoTexto = 'Activo';
+                                        $estadoClase = ''; // Sin clase especial para activo
                                     }
                                 ?>
                                     <tr class="<?= $estadoClase ?>">
                                         <td class="ps-4">
                                             <div class="d-flex align-items-center">
                                                 <span class="badge bg-light text-dark border fs-6 fw-normal">
-                                                    <i class="fas fa-tag me-1 text-muted"></i>
+                                                    <i class="fas fa-<?= $esAutomatico ? 'bolt' : 'tag' ?> me-1 text-<?= $esAutomatico ? 'warning' : 'muted' ?>"></i>
                                                     <?= htmlspecialchars($d['Codigo']) ?>
                                                 </span>
+                                                <?php if ($esAutomatico): ?>
+                                                    <span class="badge bg-warning bg-opacity-10 text-warning border border-warning border-opacity-25 ms-2">
+                                                        <i class="fas fa-bolt me-1"></i>Auto
+                                                    </span>
+                                                <?php endif; ?>
                                             </div>
                                             <small class="text-muted">ID: <?= $d['ID_Descuento'] ?></small>
                                         </td>
@@ -417,10 +443,45 @@ if (!isset($descuentos)) $descuentos = [];
                                         </td>
                                         <td>
                                             <div class="small">
+                                                <?php if ($d['Monto_Minimo'] > 0): ?>
+                                                    <div class="text-success">
+                                                        <i class="fas fa-trophy me-1"></i>Mín: $<?= number_format($d['Monto_Minimo'], 2) ?>
+                                                    </div>
+                                                <?php endif; ?>
+                                                <?php if ($d['Max_Usos_Global'] > 0): ?>
+                                                    <div class="text-info">
+                                                        <i class="fas fa-globe me-1"></i>Global: <?= $d['Usos_Globales'] ?>/<?= $d['Max_Usos_Global'] ?>
+                                                    </div>
+                                                <?php endif; ?>
+                                                <?php if ($d['Max_Usos_Usuario'] > 0): ?>
+                                                    <div class="text-warning">
+                                                        <i class="fas fa-user me-1"></i>Usuario: <?= $d['Max_Usos_Usuario'] ?>
+                                                    </div>
+                                                <?php endif; ?>
+                                            </div>
+                                        </td>
+                                        <td>
+                                            <div class="small">
+                                                <div class="fw-semibold">
+                                                    <i class="fas fa-chart-bar me-1 text-primary"></i>
+                                                    <?= $d['Usos_Globales'] ?> usos
+                                                </div>
+                                                <div class="text-muted">
+                                                    <i class="fas fa-users me-1"></i>
+                                                    <?= $d['UsuariosUnicos'] ?? 0 ?> usuarios
+                                                </div>
+                                            </div>
+                                        </td>
+                                        <td>
+                                            <div class="small">
                                                 <div class="fw-semibold <?= $isExpired ? 'text-danger' : 'text-success' ?>">
                                                     <?= date('d/m/Y', strtotime($d['FechaInicio'])) ?> - <?= date('d/m/Y', strtotime($d['FechaFin'])) ?>
                                                 </div>
-                                                <?php if ($isExpired): ?>
+                                                <?php if ($isExhausted): ?>
+                                                    <small class="text-danger">
+                                                        <i class="fas fa-ban me-1"></i>Agotado
+                                                    </small>
+                                                <?php elseif ($isExpired): ?>
                                                     <small class="text-danger">
                                                         <i class="fas fa-clock me-1"></i>Expirado
                                                     </small>
@@ -436,24 +497,35 @@ if (!isset($descuentos)) $descuentos = [];
                                             </div>
                                         </td>
                                         <td>
-                                            <span class="badge bg-<?= $isActive ? ($isCurrent ? 'success' : ($isFuture ? 'info' : 'warning')) : 'danger' ?>">
-                                                <i class="fas fa-<?= $isActive ? ($isCurrent ? 'play-circle' : ($isFuture ? 'clock' : 'exclamation-triangle')) : 'pause-circle' ?> me-1"></i>
+                                            <span class="badge bg-<?= 
+                                                !$isActive ? 'danger' : 
+                                                ($isExhausted ? 'dark' : 
+                                                ($isExpired ? 'warning' : 
+                                                ($isFuture ? 'info' : 'success'))) 
+                                            ?>">
+                                                <i class="fas fa-<?= 
+                                                    !$isActive ? 'pause-circle' : 
+                                                    ($isExhausted ? 'ban' : 
+                                                    ($isExpired ? 'exclamation-triangle' : 
+                                                    ($isFuture ? 'clock' : 'play-circle'))) 
+                                                ?> me-1"></i>
                                                 <?= $estadoTexto ?>
                                             </span>
                                         </td>
                                         <td class="text-center pe-4">
                                             <div class="btn-group btn-group-sm" role="group">
-                                                <a href="<?= BASE_URL ?>?c=Descuento&a=ver&id=<?= $d['ID_Descuento'] ?>" 
-                                                   class="btn btn-outline-info" 
-                                                   data-bs-toggle="tooltip" 
-                                                   title="Ver detalles">
-                                                    <i class="fas fa-eye"></i>
-                                                </a>
+                                                <!-- ELIMINADO BOTÓN "VER" -->
                                                 <a href="<?= BASE_URL ?>?c=Descuento&a=editar&id=<?= $d['ID_Descuento'] ?>" 
                                                    class="btn btn-outline-warning" 
                                                    data-bs-toggle="tooltip" 
                                                    title="Editar descuento">
                                                     <i class="fas fa-edit"></i>
+                                                </a>
+                                                <a href="<?= BASE_URL ?>?c=Descuento&a=estadisticas&id=<?= $d['ID_Descuento'] ?>" 
+                                                   class="btn btn-outline-primary" 
+                                                   data-bs-toggle="tooltip" 
+                                                   title="Ver estadísticas">
+                                                    <i class="fas fa-chart-bar"></i>
                                                 </a>
                                                 <button onclick="confirmarEliminacion(<?= $d['ID_Descuento'] ?>, '<?= htmlspecialchars(addslashes($d['Codigo'])) ?>')" 
                                                         class="btn btn-outline-danger"

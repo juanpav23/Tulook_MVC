@@ -6,6 +6,9 @@ $formErrors = $_SESSION['form_errors'] ?? [];
 $formData = $_SESSION['form_data'] ?? $descuento;
 unset($_SESSION['form_errors']);
 unset($_SESSION['form_data']);
+
+// Determinar si es descuento automático (monto mínimo > 0)
+$esAutomatico = ($formData['Monto_Minimo'] ?? 0) > 0;
 ?>
 <!DOCTYPE html>
 <html lang="es">
@@ -163,6 +166,28 @@ unset($_SESSION['form_data']);
             content: " *";
             color: var(--danger-color);
         }
+        
+        .form-section {
+            margin-bottom: 2rem;
+        }
+        
+        .form-section-title {
+            color: var(--primary-color);
+            font-weight: 600;
+            margin-bottom: 1rem;
+            padding-bottom: 0.5rem;
+            border-bottom: 2px solid #e3e6f0;
+        }
+        
+        .estadisticas-card {
+            border-left: 4px solid;
+            background: linear-gradient(135deg, #f8f9fc 0%, #ffffff 100%);
+        }
+        
+        .estadisticas-card.primary { border-left-color: var(--primary-color); }
+        .estadisticas-card.success { border-left-color: var(--success-color); }
+        .estadisticas-card.info { border-left-color: var(--info-color); }
+        .estadisticas-card.warning { border-left-color: var(--warning-color); }
     </style>
 </head>
 <body>
@@ -182,6 +207,95 @@ unset($_SESSION['form_data']);
                 </a>
             </div>
         </div>
+
+        <!-- Estadísticas del Descuento -->
+        <?php if (isset($descuento['estadisticas'])): ?>
+        <div class="row mb-4">
+            <div class="col-md-3 mb-3">
+                <div class="card estadisticas-card primary h-100">
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between">
+                            <div>
+                                <h6 class="text-uppercase text-muted small">Usos Globales</h6>
+                                <h3 class="mb-0"><?= $descuento['Usos_Globales'] ?? 0 ?></h3>
+                            </div>
+                            <div class="icon-circle bg-primary text-white">
+                                <i class="fas fa-globe"></i>
+                            </div>
+                        </div>
+                        <p class="text-muted mb-0 small">
+                            <?php if ($descuento['Max_Usos_Global'] > 0): ?>
+                                Límite: <?= $descuento['Max_Usos_Global'] ?>
+                            <?php else: ?>
+                                Sin límite
+                            <?php endif; ?>
+                        </p>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="col-md-3 mb-3">
+                <div class="card estadisticas-card info h-100">
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between">
+                            <div>
+                                <h6 class="text-uppercase text-muted small">Usuarios Únicos</h6>
+                                <h3 class="mb-0"><?= $descuento['estadisticas']['TotalUsuarios'] ?? 0 ?></h3>
+                            </div>
+                            <div class="icon-circle bg-info text-white">
+                                <i class="fas fa-users"></i>
+                            </div>
+                        </div>
+                        <p class="text-muted mb-0 small">
+                            <?php if ($descuento['Max_Usos_Usuario'] > 0): ?>
+                                Límite por usuario: <?= $descuento['Max_Usos_Usuario'] ?>
+                            <?php else: ?>
+                                Sin límite por usuario
+                            <?php endif; ?>
+                        </p>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="col-md-3 mb-3">
+                <div class="card estadisticas-card success h-100">
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between">
+                            <div>
+                                <h6 class="text-uppercase text-muted small">Promedio por Usuario</h6>
+                                <h3 class="mb-0"><?= number_format($descuento['estadisticas']['PromedioUsosPorUsuario'] ?? 0, 1) ?></h3>
+                            </div>
+                            <div class="icon-circle bg-success text-white">
+                                <i class="fas fa-chart-line"></i>
+                            </div>
+                        </div>
+                        <p class="text-muted mb-0 small">
+                            Usos promedio por cada usuario
+                        </p>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="col-md-3 mb-3">
+                <div class="card estadisticas-card warning h-100">
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between">
+                            <div>
+                                <h6 class="text-uppercase text-muted small">Máximo Usos</h6>
+                                <h3 class="mb-0"><?= $descuento['estadisticas']['MaxUsosUsuario'] ?? 0 ?></h3>
+                            </div>
+                            <div class="icon-circle bg-warning text-white">
+                                <i class="fas fa-crown"></i>
+                            </div>
+                        </div>
+                        <p class="text-muted mb-0 small">
+                            Máximo usos por un solo usuario
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <?php endif; ?>
 
         <!-- Alertas de Error -->
         <?php if (!empty($formErrors)): ?>
@@ -214,232 +328,363 @@ unset($_SESSION['form_data']);
                     </div>
                     <div class="card-body p-4">
                         <form method="POST" id="descuentoForm">
-                            <!-- Código y Tipo -->
-                            <div class="row mb-4">
-                                <div class="col-md-6">
-                                    <label class="form-label required-field">
-                                        Código del Descuento
-                                    </label>
-                                    <div class="input-group">
-                                        <span class="input-group-text">
-                                            <i class="fas fa-tag"></i>
-                                        </span>
-                                        <input type="text" 
-                                               class="form-control <?= isset($formErrors['codigo']) ? 'is-invalid' : '' ?>" 
-                                               name="codigo" 
-                                               value="<?= htmlspecialchars($formData['Codigo'] ?? '') ?>" 
-                                               required
-                                               placeholder="EJ: VERANO2024"
-                                               maxlength="20"
-                                               pattern="[A-Z0-9_]+"
-                                               title="Solo mayúsculas, números y guiones bajos"
-                                               oninput="this.value = this.value.toUpperCase()">
-                                        <?php if (isset($formErrors['codigo'])): ?>
-                                            <div class="invalid-feedback">
-                                                <?= $formErrors['codigo'] ?>
-                                            </div>
-                                        <?php endif; ?>
+                            <!-- Información Básica -->
+                            <div class="form-section">
+                                <h6 class="form-section-title">
+                                    <i class="fas fa-tag me-2"></i>Información Básica
+                                </h6>
+                                
+                                <div class="row mb-4">
+                                    <div class="col-md-6">
+                                        <label class="form-label required-field">
+                                            Código del Descuento
+                                        </label>
+                                        <div class="input-group">
+                                            <span class="input-group-text">
+                                                <i class="fas fa-tag"></i>
+                                            </span>
+                                            <input type="text" 
+                                                   class="form-control <?= isset($formErrors['codigo']) ? 'is-invalid' : '' ?>" 
+                                                   name="codigo" 
+                                                   value="<?= htmlspecialchars($formData['Codigo'] ?? '') ?>" 
+                                                   required
+                                                   placeholder="EJ: VERANO2024"
+                                                   maxlength="20"
+                                                   pattern="[A-Z0-9_]+"
+                                                   title="Solo mayúsculas, números y guiones bajos"
+                                                   oninput="this.value = this.value.toUpperCase()"
+                                                   id="inputCodigo"
+                                                   <?= $esAutomatico ? 'readonly' : '' ?>>
+                                            <?php if (isset($formErrors['codigo'])): ?>
+                                                <div class="invalid-feedback">
+                                                    <?= $formErrors['codigo'] ?>
+                                                </div>
+                                            <?php endif; ?>
+                                        </div>
+                                        <div class="form-text mt-2">
+                                            <i class="fas fa-lightbulb text-warning me-1"></i>
+                                            <?php if ($esAutomatico): ?>
+                                                <span class="text-info">Código generado automáticamente. No se puede editar.</span>
+                                            <?php else: ?>
+                                                Usa un código único y descriptivo. Solo mayúsculas, números y _
+                                            <?php endif; ?>
+                                        </div>
                                     </div>
-                                    <div class="form-text mt-2">
-                                        <i class="fas fa-lightbulb text-warning me-1"></i>
-                                        Usa un código único y descriptivo. Solo mayúsculas, números y _
+                                    <div class="col-md-6">
+                                        <label class="form-label required-field">
+                                            Tipo de Descuento
+                                        </label>
+                                        <div class="input-group">
+                                            <span class="input-group-text">
+                                                <i class="fas fa-percentage"></i>
+                                            </span>
+                                            <select class="form-control <?= isset($formErrors['tipo']) ? 'is-invalid' : '' ?>" name="tipo" required id="tipoDescuento">
+                                                <option value="">Selecciona un tipo...</option>
+                                                <option value="Porcentaje" <?= ($formData['Tipo'] ?? '') == 'Porcentaje' ? 'selected' : '' ?>>Porcentaje (%)</option>
+                                                <option value="ValorFijo" <?= ($formData['Tipo'] ?? '') == 'ValorFijo' ? 'selected' : '' ?>>Valor Fijo ($)</option>
+                                            </select>
+                                            <?php if (isset($formErrors['tipo'])): ?>
+                                                <div class="invalid-feedback">
+                                                    <?= $formErrors['tipo'] ?>
+                                                </div>
+                                            <?php endif; ?>
+                                        </div>
                                     </div>
                                 </div>
-                                <div class="col-md-6">
-                                    <label class="form-label required-field">
-                                        Tipo de Descuento
-                                    </label>
-                                    <div class="input-group">
-                                        <span class="input-group-text">
-                                            <i class="fas fa-percentage"></i>
-                                        </span>
-                                        <select class="form-control <?= isset($formErrors['tipo']) ? 'is-invalid' : '' ?>" name="tipo" required id="tipoDescuento">
-                                            <option value="">Selecciona un tipo...</option>
-                                            <option value="Porcentaje" <?= ($formData['Tipo'] ?? '') == 'Porcentaje' ? 'selected' : '' ?>>Porcentaje (%)</option>
-                                            <option value="ValorFijo" <?= ($formData['Tipo'] ?? '') == 'ValorFijo' ? 'selected' : '' ?>>Valor Fijo ($)</option>
+
+                                <div class="row mb-4">
+                                    <div class="col-md-6">
+                                        <label class="form-label required-field">
+                                            Valor del Descuento
+                                        </label>
+                                        <div class="input-group">
+                                            <span class="input-group-text" id="simboloValor">
+                                                <?= ($formData['Tipo'] ?? '') == 'Porcentaje' ? '%' : '$' ?>
+                                            </span>
+                                            <input type="number" 
+                                                   class="form-control <?= isset($formErrors['valor']) ? 'is-invalid' : '' ?>" 
+                                                   name="valor" 
+                                                   step="0.01" 
+                                                   min="0.01" 
+                                                   max="<?= ($formData['Tipo'] ?? '') == 'Porcentaje' ? '100' : '999999' ?>" 
+                                                   value="<?= htmlspecialchars($formData['Valor'] ?? '') ?>" 
+                                                   required
+                                                   placeholder="0.00"
+                                                   id="inputValor">
+                                            <?php if (isset($formErrors['valor'])): ?>
+                                                <div class="invalid-feedback">
+                                                    <?= $formErrors['valor'] ?>
+                                                </div>
+                                            <?php endif; ?>
+                                        </div>
+                                        <div class="form-text mt-2" id="textoAyudaValor">
+                                            <i class="fas fa-info-circle me-1"></i>
+                                            <span id="textoAyuda">
+                                                <?= ($formData['Tipo'] ?? '') == 'Porcentaje' ? 
+                                                    'Ingresa el porcentaje de descuento. Máximo 100%.' : 
+                                                    'Ingresa el valor fijo del descuento.' ?>
+                                            </span>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label class="form-label required-field">
+                                            Aplicar a
+                                        </label>
+                                        <select class="form-control <?= isset($formErrors['aplicacion']) ? 'is-invalid' : '' ?>" name="tipo_aplicacion" id="tipo_aplicacion" required>
+                                            <option value="">¿Dónde aplicar el descuento?</option>
+                                            <option value="articulo" <?= isset($formData['ID_Articulo']) ? 'selected' : '' ?>>Artículo Específico</option>
+                                            <option value="producto" <?= isset($formData['ID_Producto']) ? 'selected' : '' ?>>Producto/Variante Específica</option>
+                                            <option value="categoria" <?= isset($formData['ID_Categoria']) ? 'selected' : '' ?>>Categoría Completa</option>
                                         </select>
-                                        <?php if (isset($formErrors['tipo'])): ?>
+                                        <?php if (isset($formErrors['aplicacion'])): ?>
                                             <div class="invalid-feedback">
-                                                <?= $formErrors['tipo'] ?>
+                                                <?= $formErrors['aplicacion'] ?>
                                             </div>
                                         <?php endif; ?>
                                     </div>
                                 </div>
                             </div>
 
-                            <!-- Valor y Aplicación -->
-                            <div class="row mb-4">
-                                <div class="col-md-6">
-                                    <label class="form-label required-field">
-                                        Valor del Descuento
-                                    </label>
-                                    <div class="input-group">
-                                        <span class="input-group-text" id="simboloValor">
-                                            <?= ($formData['Tipo'] ?? '') == 'Porcentaje' ? '%' : '$' ?>
-                                        </span>
-                                        <input type="number" 
-                                               class="form-control <?= isset($formErrors['valor']) ? 'is-invalid' : '' ?>" 
-                                               name="valor" 
-                                               step="0.01" 
-                                               min="0.01" 
-                                               max="<?= ($formData['Tipo'] ?? '') == 'Porcentaje' ? '100' : '999999' ?>" 
-                                               value="<?= htmlspecialchars($formData['Valor'] ?? '') ?>" 
-                                               required
-                                               placeholder="0.00"
-                                               id="inputValor">
-                                        <?php if (isset($formErrors['valor'])): ?>
-                                            <div class="invalid-feedback">
-                                                <?= $formErrors['valor'] ?>
-                                            </div>
-                                        <?php endif; ?>
-                                    </div>
-                                    <div class="form-text mt-2" id="textoAyudaValor">
-                                        <i class="fas fa-info-circle me-1"></i>
-                                        <span id="textoAyuda">
-                                            <?= ($formData['Tipo'] ?? '') == 'Porcentaje' ? 
-                                                'Ingresa el porcentaje de descuento. Máximo 100%.' : 
-                                                'Ingresa el valor fijo del descuento.' ?>
-                                        </span>
-                                    </div>
-                                </div>
-                                <div class="col-md-6">
-                                    <label class="form-label required-field">
-                                        Aplicar a
-                                    </label>
-                                    <select class="form-control <?= isset($formErrors['aplicacion']) ? 'is-invalid' : '' ?>" name="tipo_aplicacion" id="tipo_aplicacion" required>
-                                        <option value="">¿Dónde aplicar el descuento?</option>
-                                        <option value="articulo" <?= isset($formData['ID_Articulo']) ? 'selected' : '' ?>>Artículo Específico</option>
-                                        <option value="producto" <?= isset($formData['ID_Producto']) ? 'selected' : '' ?>>Producto/Variante Específica</option>
-                                        <option value="categoria" <?= isset($formData['ID_Categoria']) ? 'selected' : '' ?>>Categoría Completa</option>
-                                    </select>
-                                    <?php if (isset($formErrors['aplicacion'])): ?>
-                                        <div class="invalid-feedback">
-                                            <?= $formErrors['aplicacion'] ?>
+                            <!-- Condiciones y Límites -->
+                            <div class="form-section">
+                                <h6 class="form-section-title">
+                                    <i class="fas fa-sliders-h me-2"></i>Condiciones y Límites
+                                </h6>
+                                
+                                <div class="row mb-4">
+                                    <div class="col-md-4">
+                                        <label class="form-label">
+                                            <i class="fas fa-dollar-sign text-success me-1"></i>Monto Mínimo para Ganar
+                                        </label>
+                                        <div class="input-group">
+                                            <span class="input-group-text">
+                                                <i class="fas fa-trophy"></i>
+                                            </span>
+                                            <input type="number" 
+                                                   class="form-control <?= isset($formErrors['monto_minimo']) ? 'is-invalid' : '' ?>" 
+                                                   name="monto_minimo" 
+                                                   step="0.01" 
+                                                   min="0" 
+                                                   value="<?= $formData['Monto_Minimo'] ?? 0 ?>" 
+                                                   placeholder="0.00"
+                                                   id="montoMinimo">
+                                            <span class="input-group-text">$</span>
                                         </div>
-                                    <?php endif; ?>
+                                        <div class="form-text mt-2">
+                                            <i class="fas fa-info-circle me-1"></i>
+                                            <?php if ($esAutomatico): ?>
+                                                <span class="text-info">Descuento automático (se gana al alcanzar el monto)</span>
+                                            <?php else: ?>
+                                                0 = aplicable inmediatamente, >0 = se gana al alcanzar monto
+                                            <?php endif; ?>
+                                        </div>
+                                    </div>
+                                    
+                                    <div class="col-md-4">
+                                        <label class="form-label">
+                                            <i class="fas fa-globe text-info me-1"></i>Máximo Usos Globales
+                                        </label>
+                                        <div class="input-group">
+                                            <span class="input-group-text">
+                                                <i class="fas fa-globe-americas"></i>
+                                            </span>
+                                            <input type="number" 
+                                                   class="form-control <?= isset($formErrors['max_usos_global']) ? 'is-invalid' : '' ?>" 
+                                                   name="max_usos_global" 
+                                                   min="0" 
+                                                   value="<?= $formData['Max_Usos_Global'] ?? 0 ?>" 
+                                                   placeholder="0 = ilimitado"
+                                                   id="maxUsosGlobal">
+                                        </div>
+                                        <div class="form-text mt-2">
+                                            <i class="fas fa-info-circle me-1"></i>
+                                            Límite total: <?= $formData['Usos_Globales'] ?? 0 ?> usados de <?= $formData['Max_Usos_Global'] ?? 0 ?>
+                                        </div>
+                                    </div>
+                                    
+                                    <div class="col-md-4">
+                                        <label class="form-label">
+                                            <i class="fas fa-user text-warning me-1"></i>Máximo Usos por Usuario
+                                        </label>
+                                        <div class="input-group">
+                                            <span class="input-group-text">
+                                                <i class="fas fa-user-check"></i>
+                                            </span>
+                                            <input type="number" 
+                                                   class="form-control <?= isset($formErrors['max_usos_usuario']) ? 'is-invalid' : '' ?>" 
+                                                   name="max_usos_usuario" 
+                                                   min="0" 
+                                                   value="<?= $formData['Max_Usos_Usuario'] ?? 0 ?>" 
+                                                   placeholder="0 = ilimitado"
+                                                   id="maxUsosUsuario">
+                                        </div>
+                                        <div class="form-text mt-2">
+                                            <i class="fas fa-info-circle me-1"></i>
+                                            Usuarios únicos: <?= $descuento['estadisticas']['TotalUsuarios'] ?? 0 ?>
+                                        </div>
+                                    </div>
                                 </div>
+                                
+                                <?php if ($esAutomatico): ?>
+                                <div class="row">
+                                    <div class="col-12">
+                                        <div class="alert alert-info border-0">
+                                            <div class="d-flex">
+                                                <i class="fas fa-bolt text-warning fs-5 me-3 mt-1"></i>
+                                                <div>
+                                                    <h6 class="alert-heading mb-2">Descuento Automático Activado</h6>
+                                                    <ul class="mb-0">
+                                                        <li>Este descuento se gana cuando el usuario alcanza el monto mínimo en una compra</li>
+                                                        <li>El código se genera automáticamente al ganar el descuento</li>
+                                                        <li>El descuento ganado se aplica en compras futuras</li>
+                                                        <li>El código no se puede cambiar manualmente</li>
+                                                    </ul>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <?php endif; ?>
                             </div>
 
                             <!-- Campos Dinámicos -->
-                            <div class="row mb-4" id="articulo-field" style="display:none;">
-                                <div class="col-12">
-                                    <div class="card application-card border-info">
-                                        <div class="card-header bg-info bg-opacity-10 text-info border-0 py-3">
-                                            <i class="fas fa-cube me-2"></i>Seleccionar Artículo
-                                        </div>
-                                        <div class="card-body">
-                                            <select class="form-control" name="id_articulo" id="selectArticulo">
-                                                <option value="">Elige un artículo...</option>
-                                                <?php foreach ($articulos as $a): ?>
-                                                <option value="<?= $a['ID_Articulo'] ?>" 
-                                                        <?= ($formData['ID_Articulo'] ?? '') == $a['ID_Articulo'] ? 'selected' : '' ?>>
-                                                    <?= htmlspecialchars($a['N_Articulo']) ?>
-                                                </option>
-                                                <?php endforeach; ?>
-                                            </select>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-
-                            <div class="row mb-4" id="producto-field" style="display:none;">
-                                <div class="col-12">
-                                    <div class="card application-card border-success">
-                                        <div class="card-header bg-success bg-opacity-10 text-success border-0 py-3">
-                                            <i class="fas fa-palette me-2"></i>Seleccionar Producto/Variante
-                                        </div>
-                                        <div class="card-body">
-                                            <select class="form-control" name="id_producto" id="selectProducto">
-                                                <option value="">Elige un producto/variante...</option>
-                                                <?php foreach ($productos as $p): ?>
-                                                <option value="<?= $p['ID_Producto'] ?>" 
-                                                        <?= ($formData['ID_Producto'] ?? '') == $p['ID_Producto'] ? 'selected' : '' ?>>
-                                                    <?= htmlspecialchars($p['Nombre_Completo']) ?>
-                                                </option>
-                                                <?php endforeach; ?>
-                                            </select>
+                            <div class="form-section">
+                                <h6 class="form-section-title">
+                                    <i class="fas fa-bullseye me-2"></i>Aplicación del Descuento
+                                </h6>
+                                
+                                <div class="row mb-4" id="articulo-field" style="display:none;">
+                                    <div class="col-12">
+                                        <div class="card application-card border-info">
+                                            <div class="card-header bg-info bg-opacity-10 text-info border-0 py-3">
+                                                <i class="fas fa-cube me-2"></i>Seleccionar Artículo
+                                            </div>
+                                            <div class="card-body">
+                                                <select class="form-control" name="id_articulo" id="selectArticulo">
+                                                    <option value="">Elige un artículo...</option>
+                                                    <?php foreach ($articulos as $a): ?>
+                                                    <option value="<?= $a['ID_Articulo'] ?>" 
+                                                            <?= ($formData['ID_Articulo'] ?? '') == $a['ID_Articulo'] ? 'selected' : '' ?>>
+                                                        <?= htmlspecialchars($a['N_Articulo']) ?>
+                                                    </option>
+                                                    <?php endforeach; ?>
+                                                </select>
+                                            </div>
                                         </div>
                                     </div>
                                 </div>
-                            </div>
 
-                            <div class="row mb-4" id="categoria-field" style="display:none;">
-                                <div class="col-12">
-                                    <div class="card application-card border-secondary">
-                                        <div class="card-header bg-secondary bg-opacity-10 text-secondary border-0 py-3">
-                                            <i class="fas fa-layer-group me-2"></i>Seleccionar Categoría
+                                <div class="row mb-4" id="producto-field" style="display:none;">
+                                    <div class="col-12">
+                                        <div class="card application-card border-success">
+                                            <div class="card-header bg-success bg-opacity-10 text-success border-0 py-3">
+                                                <i class="fas fa-palette me-2"></i>Seleccionar Producto/Variante
+                                            </div>
+                                            <div class="card-body">
+                                                <select class="form-control" name="id_producto" id="selectProducto">
+                                                    <option value="">Elige un producto/variante...</option>
+                                                    <?php foreach ($productos as $p): ?>
+                                                    <option value="<?= $p['ID_Producto'] ?>" 
+                                                            <?= ($formData['ID_Producto'] ?? '') == $p['ID_Producto'] ? 'selected' : '' ?>>
+                                                        <?= htmlspecialchars($p['Nombre_Completo']) ?>
+                                                    </option>
+                                                    <?php endforeach; ?>
+                                                </select>
+                                            </div>
                                         </div>
-                                        <div class="card-body">
-                                            <select class="form-control" name="id_categoria" id="selectCategoria">
-                                                <option value="">Elige una categoría...</option>
-                                                <?php foreach ($categorias as $c): ?>
-                                                <option value="<?= $c['ID_Categoria'] ?>" 
-                                                        <?= ($formData['ID_Categoria'] ?? '') == $c['ID_Categoria'] ? 'selected' : '' ?>>
-                                                    <?= htmlspecialchars($c['N_Categoria']) ?>
-                                                </option>
-                                                <?php endforeach; ?>
-                                            </select>
+                                    </div>
+                                </div>
+
+                                <div class="row mb-4" id="categoria-field" style="display:none;">
+                                    <div class="col-12">
+                                        <div class="card application-card border-secondary">
+                                            <div class="card-header bg-secondary bg-opacity-10 text-secondary border-0 py-3">
+                                                <i class="fas fa-layer-group me-2"></i>Seleccionar Categoría
+                                            </div>
+                                            <div class="card-body">
+                                                <select class="form-control" name="id_categoria" id="selectCategoria">
+                                                    <option value="">Elige una categoría...</option>
+                                                    <?php foreach ($categorias as $c): ?>
+                                                    <option value="<?= $c['ID_Categoria'] ?>" 
+                                                            <?= ($formData['ID_Categoria'] ?? '') == $c['ID_Categoria'] ? 'selected' : '' ?>>
+                                                        <?= htmlspecialchars($c['N_Categoria']) ?>
+                                                    </option>
+                                                    <?php endforeach; ?>
+                                                </select>
+                                            </div>
                                         </div>
                                     </div>
                                 </div>
                             </div>
 
                             <!-- Fechas -->
-                            <div class="row mb-4">
-                                <div class="col-md-6">
-                                    <label class="form-label required-field">
-                                        Fecha de Inicio
-                                    </label>
-                                    <div class="input-group">
-                                        <span class="input-group-text">
-                                            <i class="fas fa-calendar-plus"></i>
-                                        </span>
-                                        <input type="datetime-local" 
-                                               class="form-control <?= isset($formErrors['fechas']) ? 'is-invalid' : '' ?>" 
-                                               name="fecha_inicio" 
-                                               value="<?= isset($formData['FechaInicio']) ? date('Y-m-d\TH:i', strtotime($formData['FechaInicio'])) : '' ?>" 
-                                               required
-                                               id="fechaInicio">
-                                    </div>
-                                </div>
-                                <div class="col-md-6">
-                                    <label class="form-label required-field">
-                                        Fecha de Fin
-                                    </label>
-                                    <div class="input-group">
-                                        <span class="input-group-text">
-                                            <i class="fas fa-calendar-minus"></i>
-                                        </span>
-                                        <input type="datetime-local" 
-                                               class="form-control <?= isset($formErrors['fechas']) ? 'is-invalid' : '' ?>" 
-                                               name="fecha_fin" 
-                                               value="<?= isset($formData['FechaFin']) ? date('Y-m-d\TH:i', strtotime($formData['FechaFin'])) : '' ?>" 
-                                               required
-                                               id="fechaFin">
-                                    </div>
-                                    <?php if (isset($formErrors['fechas'])): ?>
-                                        <div class="invalid-feedback d-block">
-                                            <?= $formErrors['fechas'] ?>
+                            <div class="form-section">
+                                <h6 class="form-section-title">
+                                    <i class="fas fa-calendar-alt me-2"></i>Período de Vigencia
+                                </h6>
+                                
+                                <div class="row mb-4">
+                                    <div class="col-md-6">
+                                        <label class="form-label required-field">
+                                            Fecha de Inicio
+                                        </label>
+                                        <div class="input-group">
+                                            <span class="input-group-text">
+                                                <i class="fas fa-calendar-plus"></i>
+                                            </span>
+                                            <input type="datetime-local" 
+                                                   class="form-control <?= isset($formErrors['fechas']) ? 'is-invalid' : '' ?>" 
+                                                   name="fecha_inicio" 
+                                                   value="<?= isset($formData['FechaInicio']) ? date('Y-m-d\TH:i', strtotime($formData['FechaInicio'])) : '' ?>" 
+                                                   required
+                                                   id="fechaInicio">
                                         </div>
-                                    <?php endif; ?>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label class="form-label required-field">
+                                            Fecha de Fin
+                                        </label>
+                                        <div class="input-group">
+                                            <span class="input-group-text">
+                                                <i class="fas fa-calendar-minus"></i>
+                                            </span>
+                                            <input type="datetime-local" 
+                                                   class="form-control <?= isset($formErrors['fechas']) ? 'is-invalid' : '' ?>" 
+                                                   name="fecha_fin" 
+                                                   value="<?= isset($formData['FechaFin']) ? date('Y-m-d\TH:i', strtotime($formData['FechaFin'])) : '' ?>" 
+                                                   required
+                                                   id="fechaFin">
+                                        </div>
+                                        <?php if (isset($formErrors['fechas'])): ?>
+                                            <div class="invalid-feedback d-block">
+                                                <?= $formErrors['fechas'] ?>
+                                            </div>
+                                        <?php endif; ?>
+                                    </div>
                                 </div>
                             </div>
 
                             <!-- Estado -->
-                            <div class="row mb-4">
-                                <div class="col-12">
-                                    <div class="card border-0 bg-light">
-                                        <div class="card-body">
-                                            <div class="form-check form-switch mb-0">
-                                                <input class="form-check-input" type="checkbox" name="activo" id="activo" 
-                                                       <?= ($formData['Activo'] ?? 1) ? 'checked' : '' ?>>
-                                                <label class="form-check-label fw-semibold" for="activo">
-                                                    Descuento Activo
-                                                </label>
-                                            </div>
-                                            <div class="form-text mt-2">
-                                                <i class="fas fa-info-circle me-1"></i>
-                                                Cuando está inactivo, el descuento no se aplicará a ningún producto.
+                            <div class="form-section">
+                                <h6 class="form-section-title">
+                                    <i class="fas fa-toggle-on me-2"></i>Estado del Descuento
+                                </h6>
+                                
+                                <div class="row mb-4">
+                                    <div class="col-12">
+                                        <div class="card border-0 bg-light">
+                                            <div class="card-body">
+                                                <div class="form-check form-switch mb-0">
+                                                    <input class="form-check-input" type="checkbox" name="activo" id="activo" 
+                                                           <?= ($formData['Activo'] ?? 1) ? 'checked' : '' ?>>
+                                                    <label class="form-check-label fw-semibold" for="activo">
+                                                        Descuento Activo
+                                                    </label>
+                                                </div>
+                                                <div class="form-text mt-2">
+                                                    <i class="fas fa-info-circle me-1"></i>
+                                                    Cuando está inactivo, el descuento no se aplicará a ningún producto.
+                                                </div>
                                             </div>
                                         </div>
                                     </div>
@@ -564,22 +809,6 @@ unset($_SESSION['form_data']);
 
         fechaFin.addEventListener('change', validarFechas);
 
-        // Validación en tiempo real para el código
-        const codigoInput = document.querySelector('input[name="codigo"]');
-        codigoInput.addEventListener('input', function(e) {
-            const valor = e.target.value;
-            const regex = /^[A-Z0-9_]*$/;
-            
-            if (!regex.test(valor)) {
-                e.target.value = valor.slice(0, -1);
-            }
-            
-            // Validar longitud
-            if (valor.length > 20) {
-                e.target.value = valor.slice(0, 20);
-            }
-        });
-
         // Validación del formulario antes de enviar
         document.getElementById('descuentoForm').addEventListener('submit', function(e) {
             if (!validarFechas()) {
@@ -601,6 +830,35 @@ unset($_SESSION['form_data']);
             } else if (tipoApp === 'categoria' && !document.getElementById('selectCategoria').value) {
                 e.preventDefault();
                 alert('Por favor selecciona una categoría.');
+                return false;
+            }
+            
+            // Validar límites lógicos
+            const montoMinimo = parseFloat(document.getElementById('montoMinimo').value);
+            const maxGlobal = parseInt(document.getElementById('maxUsosGlobal').value);
+            const maxUsuario = parseInt(document.getElementById('maxUsosUsuario').value);
+            
+            if (montoMinimo < 0) {
+                e.preventDefault();
+                alert('El monto mínimo no puede ser negativo.');
+                return false;
+            }
+            
+            if (maxGlobal < 0) {
+                e.preventDefault();
+                alert('El máximo de usos globales no puede ser negativo.');
+                return false;
+            }
+            
+            if (maxUsuario < 0) {
+                e.preventDefault();
+                alert('El máximo de usos por usuario no puede ser negativo.');
+                return false;
+            }
+            
+            if (maxUsuario > 0 && maxGlobal > 0 && maxUsuario > maxGlobal) {
+                e.preventDefault();
+                alert('El límite por usuario no puede ser mayor al límite global.');
                 return false;
             }
         });

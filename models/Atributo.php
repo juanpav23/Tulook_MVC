@@ -13,8 +13,8 @@ class Atributo {
         $query = "SELECT av.*, ta.Nombre as TipoNombre, ta.Descripcion as TipoDescripcion
                   FROM {$this->table_name} av
                   INNER JOIN {$this->table_tipo} ta ON av.ID_TipoAtributo = ta.ID_TipoAtributo
-                  WHERE ta.Nombre != 'Color'  -- Excluir colores
-                  ORDER BY ta.Nombre, av.Valor";  // Ordenar por tipo y luego valor
+                  WHERE ta.Nombre != 'Color'
+                  ORDER BY ta.Nombre, av.Valor";
         $stmt = $this->conn->prepare($query);
         $stmt->execute();
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
@@ -39,15 +39,6 @@ class Atributo {
         $stmt = $this->conn->prepare($query);
         $stmt->execute();
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
-    }
-
-    // OBTENER TIPO ESPECÍFICO
-    public function obtenerTipoPorId($tipoId) {
-        $query = "SELECT * FROM {$this->table_tipo} 
-                  WHERE ID_TipoAtributo = ? AND Nombre != 'Color'";
-        $stmt = $this->conn->prepare($query);
-        $stmt->execute([$tipoId]);
-        return $stmt->fetch(PDO::FETCH_ASSOC);
     }
 
     // VERIFICAR SI EXISTE UN ATRIBUTO CON EL MISMO VALOR Y TIPO
@@ -79,12 +70,10 @@ class Atributo {
 
     // CREAR NUEVO ATRIBUTO CON ORDEN AUTOMÁTICO
     public function crear($tipoId, $valor, $activo) {
-        // Verificar si ya existe un atributo con el mismo valor y tipo
         if ($this->existeAtributo($valor, $tipoId)) {
             throw new Exception("Ya existe un atributo con el valor '{$valor}' para este tipo");
         }
 
-        // Obtener orden automático
         $orden = $this->obtenerSiguienteOrden($tipoId);
 
         $query = "INSERT INTO {$this->table_name} 
@@ -97,12 +86,15 @@ class Atributo {
 
     // ACTUALIZAR ATRIBUTO
     public function actualizar($id, $tipoId, $valor, $activo) {
-        // Verificar si ya existe otro atributo con el mismo valor y tipo
+        $atributoActual = $this->obtenerPorId($id);
+        if ($atributoActual && ($id == 16 || strtolower($atributoActual['Valor']) === 'única')) {
+            throw new Exception('El valor "Única" no puede ser editado');
+        }
+
         if ($this->existeAtributo($valor, $tipoId, $id)) {
             throw new Exception("Ya existe otro atributo con el valor '{$valor}' para este tipo");
         }
 
-        // Mantener el orden actual (no lo actualizamos, es automático)
         $query = "UPDATE {$this->table_name} 
                  SET ID_TipoAtributo = ?, Valor = ?, Activo = ?
                  WHERE ID_AtributoValor = ?";
@@ -113,33 +105,39 @@ class Atributo {
 
     // CAMBIAR ESTADO (ACTIVAR/DESACTIVAR)
     public function cambiarEstado($id, $estado) {
+        $atributo = $this->obtenerPorId($id);
+        if ($atributo && ($id == 16 || strtolower($atributo['Valor']) === 'única')) {
+            throw new Exception('El valor "Única" no puede cambiar de estado');
+        }
+        
+        if ($estado == 0 && $this->estaEnUso($id)) {
+            throw new Exception("El atributo está siendo usado por productos y no puede desactivarse");
+        }
+        
         $query = "UPDATE {$this->table_name} SET Activo = ? WHERE ID_AtributoValor = ?";
         $stmt = $this->conn->prepare($query);
         return $stmt->execute([$estado, $id]);
     }
 
-    // BUSCAR ATRIBUTOS (EXCLUYENDO COLOR)
-    public function buscar($termino = '', $tipoId = '', $estado = '') {
+    // BUSCAR ATRIBUTOS (EXCLUYENDO COLOR) CON FILTRO DE USO
+    public function buscar($termino = '', $tipoId = '', $estado = '', $enUso = '') {
         $query = "SELECT av.*, ta.Nombre as TipoNombre, ta.Descripcion as TipoDescripcion
                   FROM {$this->table_name} av
                   INNER JOIN {$this->table_tipo} ta ON av.ID_TipoAtributo = ta.ID_TipoAtributo
                   WHERE ta.Nombre != 'Color'";
         $params = [];
 
-        // Búsqueda por valor
         if (!empty($termino)) {
             $query .= " AND (av.Valor LIKE ? OR ta.Nombre LIKE ?)";
             $params[] = '%' . $termino . '%';
             $params[] = '%' . $termino . '%';
         }
 
-        // Filtro por tipo
         if (!empty($tipoId)) {
             $query .= " AND av.ID_TipoAtributo = ?";
             $params[] = $tipoId;
         }
 
-        // Filtro por estado
         if ($estado !== '') {
             $query .= " AND av.Activo = ?";
             $params[] = $estado;
@@ -149,7 +147,21 @@ class Atributo {
 
         $stmt = $this->conn->prepare($query);
         $stmt->execute($params);
-        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+        $atributos = $stmt->fetchAll(PDO::FETCH_ASSOC);
+        
+        // Aplicar filtro de uso si está especificado
+        if ($enUso !== '') {
+            $filtrados = [];
+            foreach ($atributos as $attr) {
+                $estaEnUso = $this->estaEnUso($attr['ID_AtributoValor']);
+                if (($enUso === 'si' && $estaEnUso) || ($enUso === 'no' && !$estaEnUso)) {
+                    $filtrados[] = $attr;
+                }
+            }
+            return $filtrados;
+        }
+        
+        return $atributos;
     }
 
     // OBTENER ESTADÍSTICAS (EXCLUYENDO COLORES)
@@ -168,98 +180,104 @@ class Atributo {
         return $stmt->fetch(PDO::FETCH_ASSOC);
     }
 
-    // OBTENER ATRIBUTOS POR TIPO
-    public function obtenerPorTipo($tipoId, $soloActivos = true) {
-        $query = "SELECT av.* FROM {$this->table_name} av
-                  INNER JOIN {$this->table_tipo} ta ON av.ID_TipoAtributo = ta.ID_TipoAtributo
-                  WHERE av.ID_TipoAtributo = ? AND ta.Nombre != 'Color'";
-        
-        if ($soloActivos) {
-            $query .= " AND av.Activo = 1";
-        }
-        
-        $query .= " ORDER BY av.Valor";
-        
-        $stmt = $this->conn->prepare($query);
-        $stmt->execute([$tipoId]);
-        return $stmt->fetchAll(PDO::FETCH_ASSOC);
-    }
-
-    // OBTENER INPUT TYPE SEGÚN TIPO DE ATRIBUTO
-    public function obtenerInputTypePorTipo($tipoId) {
-        $tipo = $this->obtenerTipoPorId($tipoId);
-        if (!$tipo) return 'text';
-        
-        $tipoNombre = strtolower($tipo['Nombre']);
-        
-        switch ($tipoNombre) {
-            case 'talla':
-                return 'select'; // Select con opciones predefinidas
-            case 'medida':
-                return 'measurements'; // Inputs especiales para medidas
-            case 'volumen':
-                return 'volume'; // Input especial para volumen
-            case 'tamaño':
-                return 'size'; // Select con tamaños predefinidos
-            default:
-                return 'text';
-        }
-    }
-
     // VERIFICAR SI UN ATRIBUTO ESTÁ EN USO
     public function estaEnUso($idAtributo) {
-        $query = "SELECT COUNT(*) FROM producto 
-                  WHERE ID_Atributo1 = ? OR ID_Atributo2 = ? OR ID_Atributo3 = ?";
+        $atributo = $this->obtenerPorId($idAtributo);
+        if ($atributo && ($idAtributo == 16 || strtolower($atributo['Valor']) === 'única')) {
+            return true;
+        }
+        
+        $query = "SELECT COUNT(*) as total_uso 
+                FROM producto 
+                WHERE (ID_Atributo1 = ? OR ID_Atributo2 = ? OR ID_Atributo3 = ?)";
+        
         $stmt = $this->conn->prepare($query);
         $stmt->execute([$idAtributo, $idAtributo, $idAtributo]);
+        $result = $stmt->fetch(PDO::FETCH_ASSOC);
         
-        return $stmt->fetchColumn() > 0;
+        if ($result['total_uso'] == 0 && $atributo) {
+            $query2 = "SELECT COUNT(*) as total_uso_valor 
+                    FROM producto 
+                    WHERE (ValorAtributo1 = ? OR ValorAtributo2 = ? OR ValorAtributo3 = ?)";
+            
+            $stmt2 = $this->conn->prepare($query2);
+            $stmt2->execute([$atributo['Valor'], $atributo['Valor'], $atributo['Valor']]);
+            $result2 = $stmt2->fetch(PDO::FETCH_ASSOC);
+            
+            return ($result2['total_uso_valor'] > 0);
+        }
+        
+        return ($result['total_uso'] > 0);
     }
 
     // OBTENER PRODUCTOS QUE USAN UN ATRIBUTO
     public function obtenerProductosPorAtributo($idAtributo) {
-        $query = "SELECT p.Nombre_Producto, a.N_Articulo as Articulo
-                  FROM producto p
-                  INNER JOIN articulo a ON p.ID_Articulo = a.ID_Articulo
-                  WHERE p.ID_Atributo1 = ? OR p.ID_Atributo2 = ? OR p.ID_Atributo3 = ?
-                  ORDER BY p.Nombre_Producto";
+        $atributo = $this->obtenerPorId($idAtributo);
+        if (!$atributo) {
+            return [];
+        }
+        
+        $query = "SELECT 
+                    p.Nombre_Producto, 
+                    a.N_Articulo as Articulo
+                FROM producto p
+                INNER JOIN articulo a ON p.ID_Articulo = a.ID_Articulo
+                WHERE (p.ID_Atributo1 = ? OR p.ID_Atributo2 = ? OR p.ID_Atributo3 = ?
+                       OR p.ValorAtributo1 = ? OR p.ValorAtributo2 = ? OR p.ValorAtributo3 = ?)
+                ORDER BY p.Nombre_Producto";
         
         $stmt = $this->conn->prepare($query);
-        $stmt->execute([$idAtributo, $idAtributo, $idAtributo]);
+        $stmt->execute([
+            $idAtributo, $idAtributo, $idAtributo,
+            $atributo['Valor'], $atributo['Valor'], $atributo['Valor']
+        ]);
+        
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
     }
 
-    // OBTENER OPCIONES PREGENERADAS POR TIPO DE ATRIBUTO (BASADO EN TUS DATOS)
-    public function obtenerOpcionesPorTipo($tipoId) {
-        $tipo = $this->obtenerTipoPorId($tipoId);
-        if (!$tipo) return [];
+    // REORGANIZAR ÓRDENES DESPUÉS DE ELIMINAR
+    private function reorganizarOrdenes($tipoId) {
+        $query = "SELECT ID_AtributoValor, Orden 
+                FROM {$this->table_name} 
+                WHERE ID_TipoAtributo = ? 
+                ORDER BY Orden";
+        $stmt = $this->conn->prepare($query);
+        $stmt->execute([$tipoId]);
+        $atributos = $stmt->fetchAll(PDO::FETCH_ASSOC);
         
-        $tipoNombre = strtolower($tipo['Nombre']);
-        
-        // Basado en tus datos existentes en la tabla
-        switch ($tipoNombre) {
-            case 'talla':
-                return [
-                    'XS', 'S', 'M', 'L', 'XL', 'XXL',
-                    '28', '30', '32', '34', '36', '38', '40', '42', '44',
-                    'Única'
-                ];
-            case 'medida':
-                return [
-                    '16', '17', '18', '19', '20', '28', '30', '32', '34', '36',
-                    'Ajuste Estándar', 'Correa Corta', 'Correa Larga'
-                ];
-            case 'tamaño':
-                return [
-                    'Pequeño', 'Mediano', 'Grande', 'Extra Grande'
-                ];
-            case 'volumen':
-                return [
-                    '30 ml', '50 ml', '75 ml', '100 ml', '150 ml'
-                ];
-            default:
-                return [];
+        $nuevoOrden = 1;
+        foreach ($atributos as $atributo) {
+            $updateQuery = "UPDATE {$this->table_name} SET Orden = ? WHERE ID_AtributoValor = ?";
+            $updateStmt = $this->conn->prepare($updateQuery);
+            $updateStmt->execute([$nuevoOrden, $atributo['ID_AtributoValor']]);
+            $nuevoOrden++;
         }
+    }
+
+    // ELIMINAR ATRIBUTO
+    public function eliminar($id) {
+        $atributo = $this->obtenerPorId($id);
+        if (!$atributo) {
+            throw new Exception('Atributo no encontrado');
+        }
+        
+        if ($id == 16 || strtolower($atributo['Valor']) === 'única') {
+            throw new Exception('El valor "Única" es un valor universal del sistema y no puede eliminarse');
+        }
+        
+        if ($this->estaEnUso($id)) {
+            throw new Exception('El atributo está siendo usado por productos y no puede eliminarse');
+        }
+        
+        $query = "DELETE FROM {$this->table_name} WHERE ID_AtributoValor = ?";
+        $stmt = $this->conn->prepare($query);
+        
+        if ($stmt->execute([$id])) {
+            $this->reorganizarOrdenes($atributo['ID_TipoAtributo']);
+            return true;
+        }
+        
+        return false;
     }
 }
 ?>

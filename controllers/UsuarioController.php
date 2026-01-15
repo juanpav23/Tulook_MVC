@@ -676,4 +676,392 @@ private function obtenerMensajes() {
             exit;
         }
 
+        // Mostrar formulario de olvido de contraseña
+        public function olvidoContrasena() {
+            if (isset($_SESSION['usuario'])) {
+                header("Location: " . BASE_URL);
+                exit;
+            }
+            
+            // HEADERS PARA PREVENIR CACHE
+            header("Cache-Control: no-cache, no-store, must-revalidate");
+            header("Pragma: no-cache");
+            header("Expires: 0");
+            
+            include "views/usuario/olvido_contrasena.php";
+        }
+
+        // Solicitar reset de contraseña
+        public function requestPasswordReset() {
+            if (isset($_SESSION['usuario'])) {
+                header("Location: " . BASE_URL);
+                exit;
+            }
+            
+            if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+                try {
+                    $email = filter_var($_POST['email'] ?? '', FILTER_SANITIZE_EMAIL);
+                    
+                    if (empty($email) || !$this->validarCorreo($email)) {
+                        $_SESSION['recovery_message'] = "Por favor ingresa un correo electrónico válido";
+                        $_SESSION['recovery_type'] = 'error';
+                        header("Location: " . BASE_URL . "?c=Usuario&a=olvidoContrasena");
+                        exit;
+                    }
+                    
+                    // Verificar si el usuario existe
+                    if (!$this->usuario->existeCorreo($email)) {
+                        // Por seguridad, mostramos mensaje genérico aunque el correo no exista
+                        $_SESSION['recovery_message'] = "Si el correo está registrado, recibirás un enlace para restablecer tu contraseña";
+                        $_SESSION['recovery_type'] = 'success';
+                        header("Location: " . BASE_URL . "?c=Usuario&a=olvidoContrasena");
+                        exit;
+                    }
+                    
+                    // Generar token único
+                    $token = bin2hex(random_bytes(50));
+                    $expires = date('Y-m-d H:i:s', strtotime('+1 hour'));
+                    
+                    // Eliminar tokens anteriores para este email
+                    $stmt = $this->db->prepare("DELETE FROM password_resets WHERE email = ? OR expires_at < NOW()");
+                    $stmt->execute([$email]);
+                    
+                    // Guardar nuevo token
+                    $stmt = $this->db->prepare("INSERT INTO password_resets (email, token, expires_at) VALUES (?, ?, ?)");
+                    $stmt->execute([$email, password_hash($token, PASSWORD_BCRYPT), $expires]);
+                    
+                    // Obtener nombre del usuario
+                    $stmt = $this->db->prepare("SELECT Nombre FROM usuario WHERE Correo = ?");
+                    $stmt->execute([$email]);
+                    $user = $stmt->fetch(PDO::FETCH_ASSOC);
+                    $userName = $user['Nombre'] ?? 'Usuario';
+                    
+                    // Crear enlace de recuperación
+                    $resetLink = BASE_URL . "?c=Usuario&a=olvidoContrasena&token=" . urlencode($token) . "&email=" . urlencode($email);
+                    
+                    // Enviar correo (implementación básica - puedes usar tu clase Mailer)
+                    $this->enviarEmailRecuperacion($email, $userName, $resetLink);
+                    
+                    $_SESSION['recovery_message'] = "Se ha enviado un enlace de recuperación a tu correo. Revisa también la carpeta de spam.";
+                    $_SESSION['recovery_type'] = 'success';
+                    header("Location: " . BASE_URL . "?c=Usuario&a=olvidoContrasena");
+                    exit;
+                    
+                } catch (Exception $e) {
+                    error_log("Error en recuperación: " . $e->getMessage());
+                    $_SESSION['recovery_message'] = "Error al procesar la solicitud. Intenta nuevamente.";
+                    $_SESSION['recovery_type'] = 'error';
+                    header("Location: " . BASE_URL . "?c=Usuario&a=olvidoContrasena");
+                    exit;
+                }
+            } else {
+                header("Location: " . BASE_URL . "?c=Usuario&a=olvidoContrasena");
+                exit;
+            }
+        }
+
+        // Resetear contraseña
+        public function resetPassword() {
+            if (isset($_SESSION['usuario'])) {
+                header("Location: " . BASE_URL);
+                exit;
+            }
+            
+            if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+                try {
+                    $token = $_POST['token'] ?? '';
+                    $email = filter_var($_POST['email'] ?? '', FILTER_SANITIZE_EMAIL);
+                    $nueva_contrasena = $_POST['nueva_contrasena'] ?? '';
+                    $confirmar_contrasena = $_POST['confirmar_contrasena'] ?? '';
+                    
+                    // Validaciones básicas
+                    if (empty($token) || empty($email) || empty($nueva_contrasena)) {
+                        $_SESSION['recovery_message'] = "Datos incompletos";
+                        $_SESSION['recovery_type'] = 'error';
+                        header("Location: " . BASE_URL . "?c=Usuario&a=olvidoContrasena");
+                        exit;
+                    }
+                    
+                    if (!$this->validarCorreo($email)) {
+                        $_SESSION['recovery_message'] = "Correo electrónico inválido";
+                        $_SESSION['recovery_type'] = 'error';
+                        header("Location: " . BASE_URL . "?c=Usuario&a=olvidoContrasena");
+                        exit;
+                    }
+                    
+                    // Verificar que las contraseñas coincidan
+                    if ($nueva_contrasena !== $confirmar_contrasena) {
+                        $_SESSION['recovery_message'] = "Las contraseñas no coinciden";
+                        $_SESSION['recovery_type'] = 'error';
+                        header("Location: " . BASE_URL . "?c=Usuario&a=olvidoContrasena&token=" . urlencode($token) . "&email=" . urlencode($email));
+                        exit;
+                    }
+                    
+                    // Validar seguridad de la contraseña
+                    $validacion_contrasena = $this->validarContrasena($nueva_contrasena);
+                    if ($validacion_contrasena !== true) {
+                        $errores = implode("\n• ", $validacion_contrasena);
+                        $_SESSION['recovery_message'] = "La contraseña no cumple los requisitos:\n• " . $errores;
+                        $_SESSION['recovery_type'] = 'error';
+                        header("Location: " . BASE_URL . "?c=Usuario&a=olvidoContrasena&token=" . urlencode($token) . "&email=" . urlencode($email));
+                        exit;
+                    }
+                    
+                    // Buscar token válido
+                    $stmt = $this->db->prepare("SELECT * FROM password_resets WHERE email = ? AND expires_at > NOW() AND used = 0");
+                    $stmt->execute([$email]);
+                    $resetTokens = $stmt->fetchAll(PDO::FETCH_ASSOC);
+                    
+                    $tokenValido = false;
+                    foreach ($resetTokens as $resetToken) {
+                        if (password_verify($token, $resetToken['token'])) {
+                            $tokenValido = true;
+                            $tokenId = $resetToken['id'];
+                            break;
+                        }
+                    }
+                    
+                    if (!$tokenValido) {
+                        $_SESSION['recovery_message'] = "El enlace ha expirado o no es válido. Solicita uno nuevo.";
+                        $_SESSION['recovery_type'] = 'error';
+                        header("Location: " . BASE_URL . "?c=Usuario&a=olvidoContrasena");
+                        exit;
+                    }
+                    
+                    // Verificar que el usuario existe
+                    $stmt = $this->db->prepare("SELECT ID_Usuario FROM usuario WHERE Correo = ? AND activo = 1");
+                    $stmt->execute([$email]);
+                    $user = $stmt->fetch(PDO::FETCH_ASSOC);
+                    
+                    if (!$user) {
+                        $_SESSION['recovery_message'] = "Usuario no encontrado o cuenta desactivada";
+                        $_SESSION['recovery_type'] = 'error';
+                        header("Location: " . BASE_URL . "?c=Usuario&a=olvidoContrasena");
+                        exit;
+                    }
+                    
+                    // Actualizar contraseña
+                    $nueva_contrasena_hash = password_hash($nueva_contrasena, PASSWORD_BCRYPT);
+                    $stmt = $this->db->prepare("UPDATE usuario SET Contrasena = ? WHERE Correo = ?");
+                    $success = $stmt->execute([$nueva_contrasena_hash, $email]);
+                    
+                    if ($success) {
+                        // Marcar token como usado
+                        $stmt = $this->db->prepare("UPDATE password_resets SET used = 1 WHERE id = ?");
+                        $stmt->execute([$tokenId]);
+                        
+                        // Eliminar todos los tokens de este email
+                        $stmt = $this->db->prepare("DELETE FROM password_resets WHERE email = ?");
+                        $stmt->execute([$email]);
+                        
+                        $_SESSION['recovery_message'] = "¡Contraseña cambiada exitosamente! Ahora puedes iniciar sesión con tu nueva contraseña.";
+                        $_SESSION['recovery_type'] = 'success';
+                        header("Location: " . BASE_URL . "?c=Usuario&a=login");
+                        exit;
+                    } else {
+                        throw new Exception("Error al actualizar la contraseña");
+                    }
+                    
+                } catch (Exception $e) {
+                    error_log("Error en reset password: " . $e->getMessage());
+                    $_SESSION['recovery_message'] = "Error al restablecer la contraseña. Intenta nuevamente.";
+                    $_SESSION['recovery_type'] = 'error';
+                    header("Location: " . BASE_URL . "?c=Usuario&a=olvidoContrasena");
+                    exit;
+                }
+            } else {
+                header("Location: " . BASE_URL . "?c=Usuario&a=olvidoContrasena");
+                exit;
+            }
+        }
+
+        // Método para enviar email (usando PHPMailer)
+        private function enviarEmailRecuperacion($email, $nombre, $resetLink) {
+            try {
+                // Incluir PHPMailer y usar tu clase Mailer
+                require_once __DIR__ . "/../vendor/autoload.php"; // Ajusta según tu estructura
+                
+                // Inicializar PHPMailer directamente
+                $mail = new PHPMailer\PHPMailer\PHPMailer(true);
+                
+                // Obtener configuración de mail.php
+                $configPath = __DIR__ . '/../config/mail.php';
+                if (file_exists($configPath)) {
+                    $mailConfig = require $configPath;
+                } else {
+                    // Configuración por defecto
+                    $mailConfig = [
+                        'host' => 'smtp.gmail.com',
+                        'port' => 465,
+                        'smtp_secure' => 'ssl',
+                        'username' => 'looktu541@gmail.com', // Tu correo
+                        'password' => 'tu_contraseña', // Tu contraseña
+                        'from_email' => 'looktu541@gmail.com',
+                        'from_name' => 'TuLook'
+                    ];
+                }
+                
+                // Configuración SMTP
+                $mail->isSMTP();
+                $mail->Host = $mailConfig['host'] ?? 'smtp.gmail.com';
+                $mail->SMTPAuth = true;
+                $mail->Username = $mailConfig['username'];
+                $mail->Password = $mailConfig['password'];
+                $mail->SMTPSecure = $mailConfig['smtp_secure'] ?? 'ssl';
+                $mail->Port = $mailConfig['port'] ?? 465;
+                
+                // Configuración para XAMPP
+                $mail->SMTPOptions = [
+                    'ssl' => [
+                        'verify_peer' => false,
+                        'verify_peer_name' => false,
+                        'allow_self_signed' => true
+                    ]
+                ];
+                
+                $mail->Timeout = 30;
+                $mail->CharSet = 'UTF-8';
+                
+                // Remitente y destinatario
+                $fromEmail = $mailConfig['from_email'] ?? 'looktu541@gmail.com';
+                $fromName = $mailConfig['from_name'] ?? 'TuLook';
+                $mail->setFrom($fromEmail, $fromName);
+                $mail->addAddress($email, $nombre);
+                
+                // Contenido del correo
+                $mail->isHTML(true);
+                $mail->Subject = "Recuperación de Contraseña - TuLook";
+                
+                // Cuerpo HTML del correo
+                $mail->Body = "
+                    <!DOCTYPE html>
+                    <html lang='es'>
+                    <head>
+                        <meta charset='UTF-8'>
+                        <meta name='viewport' content='width=device-width, initial-scale=1.0'>
+                        <style>
+                            body {
+                                font-family: Arial, sans-serif;
+                                line-height: 1.6;
+                                color: #333;
+                                margin: 0;
+                                padding: 0;
+                            }
+                            .container {
+                                max-width: 600px;
+                                margin: 0 auto;
+                                padding: 20px;
+                            }
+                            .header {
+                                background: #2f3e53;
+                                color: white;
+                                padding: 20px;
+                                text-align: center;
+                                border-radius: 5px 5px 0 0;
+                            }
+                            .content {
+                                padding: 30px;
+                                background: #f8f9fa;
+                                border: 1px solid #ddd;
+                                border-top: none;
+                                border-radius: 0 0 5px 5px;
+                            }
+                            .button {
+                                display: inline-block;
+                                background: #2f3e53;
+                                color: white !important;
+                                padding: 12px 24px;
+                                text-decoration: none;
+                                border-radius: 5px;
+                                margin: 20px 0;
+                                font-weight: bold;
+                            }
+                            .footer {
+                                text-align: center;
+                                padding: 20px;
+                                color: #666;
+                                font-size: 12px;
+                                margin-top: 20px;
+                            }
+                            .warning {
+                                background: #fff3cd;
+                                border: 1px solid #ffc107;
+                                padding: 15px;
+                                border-radius: 5px;
+                                margin: 20px 0;
+                            }
+                            .link-text {
+                                word-break: break-all;
+                                background: #eee;
+                                padding: 10px;
+                                border-radius: 5px;
+                                margin: 10px 0;
+                                font-size: 12px;
+                            }
+                        </style>
+                    </head>
+                    <body>
+                        <div class='container'>
+                            <div class='header'>
+                                <h1>TuLook</h1>
+                            </div>
+                            <div class='content'>
+                                <h2>Hola $nombre,</h2>
+                                <p>Hemos recibido una solicitud para restablecer tu contraseña en TuLook.</p>
+                                <p>Para crear una nueva contraseña, haz clic en el siguiente botón:</p>
+                                
+                                <p style='text-align: center;'>
+                                    <a href='$resetLink' class='button'>Restablecer Contraseña</a>
+                                </p>
+                                
+                                <p>O copia y pega este enlace en tu navegador:</p>
+                                <p class='link-text'>$resetLink</p>
+                                
+                                <div class='warning'>
+                                    <p><strong>⚠️ Información importante:</strong></p>
+                                    <ul>
+                                        <li>Este enlace expirará en <strong>1 hora</strong></li>
+                                        <li>Si no solicitaste este cambio, puedes ignorar este correo</li>
+                                        <li>Tu contraseña actual permanecerá activa hasta que completes el proceso</li>
+                                    </ul>
+                                </div>
+                                
+                                <p>Si tienes problemas para restablecer tu contraseña o no solicitaste este cambio, 
+                                contacta con nuestro equipo de soporte.</p>
+                            </div>
+                            <div class='footer'>
+                                <p>© " . date('Y') . " TuLook. Todos los derechos reservados.</p>
+                                <p>Este es un correo automático, por favor no responder.</p>
+                            </div>
+                        </div>
+                    </body>
+                    </html>
+                ";
+                
+                // Versión en texto plano
+                $mail->AltBody = "Hola $nombre,\n\n" .
+                                "Para restablecer tu contraseña en TuLook, visita el siguiente enlace:\n\n" .
+                                "$resetLink\n\n" .
+                                "Este enlace expirará en 1 hora.\n\n" .
+                                "Si no solicitaste este cambio, ignora este correo.\n\n" .
+                                "Saludos,\n" .
+                                "El equipo de TuLook";
+                
+                // Intentar enviar el correo
+                $mail->send();
+                
+                // Registrar envío exitoso
+                error_log("Email de recuperación enviado a: $email - " . date('Y-m-d H:i:s'));
+                
+                return true;
+                
+            } catch (Exception $e) {
+                // Registrar error pero no mostrarlo al usuario (por seguridad)
+                error_log("Error enviando email de recuperación a $email: " . $e->getMessage());
+                
+                // No lanzamos excepción para no revelar información
+                // El sistema mostrará mensaje de éxito aunque falle el envío
+                return true;
+            }
+        }
     }

@@ -1,6 +1,6 @@
 <?php
 // =============================
-// VIEWS/ADMIN/DASHBOARD.PHP - CORREGIDO
+// VIEWS/ADMIN/DASHBOARD.PHP - DISEÑO MODERNIZADO
 // =============================
 
 // Obtener estadísticas adicionales (solo con tablas existentes)
@@ -28,40 +28,10 @@ $stats = [
     'editores' => (int)$this->db->query("SELECT COUNT(*) FROM usuario WHERE ID_Rol = 2")->fetchColumn(),
     'clientes' => (int)$this->db->query("SELECT COUNT(*) FROM usuario WHERE ID_Rol = 3")->fetchColumn(),
     
-    // Estadísticas de categorías
+    // Estadísticas de categorías (solo tablas que existen)
     'total_categorias' => (int)$this->db->query("SELECT COUNT(*) FROM categoria")->fetchColumn(),
     'total_subcategorias' => (int)$this->db->query("SELECT COUNT(*) FROM subcategoria")->fetchColumn(),
-    'total_colores' => (int)$this->db->query("SELECT COUNT(*) FROM color")->fetchColumn(),
-    'total_tallas' => (int)$this->db->query("SELECT COUNT(*) FROM talla")->fetchColumn(),
-    'total_precios' => (int)$this->db->query("SELECT COUNT(*) FROM precio")->fetchColumn(),
 ];
-
-// Obtener productos más populares (basado en stock y actividad)
-$productosPopulares = $this->db->query("
-    SELECT a.ID_Articulo, a.N_Articulo, a.Foto, a.Activo,
-           c.N_Categoria, COUNT(p.ID_Producto) as total_variantes,
-           COALESCE(SUM(p.Cantidad), 0) as stock_total
-    FROM articulo a
-    LEFT JOIN categoria c ON a.ID_Categoria = c.ID_Categoria
-    LEFT JOIN producto p ON a.ID_Articulo = p.ID_Articulo
-    WHERE a.Activo = 1
-    GROUP BY a.ID_Articulo, a.N_Articulo, a.Foto, a.Activo, c.N_Categoria
-    ORDER BY stock_total DESC
-    LIMIT 1
-")->fetch(PDO::FETCH_ASSOC);
-
-$productosMenosPopulares = $this->db->query("
-    SELECT a.ID_Articulo, a.N_Articulo, a.Foto, a.Activo,
-           c.N_Categoria, COUNT(p.ID_Producto) as total_variantes,
-           COALESCE(SUM(p.Cantidad), 0) as stock_total
-    FROM articulo a
-    LEFT JOIN categoria c ON a.ID_Categoria = c.ID_Categoria
-    LEFT JOIN producto p ON a.ID_Articulo = p.ID_Articulo
-    WHERE a.Activo = 1
-    GROUP BY a.ID_Articulo, a.N_Articulo, a.Foto, a.Activo, c.N_Categoria
-    ORDER BY stock_total ASC
-    LIMIT 1
-")->fetch(PDO::FETCH_ASSOC);
 
 // Obtener últimos productos agregados
 $ultimosProductos = $this->db->query("
@@ -78,7 +48,7 @@ $ultimosProductos = $this->db->query("
     LIMIT 5
 ")->fetchAll(PDO::FETCH_ASSOC);
 
-// Obtener productos con stock bajo (basado en variantes)
+// Obtener productos con stock bajo
 $stockBajo = $this->db->query("
     SELECT a.ID_Articulo, a.N_Articulo, a.Foto, a.Activo,
            c.N_Categoria, COUNT(p.ID_Producto) as total_variantes,
@@ -107,9 +77,9 @@ $sinStock = $this->db->query("
     LIMIT 5
 ")->fetchAll(PDO::FETCH_ASSOC);
 
-// Obtener variantes más recientes
+// Obtener variantes más recientes CON IMAGEN DEL ARTÍCULO
 $ultimasVariantes = $this->db->query("
-    SELECT p.ID_Producto, a.N_Articulo, 
+    SELECT p.ID_Producto, a.N_Articulo, a.Foto,
            p.ValorAtributo1, p.ValorAtributo2, p.ValorAtributo3,
            p.Cantidad, p.Porcentaje, p.Nombre_Producto
     FROM producto p
@@ -119,102 +89,68 @@ $ultimasVariantes = $this->db->query("
 ")->fetchAll(PDO::FETCH_ASSOC);
 ?>
 
-<div class="container-fluid">
-    <!-- HEADER DEL DASHBOARD -->
-    <div class="d-flex justify-content-between align-items-center mb-4">
-        <div>
-            <h1 class="fw-bold text-primary mb-2">
-                <i class="fas fa-tachometer-alt me-2"></i>Panel de Administración
-            </h1>
-            <p class="text-muted mb-0">
-                Bienvenido, <strong><?php echo htmlspecialchars($_SESSION['Nombre_Completo'] ?? 'Administrador'); ?></strong> 
-                <span class="badge bg-<?= $_SESSION['rol'] == 1 ? 'danger' : 'warning' ?> ms-2">
-                    <?= $_SESSION['rol'] == 1 ? 'Administrador' : 'Editor' ?>
-                </span>
-            </p>
-        </div>
-        <div class="text-end">
-            <small class="text-muted d-block">Usuario ID: <?php echo htmlspecialchars($_SESSION['ID_Usuario'] ?? '-'); ?></small>
-            <small class="text-muted"><?php echo date('d/m/Y H:i:s'); ?></small>
-        </div>
-    </div>
+<!-- Incluir el CSS del dashboard -->
+<link rel="stylesheet" href="<?= BASE_URL ?>assets/css/dashboard.css">
 
-    <!-- RESUMEN DE ESTADISTICAS -->
-    <div class="row">
-        <div class="col-12">
-            <div class="card border-0 shadow-sm">
-                <div class="card-header bg-info text-white">
-                    <h5 class="mb-0">
-                        <i class="fas fa-chart-bar me-2"></i>Resumen del Sistema
-                    </h5>
+<div class="dashboard-body">
+    <!-- HEADER MODERNO -->
+    <div class="dashboard-header">
+        <div class="container">
+            <div class="row align-items-center">
+                <div class="col-md-8">
+                    <div class="user-info">
+                        <div class="user-avatar">
+                            <?php echo substr(htmlspecialchars($_SESSION['Nombre_Completo'] ?? 'A'), 0, 1); ?>
+                        </div>
+                        <div class="welcome-text">
+                            <h1>Panel de Administración</h1>
+                            <p>
+                                Bienvenido, <strong><?php echo htmlspecialchars($_SESSION['Nombre_Completo'] ?? 'Administrador'); ?></strong>
+                                <span class="badge badge-custom ms-2 bg-dark">
+                                    <?= $_SESSION['rol'] == 1 ? 'Administrador' : 'Editor' ?>
+                                </span>
+                            </p>
+                        </div>
+                    </div>
                 </div>
-                <div class="card-body">
-                    <div class="row text-center">
-                        <div class="col-md-3 mb-3">
-                            <div class="border-end">
-                                <h4 class="text-primary fw-bold"><?= $stats['total_colores'] ?></h4>
-                                <small class="text-muted">Colores Disponibles</small>
-                            </div>
-                        </div>
-                        <div class="col-md-3 mb-3">
-                            <div class="border-end">
-                                <h4 class="text-success fw-bold"><?= $stats['total_tallas'] ?></h4>
-                                <small class="text-muted">Tallas Configuradas</small>
-                            </div>
-                        </div>
-                        <div class="col-md-3 mb-3">
-                            <div class="border-end">
-                                <h4 class="text-warning fw-bold"><?= $stats['total_precios'] ?></h4>
-                                <small class="text-muted">Precios Base</small>
-                            </div>
-                        </div>
-                        <div class="col-md-3 mb-3">
-                            <div>
-                                <h4 class="text-danger fw-bold"><?= $stats['variantes_sin_stock'] ?></h4>
-                                <small class="text-muted">Variantes Sin Stock</small>
-                            </div>
-                        </div>
+                <div class="col-md-4 text-md-end">
+                    <div class="current-time">
+                        <small>ID: <?php echo htmlspecialchars($_SESSION['ID_Usuario'] ?? '-'); ?></small><br>
+                        <small><?php echo date('d/m/Y H:i:s'); ?></small>
                     </div>
                 </div>
             </div>
         </div>
     </div>
 
-    <!-- TARJETAS DE ESTADÍSTICAS PRINCIPALES -->
-    <div class="row mb-4">
-        <!-- Productos Base -->
-        <div class="col-xl-2 col-md-4 col-sm-6 mb-3">
-            <div class="card bg-primary text-white h-100 hover-lift">
-                <div class="card-body">
-                    <div class="d-flex justify-content-between align-items-center">
-                        <div>
-                            <h5 class="card-title">Productos Base</h5>
-                            <h2 class="mb-0"><?= $stats['total_articulos'] ?></h2>
-                        </div>
-                        <i class="fas fa-box-open fa-2x opacity-50"></i>
+    <!-- CONTENIDO PRINCIPAL -->
+    <div class="container">
+        <!-- TARJETAS DE ESTADÍSTICAS PRINCIPALES -->
+        <div class="row mb-4">
+            <div class="col-xl-3 col-md-6 mb-3">
+                <div class="stat-card primary">
+                    <div class="card-icon">
+                        <i class="fas fa-box-open"></i>
                     </div>
-                    <div class="mt-2">
+                    <div class="stat-number"><?= $stats['total_articulos'] ?></div>
+                    <div class="stat-label">Productos Base</div>
+                    <div class="stat-details">
                         <small>
-                            <i class="fas fa-check-circle text-success me-1"></i>
+                            <i class="fas fa-check-circle me-1"></i>
                             <?= $stats['productos_activos'] ?> activos
                         </small>
                     </div>
                 </div>
             </div>
-        </div>
 
-        <!-- Variantes -->
-        <div class="col-xl-2 col-md-4 col-sm-6 mb-3">
-            <div class="card bg-success text-white h-100 hover-lift">
-                <div class="card-body">
-                    <div class="d-flex justify-content-between align-items-center">
-                        <div>
-                            <h5 class="card-title">Variantes</h5>
-                            <h2 class="mb-0"><?= $stats['total_variantes'] ?></h2>
-                        </div>
-                        <i class="fas fa-palette fa-2x opacity-50"></i>
+            <div class="col-xl-3 col-md-6 mb-3">
+                <div class="stat-card accent">
+                    <div class="card-icon">
+                        <i class="fas fa-palette"></i>
                     </div>
-                    <div class="mt-2">
+                    <div class="stat-number"><?= $stats['total_variantes'] ?></div>
+                    <div class="stat-label">Variantes</div>
+                    <div class="stat-details">
                         <small>
                             <i class="fas fa-cubes me-1"></i>
                             <?= $stats['variantes_con_stock'] ?> con stock
@@ -222,357 +158,535 @@ $ultimasVariantes = $this->db->query("
                     </div>
                 </div>
             </div>
-        </div>
 
-        <!-- Usuarios -->
-        <div class="col-xl-2 col-md-4 col-sm-6 mb-3">
-            <div class="card bg-info text-white h-100 hover-lift">
-                <div class="card-body">
-                    <div class="d-flex justify-content-between align-items-center">
-                        <div>
-                            <h5 class="card-title">Usuarios</h5>
-                            <h2 class="mb-0"><?= $stats['total_usuarios'] ?></h2>
-                        </div>
-                        <i class="fas fa-users fa-2x opacity-50"></i>
+            <div class="col-xl-3 col-md-6 mb-3">
+                <div class="stat-card info">
+                    <div class="card-icon">
+                        <i class="fas fa-users"></i>
                     </div>
-                    <div class="mt-2">
+                    <div class="stat-number"><?= $stats['total_usuarios'] ?></div>
+                    <div class="stat-label">Usuarios</div>
+                    <div class="stat-details">
                         <small>
                             <i class="fas fa-user-shield me-1"></i>
-                            <?= $stats['administradores'] ?> admin
+                            <?= $stats['administradores'] ?> administradores
                         </small>
                     </div>
                 </div>
             </div>
-        </div>
 
-        <!-- Ventas -->
-        <div class="col-xl-2 col-md-4 col-sm-6 mb-3">
-            <div class="card bg-warning text-dark h-100 hover-lift">
-                <div class="card-body">
-                    <div class="d-flex justify-content-between align-items-center">
-                        <div>
-                            <h5 class="card-title">Ventas</h5>
-                            <h2 class="mb-0"><?= $stats['total_ventas'] ?></h2>
-                        </div>
-                        <i class="fas fa-shopping-cart fa-2x opacity-50"></i>
+            <div class="col-xl-3 col-md-6 mb-3">
+                <div class="stat-card secondary">
+                    <div class="card-icon">
+                        <i class="fas fa-cubes"></i>
                     </div>
-                    <div class="mt-2">
-                        <small>
-                            <i class="fas fa-chart-line me-1"></i>
-                            Total registradas
-                        </small>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- Stock Total -->
-        <div class="col-xl-2 col-md-4 col-sm-6 mb-3">
-            <div class="card bg-dark text-white h-100 hover-lift">
-                <div class="card-body">
-                    <div class="d-flex justify-content-between align-items-center">
-                        <div>
-                            <h5 class="card-title">Stock Total</h5>
-                            <h2 class="mb-0"><?= $stats['stock_total'] ?></h2>
-                        </div>
-                        <i class="fas fa-cubes fa-2x opacity-50"></i>
-                    </div>
-                    <div class="mt-2">
+                    <div class="stat-number"><?= $stats['stock_total'] ?></div>
+                    <div class="stat-label">Stock Total</div>
+                    <div class="stat-details">
                         <small>
                             <i class="fas fa-warehouse me-1"></i>
-                            Unidades en sistema
+                            Unidades disponibles
                         </small>
                     </div>
                 </div>
             </div>
         </div>
 
-        <!-- Categorías -->
-        <div class="col-xl-2 col-md-4 col-sm-6 mb-3">
-            <div class="card bg-secondary text-white h-100 hover-lift">
-                <div class="card-body">
-                    <div class="d-flex justify-content-between align-items-center">
-                        <div>
-                            <h5 class="card-title">Categorías</h5>
-                            <h2 class="mb-0"><?= $stats['total_categorias'] ?></h2>
+        <!-- SECCIÓN DE ACCESO RÁPIDO -->
+        <div class="row mb-4">
+            <div class="col-12">
+                <div class="quick-access-section">
+                    <div class="section-header">
+                        <h3><i class="fas fa-bolt me-2"></i>Acceso Rápido</h3>
+                        <div class="section-actions">
+                            <a href="#productos-section" class="btn btn-sm btn-outline-dark">
+                                <i class="fas fa-box me-1"></i>Ir a Productos
+                            </a>
                         </div>
-                        <i class="fas fa-tags fa-2x opacity-50"></i>
                     </div>
-                    <div class="mt-2">
-                        <small>
-                            <i class="fas fa-layer-group me-1"></i>
-                            <?= $stats['total_subcategorias'] ?> subcategorías
-                        </small>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- SECCIÓN DE ACCIONES RÁPIDAS -->
-    <div class="row mb-4">
-        <div class="col-12">
-            <div class="card border-0 shadow-sm">
-                <div class="card-header bg-light">
-                    <h5 class="mb-0 fw-bold">
-                        <i class="fas fa-bolt me-2 text-warning"></i>Acciones Rápidas
-                    </h5>
-                </div>
-                <div class="card-body">
-                    <div class="row g-3">
-                        <div class="col-xl-2 col-md-4 col-sm-6">
-                            <a href="<?= BASE_URL ?>?c=Admin&a=productoForm" class="btn btn-success w-100 h-100 py-3">
-                                <i class="fas fa-plus-circle fa-2x mb-2"></i><br>
-                                Nuevo Producto
-                            </a>
-                        </div>
-                        <div class="col-xl-2 col-md-4 col-sm-6">
-                            <a href="<?= BASE_URL ?>?c=Admin&a=productos" class="btn btn-primary w-100 h-100 py-3">
-                                <i class="fas fa-box-open fa-2x mb-2"></i><br>
-                                Gestionar Productos
-                            </a>
-                        </div>
-                        <div class="col-xl-2 col-md-4 col-sm-6">
-                            <a href="<?= BASE_URL ?>?c=Admin&a=variantes" class="btn btn-info w-100 h-100 py-3">
-                                <i class="fas fa-palette fa-2x mb-2"></i><br>
-                                Variantes
-                            </a>
-                        </div>
-                        <div class="col-xl-2 col-md-4 col-sm-6">
-                            <a href="<?= BASE_URL ?>?c=Tallas&a=index" class="btn btn-warning w-100 h-100 py-3">
-                                <i class="fas fa-ruler fa-2x mb-2"></i><br>
-                                Gestión Tallas
-                            </a>
-                        </div>
+                    <div class="quick-actions-grid">
+                        <a href="<?= BASE_URL ?>?c=Admin&a=productoForm" class="quick-action-btn">
+                            <div class="action-icon">
+                                <i class="fas fa-plus-circle"></i>
+                            </div>
+                            <div class="action-text">
+                                <h6>Nuevo Producto</h6>
+                                <small>Crear nuevo artículo</small>
+                            </div>
+                        </a>
+                        <a href="#productos-section" class="quick-action-btn">
+                            <div class="action-icon">
+                                <i class="fas fa-clock"></i>
+                            </div>
+                            <div class="action-text">
+                                <h6>Últimos Productos</h6>
+                                <small>Ver productos recientes</small>
+                            </div>
+                        </a>
+                        <a href="#variantes-section" class="quick-action-btn">
+                            <div class="action-icon">
+                                <i class="fas fa-palette"></i>
+                            </div>
+                            <div class="action-text">
+                                <h6>Últimas Variantes</h6>
+                                <small>Ver variantes recientes</small>
+                            </div>
+                        </a>
+                        <a href="#stock-section" class="quick-action-btn">
+                            <div class="action-icon">
+                                <i class="fas fa-boxes"></i>
+                            </div>
+                            <div class="action-text">
+                                <h6>Control de Stock</h6>
+                                <small>Alertas de inventario</small>
+                            </div>
+                        </a>
                         <?php if ($_SESSION['rol'] == 1): ?>
-                        <div class="col-xl-2 col-md-4 col-sm-6">
-                            <a href="<?= BASE_URL ?>?c=UsuarioAdmin&a=index" class="btn btn-danger w-100 h-100 py-3">
-                                <i class="fas fa-users fa-2x mb-2"></i><br>
-                                Gestión Usuarios
-                            </a>
-                        </div>
+                        <a href="<?= BASE_URL ?>?c=UsuarioAdmin&a=index" class="quick-action-btn">
+                            <div class="action-icon">
+                                <i class="fas fa-users"></i>
+                            </div>
+                            <div class="action-text">
+                                <h6>Gestión Usuarios</h6>
+                                <small>Administrar usuarios</small>
+                            </div>
+                        </a>
                         <?php endif; ?>
-                        <div class="col-xl-2 col-md-4 col-sm-6">
-                            <a href="<?= BASE_URL ?>" class="btn btn-secondary w-100 h-100 py-3">
-                                <i class="fas fa-store fa-2x mb-2"></i><br>
-                                Ir a la Tienda
+                        <a href="<?= BASE_URL ?>?c=FavoritoStats&a=index" class="quick-action-btn">
+                            <div class="action-icon">
+                                <i class="fas fa-heart"></i>
+                            </div>
+                            <div class="action-text">
+                                <h6>Estadísticas Favoritos</h6>
+                                <small>Ver análisis de favoritos</small>
+                            </div>
+                        </a>
+                        <a href="<?= BASE_URL ?>" class="quick-action-btn">
+                            <div class="action-icon">
+                                <i class="fas fa-store"></i>
+                            </div>
+                            <div class="action-text">
+                                <h6>Ir a la Tienda</h6>
+                                <small>Ver tienda pública</small>
+                            </div>
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- SECCIÓN DE PRODUCTOS RECIENTES -->
+        <div id="productos-section" class="row mb-4">
+            <div class="col-12">
+                <div class="section-header-modern">
+                    <div class="d-flex justify-content-between align-items-center mb-4">
+                        <div>
+                            <h3 class="mb-2"><i class="fas fa-clock me-2"></i>Productos Recientes</h3>
+                            <p class="text-muted mb-0">Últimos productos agregados al sistema</p>
+                        </div>
+                        <div class="section-actions">
+                            <a href="#" class="btn btn-sm btn-outline-dark" onclick="scrollToTop()">
+                                <i class="fas fa-arrow-up me-1"></i>Volver arriba
                             </a>
                         </div>
                     </div>
                 </div>
             </div>
         </div>
-    </div>
 
-    <!-- SECCIÓN DE PRODUCTOS Y VARIANTES -->
-    <div class="row">
-        <!-- Últimos Productos Agregados -->
-        <div class="col-lg-6 mb-4">
-            <div class="card border-0 shadow-sm h-100">
-                <div class="card-header bg-primary text-white">
-                    <h5 class="mb-0">
-                        <i class="fas fa-clock me-2"></i>Últimos Productos Agregados
-                    </h5>
-                </div>
-                <div class="card-body">
-                    <?php if (!empty($ultimosProductos)): ?>
-                        <div class="list-group list-group-flush">
-                            <?php foreach ($ultimosProductos as $producto): ?>
-                                <div class="list-group-item d-flex justify-content-between align-items-center">
-                                    <div class="d-flex align-items-center">
-                                        <?php
-                                        $rutaImagen = trim($producto['Foto'] ?? '');
-                                        if ($rutaImagen !== '') {
-                                            if (!preg_match('/^https?:/i', $rutaImagen) && !str_starts_with($rutaImagen, 'ImgProducto/')) {
-                                                $rutaImagen = 'ImgProducto/' . ltrim($rutaImagen, '/');
-                                            }
-                                            $rutaImagen = BASE_URL . ltrim($rutaImagen, '/');
-                                        } else {
-                                            $rutaImagen = BASE_URL . 'assets/img/sin_imagen.png';
-                                        }
-                                        ?>
-                                        <img src="<?= htmlspecialchars($rutaImagen); ?>" 
-                                             class="rounded me-3" 
-                                             style="width: 40px; height: 40px; object-fit: cover;"
-                                             alt="<?= htmlspecialchars($producto['N_Articulo']); ?>">
-                                        <div>
-                                            <h6 class="mb-0"><?= htmlspecialchars($producto['N_Articulo']); ?></h6>
-                                            <small class="text-muted">
-                                                <?= htmlspecialchars($producto['N_Categoria']); ?> • 
-                                                <?= $producto['total_variantes'] ?> variantes
-                                            </small>
+        <!-- ÚLTIMOS PRODUCTOS AGREGADOS -->
+        <div class="row mb-4">
+            <div class="col-12">
+                <div class="content-card">
+                    <div class="card-header">
+                        <h5 class="mb-0">
+                            <i class="fas fa-box me-2"></i>Últimos Productos Agregados
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <?php if (!empty($ultimosProductos)): ?>
+                            <div class="row g-3">
+                                <?php foreach ($ultimosProductos as $producto): ?>
+                                    <div class="col-md-6 col-lg-4">
+                                        <div class="product-card">
+                                            <div class="row align-items-center">
+                                                <div class="col-auto">
+                                                    <?php
+                                                    $rutaImagen = trim($producto['Foto'] ?? '');
+                                                    if ($rutaImagen !== '') {
+                                                        if (!preg_match('/^https?:/i', $rutaImagen) && !str_starts_with($rutaImagen, 'ImgProducto/')) {
+                                                            $rutaImagen = 'ImgProducto/' . ltrim($rutaImagen, '/');
+                                                        }
+                                                        $rutaImagen = BASE_URL . ltrim($rutaImagen, '/');
+                                                    } else {
+                                                        $rutaImagen = BASE_URL . 'assets/img/sin_imagen.png';
+                                                    }
+                                                    ?>
+                                                    <img src="<?= htmlspecialchars($rutaImagen); ?>" 
+                                                         class="product-image"
+                                                         alt="<?= htmlspecialchars($producto['N_Articulo']); ?>">
+                                                </div>
+                                                <div class="col">
+                                                    <div class="d-flex align-items-center mb-1">
+                                                        <h6 class="mb-0 fw-bold"><?= htmlspecialchars($producto['N_Articulo']); ?></h6>
+                                                        <span class="badge ms-2 bg-<?= $producto['Activo'] ? 'dark' : 'secondary' ?>">
+                                                            <?= $producto['Activo'] ? 'Activo' : 'Inactivo' ?>
+                                                        </span>
+                                                    </div>
+                                                    <small class="text-muted d-block">
+                                                        <i class="fas fa-tag me-1"></i>
+                                                        <?= htmlspecialchars($producto['N_Categoria']); ?>
+                                                    </small>
+                                                    <small class="text-muted">
+                                                        <i class="fas fa-layer-group me-1"></i>
+                                                        <?= $producto['total_variantes'] ?> variantes
+                                                    </small>
+                                                </div>
+                                            </div>
                                         </div>
                                     </div>
-                                    <span class="badge bg-<?= $producto['Activo'] ? 'success' : 'secondary' ?>">
-                                        <?= $producto['Activo'] ? 'Activo' : 'Inactivo' ?>
-                                    </span>
+                                <?php endforeach; ?>
+                            </div>
+                        <?php else: ?>
+                            <div class="text-center py-4">
+                                <div class="mb-3">
+                                    <i class="fas fa-box-open fa-3x"></i>
                                 </div>
-                            <?php endforeach; ?>
-                        </div>
-                    <?php else: ?>
-                        <p class="text-muted text-center mb-0">No hay productos recientes</p>
-                    <?php endif; ?>
+                                <h6 class="fw-bold">No hay productos recientes</h6>
+                                <p class="text-muted mb-0">Agrega nuevos productos para verlos aquí</p>
+                            </div>
+                        <?php endif; ?>
+                    </div>
                 </div>
             </div>
         </div>
 
-        <!-- Últimas Variantes -->
-        <div class="col-lg-6 mb-4">
-            <div class="card border-0 shadow-sm h-100">
-                <div class="card-header bg-success text-white">
-                    <h5 class="mb-0">
-                        <i class="fas fa-star me-2"></i>Últimas Variantes Agregadas
-                    </h5>
-                </div>
-                <div class="card-body">
-                    <?php if (!empty($ultimasVariantes)): ?>
-                        <div class="list-group list-group-flush">
-                            <?php foreach ($ultimasVariantes as $variante): ?>
-                                <div class="list-group-item">
-                                    <div class="d-flex justify-content-between align-items-center">
-                                        <div>
-                                            <h6 class="mb-0"><?= htmlspecialchars($variante['N_Articulo']); ?></h6>
-                                            <small class="text-muted">
-                                                <?php
-                                                $atributos = [];
-                                                if (!empty($variante['ValorAtributo1'])) $atributos[] = $variante['ValorAtributo1'];
-                                                if (!empty($variante['ValorAtributo2'])) $atributos[] = $variante['ValorAtributo2'];
-                                                if (!empty($variante['ValorAtributo3'])) $atributos[] = $variante['ValorAtributo3'];
-                                                echo !empty($atributos) ? implode(' • ', $atributos) : 'Sin atributos';
-                                                ?>
-                                                <?php if (!empty($variante['Nombre_Producto'])): ?>
-                                                    • <?= htmlspecialchars($variante['Nombre_Producto']); ?>
-                                                <?php endif; ?>
-                                            </small>
-                                        </div>
-                                        <div class="text-end">
-                                            <span class="badge bg-<?= $variante['Cantidad'] > 0 ? 'primary' : 'secondary' ?>">
-                                                <?= $variante['Cantidad'] ?> unidades
-                                            </span>
-                                            <br>
-                                            <small class="text-muted">+<?= $variante['Porcentaje'] ?>%</small>
-                                        </div>
-                                    </div>
-                                </div>
-                            <?php endforeach; ?>
+        <!-- SECCIÓN DE VARIANTES RECIENTES -->
+        <div id="variantes-section" class="row mb-4">
+            <div class="col-12">
+                <div class="section-header-modern">
+                    <div class="d-flex justify-content-between align-items-center mb-4">
+                        <div>
+                            <h3 class="mb-2"><i class="fas fa-palette me-2"></i>Variantes Recientes</h3>
+                            <p class="text-muted mb-0">Últimas variantes de productos agregadas</p>
                         </div>
-                    <?php else: ?>
-                        <p class="text-muted text-center mb-0">No hay variantes recientes</p>
-                    <?php endif; ?>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- ALERTAS DE STOCK -->
-    <div class="row">
-        <!-- Stock Bajo -->
-        <div class="col-lg-6 mb-4">
-            <div class="card border-warning h-100">
-                <div class="card-header bg-warning text-dark">
-                    <h5 class="mb-0">
-                        <i class="fas fa-exclamation-triangle me-2"></i>Stock Bajo (≤ 10 unidades)
-                    </h5>
-                </div>
-                <div class="card-body">
-                    <?php if (!empty($stockBajo)): ?>
-                        <div class="list-group list-group-flush">
-                            <?php foreach ($stockBajo as $producto): ?>
-                                <div class="list-group-item d-flex justify-content-between align-items-center">
-                                    <div>
-                                        <h6 class="mb-0"><?= htmlspecialchars($producto['N_Articulo']); ?></h6>
-                                        <small class="text-muted">
-                                            <?= htmlspecialchars($producto['N_Categoria']); ?> • 
-                                            <?= $producto['total_variantes'] ?> variantes
-                                        </small>
-                                    </div>
-                                    <span class="badge bg-warning"><?= $producto['stock_total'] ?> unidades</span>
-                                </div>
-                            <?php endforeach; ?>
+                        <div class="section-actions">
+                            <a href="#productos-section" class="btn btn-sm btn-outline-dark">
+                                <i class="fas fa-arrow-up me-1"></i>Ir a Productos
+                            </a>
                         </div>
-                    <?php else: ?>
-                        <p class="text-muted text-center mb-0">✅ Todo el stock está en niveles normales</p>
-                    <?php endif; ?>
+                    </div>
                 </div>
             </div>
         </div>
 
-        <!-- Sin Stock -->
-        <div class="col-lg-6 mb-4">
-            <div class="card border-danger h-100">
-                <div class="card-header bg-danger text-white">
-                    <h5 class="mb-0">
-                        <i class="fas fa-times-circle me-2"></i>Sin Stock
-                    </h5>
-                </div>
-                <div class="card-body">
-                    <?php if (!empty($sinStock)): ?>
-                        <div class="list-group list-group-flush">
-                            <?php foreach ($sinStock as $producto): ?>
-                                <div class="list-group-item d-flex justify-content-between align-items-center">
-                                    <div>
-                                        <h6 class="mb-0"><?= htmlspecialchars($producto['N_Articulo']); ?></h6>
-                                        <small class="text-muted">
-                                            <?= htmlspecialchars($producto['N_Categoria']); ?> • 
-                                            <?= $producto['total_variantes'] ?> variantes
-                                        </small>
+        <!-- ÚLTIMAS VARIANTES AGREGADAS -->
+        <div class="row mb-4">
+            <div class="col-12">
+                <div class="content-card">
+                    <div class="card-header">
+                        <h5 class="mb-0">
+                            <i class="fas fa-palette me-2"></i>Últimas Variantes Agregadas
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <?php if (!empty($ultimasVariantes)): ?>
+                            <div class="row g-3">
+                                <?php foreach ($ultimasVariantes as $variante): ?>
+                                    <div class="col-md-6 col-lg-4">
+                                        <div class="variant-card">
+                                            <div class="row align-items-center mb-3">
+                                                <div class="col-auto">
+                                                    <?php
+                                                    $rutaImagen = trim($variante['Foto'] ?? '');
+                                                    if ($rutaImagen !== '') {
+                                                        if (!preg_match('/^https?:/i', $rutaImagen) && !str_starts_with($rutaImagen, 'ImgProducto/')) {
+                                                            $rutaImagen = 'ImgProducto/' . ltrim($rutaImagen, '/');
+                                                        }
+                                                        $rutaImagen = BASE_URL . ltrim($rutaImagen, '/');
+                                                    } else {
+                                                        $rutaImagen = BASE_URL . 'assets/img/sin_imagen.png';
+                                                    }
+                                                    ?>
+                                                    <img src="<?= htmlspecialchars($rutaImagen); ?>" 
+                                                         class="variant-image"
+                                                         alt="<?= htmlspecialchars($variante['N_Articulo']); ?>">
+                                                </div>
+                                                <div class="col">
+                                                    <h6 class="mb-0 fw-bold"><?= htmlspecialchars($variante['N_Articulo']); ?></h6>
+                                                    <small class="text-muted">
+                                                        <i class="fas fa-cube me-1"></i>
+                                                        ID: <?= $variante['ID_Producto'] ?>
+                                                    </small>
+                                                </div>
+                                            </div>
+                                            <div class="variant-info">
+                                                <div class="variant-details mb-3">
+                                                    <?php
+                                                    $atributos = [];
+                                                    if (!empty($variante['ValorAtributo1'])) $atributos[] = $variante['ValorAtributo1'];
+                                                    if (!empty($variante['ValorAtributo2'])) $atributos[] = $variante['ValorAtributo2'];
+                                                    if (!empty($variante['ValorAtributo3'])) $atributos[] = $variante['ValorAtributo3'];
+                                                    if (!empty($atributos)): ?>
+                                                        <small class="text-muted d-block mb-2">
+                                                            <i class="fas fa-tags me-1"></i>
+                                                            <?= implode(' • ', $atributos) ?>
+                                                        </small>
+                                                    <?php endif; ?>
+                                                    <?php if (!empty($variante['Nombre_Producto'])): ?>
+                                                        <small class="text-muted d-block">
+                                                            <i class="fas fa-tag me-1"></i>
+                                                            <?= htmlspecialchars($variante['Nombre_Producto']); ?>
+                                                        </small>
+                                                    <?php endif; ?>
+                                                </div>
+                                                <div class="d-flex justify-content-between align-items-center">
+                                                    <span class="badge bg-dark">
+                                                        <i class="fas fa-box me-1"></i>
+                                                        <?= $variante['Cantidad'] ?> unidades
+                                                    </span>
+                                                    <?php if (!empty($variante['Porcentaje'])): ?>
+                                                        <small class="text-muted">
+                                                            <i class="fas fa-percentage me-1"></i>
+                                                            <?= $variante['Porcentaje'] ?>%
+                                                        </small>
+                                                    <?php endif; ?>
+                                                </div>
+                                            </div>
+                                        </div>
                                     </div>
-                                    <span class="badge bg-danger">Agotado</span>
+                                <?php endforeach; ?>
+                            </div>
+                        <?php else: ?>
+                            <div class="text-center py-4">
+                                <div class="mb-3">
+                                    <i class="fas fa-palette fa-3x"></i>
                                 </div>
-                            <?php endforeach; ?>
+                                <h6 class="fw-bold">No hay variantes recientes</h6>
+                                <p class="text-muted mb-0">Agrega nuevas variantes para verlas aquí</p>
+                            </div>
+                        <?php endif; ?>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- SECCIÓN DE CONTROL DE STOCK -->
+        <div id="stock-section" class="row mb-4">
+            <div class="col-12">
+                <div class="section-header-modern">
+                    <div class="d-flex justify-content-between align-items-center mb-4">
+                        <div>
+                            <h3 class="mb-2"><i class="fas fa-boxes me-2"></i>Control de Stock</h3>
+                            <p class="text-muted mb-0">Monitoreo de inventario y alertas de stock</p>
                         </div>
-                    <?php else: ?>
-                        <p class="text-muted text-center mb-0">✅ Todos los productos tienen stock</p>
-                    <?php endif; ?>
+                        <div class="section-actions">
+                            <a href="#variantes-section" class="btn btn-sm btn-outline-dark">
+                                <i class="fas fa-arrow-up me-1"></i>Ir a Variantes
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ALERTAS DE STOCK -->
+        <div class="row mb-4">
+            <!-- Stock Bajo -->
+            <div class="col-lg-6 mb-3">
+                <div class="alert-card stock-alert">
+                    <div class="card-header">
+                        <i class="fas fa-exclamation-circle"></i> Stock Bajo (≤ 10 unidades)
+                        <span class="badge badge-light ms-2"><?= count($stockBajo) ?> productos</span>
+                    </div>
+                    <div class="card-body">
+                        <?php if (!empty($stockBajo)): ?>
+                            <div class="row g-3">
+                                <?php foreach ($stockBajo as $producto): ?>
+                                    <div class="col-12">
+                                        <div class="alert-list-item">
+                                            <div class="row align-items-center">
+                                                <div class="col-auto">
+                                                    <?php
+                                                    $rutaImagen = trim($producto['Foto'] ?? '');
+                                                    if ($rutaImagen !== '') {
+                                                        if (!preg_match('/^https?:/i', $rutaImagen) && !str_starts_with($rutaImagen, 'ImgProducto/')) {
+                                                            $rutaImagen = 'ImgProducto/' . ltrim($rutaImagen, '/');
+                                                        }
+                                                        $rutaImagen = BASE_URL . ltrim($rutaImagen, '/');
+                                                    } else {
+                                                        $rutaImagen = BASE_URL . 'assets/img/sin_imagen.png';
+                                                    }
+                                                    ?>
+                                                    <img src="<?= htmlspecialchars($rutaImagen); ?>" 
+                                                         class="rounded"
+                                                         style="width: 50px; height: 50px; object-fit: cover;"
+                                                         alt="<?= htmlspecialchars($producto['N_Articulo']); ?>">
+                                                </div>
+                                                <div class="col">
+                                                    <div class="d-flex align-items-center mb-1">
+                                                        <span class="stock-indicator low"></span>
+                                                        <h6 class="mb-0 fw-bold"><?= htmlspecialchars($producto['N_Articulo']); ?></h6>
+                                                    </div>
+                                                    <div class="d-flex justify-content-between align-items-center">
+                                                        <small class="text-muted">
+                                                            <i class="fas fa-tag me-1"></i>
+                                                            <?= htmlspecialchars($producto['N_Categoria']); ?>
+                                                            <span class="mx-2">•</span>
+                                                            <i class="fas fa-layer-group me-1"></i>
+                                                            <?= $producto['total_variantes'] ?> variantes
+                                                        </small>
+                                                        <span class="badge badge-dark">
+                                                            <i class="fas fa-box me-1"></i>
+                                                            <?= $producto['stock_total'] ?> unidades
+                                                        </span>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                <?php endforeach; ?>
+                            </div>
+                        <?php else: ?>
+                            <div class="text-center py-4">
+                                <div class="mb-3">
+                                    <i class="fas fa-check-circle fa-3x"></i>
+                                </div>
+                                <h6 class="fw-bold">¡Todo en orden!</h6>
+                                <p class="text-muted mb-0">Todo el stock está en niveles normales</p>
+                            </div>
+                        <?php endif; ?>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Sin Stock -->
+            <div class="col-lg-6 mb-3">
+                <div class="alert-card stock-out">
+                    <div class="card-header">
+                        <i class="fas fa-times-circle"></i> Sin Stock
+                        <span class="badge badge-light ms-2"><?= count($sinStock) ?> productos</span>
+                    </div>
+                    <div class="card-body">
+                        <?php if (!empty($sinStock)): ?>
+                            <div class="row g-3">
+                                <?php foreach ($sinStock as $producto): ?>
+                                    <div class="col-12">
+                                        <div class="alert-list-item">
+                                            <div class="row align-items-center">
+                                                <div class="col-auto">
+                                                    <?php
+                                                    $rutaImagen = trim($producto['Foto'] ?? '');
+                                                    if ($rutaImagen !== '') {
+                                                        if (!preg_match('/^https?:/i', $rutaImagen) && !str_starts_with($rutaImagen, 'ImgProducto/')) {
+                                                            $rutaImagen = 'ImgProducto/' . ltrim($rutaImagen, '/');
+                                                        }
+                                                        $rutaImagen = BASE_URL . ltrim($rutaImagen, '/');
+                                                    } else {
+                                                        $rutaImagen = BASE_URL . 'assets/img/sin_imagen.png';
+                                                    }
+                                                    ?>
+                                                    <img src="<?= htmlspecialchars($rutaImagen); ?>" 
+                                                         class="rounded"
+                                                         style="width: 50px; height: 50px; object-fit: cover;"
+                                                         alt="<?= htmlspecialchars($producto['N_Articulo']); ?>">
+                                                </div>
+                                                <div class="col">
+                                                    <div class="d-flex align-items-center mb-1">
+                                                        <span class="stock-indicator out"></span>
+                                                        <h6 class="mb-0 fw-bold"><?= htmlspecialchars($producto['N_Articulo']); ?></h6>
+                                                    </div>
+                                                    <div class="d-flex justify-content-between align-items-center">
+                                                        <small class="text-muted">
+                                                            <i class="fas fa-tag me-1"></i>
+                                                            <?= htmlspecialchars($producto['N_Categoria']); ?>
+                                                            <span class="mx-2">•</span>
+                                                            <i class="fas fa-layer-group me-1"></i>
+                                                            <?= $producto['total_variantes'] ?> variantes
+                                                        </small>
+                                                        <span class="badge badge-dark">
+                                                            <i class="fas fa-exclamation-circle me-1"></i>
+                                                            Agotado
+                                                        </span>
+                                                    </div>
+                                                    <div class="mt-2">
+                                                        <small>
+                                                            <i class="fas fa-info-circle me-1"></i>
+                                                            Requiere atención inmediata
+                                                        </small>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                <?php endforeach; ?>
+                            </div>
+                        <?php else: ?>
+                            <div class="text-center py-4">
+                                <div class="mb-3">
+                                    <i class="fas fa-check-circle fa-3x"></i>
+                                </div>
+                                <h6 class="fw-bold">Stock completo</h6>
+                                <p class="text-muted mb-0">Todos los productos tienen stock disponible</p>
+                            </div>
+                        <?php endif; ?>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- BOTÓN PARA IR AL INICIO -->
+        <div class="row">
+            <div class="col-12 text-center">
+                <div class="back-to-top-section">
+                    <a href="#" class="btn btn-dark btn-lg back-to-top-btn" onclick="scrollToTop()">
+                        <i class="fas fa-arrow-up me-2"></i>Volver al Inicio
+                    </a>
+                    <p class="text-muted mt-2 mb-0">
+                        <small>ID de sesión: <?php echo htmlspecialchars($_SESSION['ID_Usuario'] ?? '-'); ?> | Último acceso: <?php echo date('d/m/Y H:i:s'); ?></small>
+                    </p>
                 </div>
             </div>
         </div>
     </div>
 </div>
 
-<style>
-.hover-lift:hover {
-    transform: translateY(-5px);
-    box-shadow: 0 10px 25px rgba(0,0,0,0.1);
-    transition: all 0.3s ease;
-}
-
-.card {
-    border-radius: 10px;
-}
-
-.btn {
-    border-radius: 8px;
-    transition: all 0.3s ease;
-}
-
-.btn:hover {
-    transform: translateY(-2px);
-}
-
-.list-group-item {
-    border: none;
-    padding: 1rem 0.5rem;
-}
-
-.list-group-item:first-child {
-    padding-top: 0;
-}
-
-.list-group-item:last-child {
-    padding-bottom: 0;
-}
-
-.border-end {
-    border-right: 1px solid #dee2e6 !important;
-}
-
-@media (max-width: 768px) {
-    .border-end {
-        border-right: none !important;
-        border-bottom: 1px solid #dee2e6 !important;
-        padding-bottom: 1rem;
-        margin-bottom: 1rem;
+<!-- JavaScript para navegación suave -->
+<script>
+function scrollToElement(elementId) {
+    const element = document.getElementById(elementId);
+    if (element) {
+        element.scrollIntoView({ behavior: 'smooth', block: 'start' });
     }
 }
-</style>
+
+function scrollToTop() {
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+// Navegación rápida desde el menú
+document.addEventListener('DOMContentLoaded', function() {
+    // Enlaces internos con scroll suave
+    document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+        anchor.addEventListener('click', function(e) {
+            const href = this.getAttribute('href');
+            if (href !== '#') {
+                e.preventDefault();
+                scrollToElement(href.substring(1));
+            }
+        });
+    });
+
+    // Mostrar/ocultar botón de volver arriba al hacer scroll
+    const backToTopBtn = document.querySelector('.back-to-top-btn');
+    window.addEventListener('scroll', function() {
+        if (window.scrollY > 300) {
+            backToTopBtn.style.opacity = '1';
+            backToTopBtn.style.visibility = 'visible';
+        } else {
+            backToTopBtn.style.opacity = '0';
+            backToTopBtn.style.visibility = 'hidden';
+        }
+    });
+});
+</script>

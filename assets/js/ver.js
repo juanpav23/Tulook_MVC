@@ -1,8 +1,8 @@
 // ===============================
-// Archivo: ver.js (SISTEMA DE ATRIBUTOS DINÁMICOS CON CÓDIGO DE DESCUENTO)
+// Archivo: ver.js (SISTEMA DE ATRIBUTOS Y DESCUENTOS CON LÍMITES)
 // ===============================
 document.addEventListener("DOMContentLoaded", () => {
-  const { usuarioLogueado, variantes, variantesAgrupadas, productoBase, baseUrl, esFavorito, infoDescuento, todosDescuentos, atributosRequeridos } = PRODUCTO_DATA;
+  const { usuarioLogueado, variantes, variantesAgrupadas, productoBase, baseUrl, infoDescuento, todosDescuentos, atributosRequeridos } = PRODUCTO_DATA;
 
   // === Elementos DOM ===
   const atributoContainers = document.querySelectorAll('.atributo-container');
@@ -15,14 +15,11 @@ document.addEventListener("DOMContentLoaded", () => {
   const formIdProducto = document.getElementById('form-id-producto');
   const formCantidad = document.getElementById('form-cantidad');
   const formPrecioFinal = document.getElementById('form-precio-final');
-  const favForm = document.getElementById('fav-form');
-  const favIdProd = document.getElementById('fav-id-prod');
   const btnAddCart = document.getElementById('btn-add-cart');
-  const btnFavorito = document.querySelector('#fav-form button[type="submit"]');
   const btnPlus = document.getElementById('qty-plus');
   const btnMinus = document.getElementById('qty-minus');
   
-  // Elementos para descuentos - NUEVOS
+  // Elementos para descuentos
   const inputCodigoDescuento = document.getElementById('input-codigo-descuento');
   const btnAplicarDescuento = document.getElementById('btn-aplicar-descuento');
   const mensajeDescuento = document.getElementById('mensaje-descuento');
@@ -42,7 +39,6 @@ document.addEventListener("DOMContentLoaded", () => {
     varianteSeleccionada: null,
     stockDisponible: 0,
     productoId: null,
-    esFavorito: esFavorito || false,
     precioBase: 0,
     precioFinal: 0,
     descuentoAplicado: 0,
@@ -50,16 +46,122 @@ document.addEventListener("DOMContentLoaded", () => {
       codigo: '',
       tipo: 'ninguno',
       valor: 0,
-      idDescuento: null
+      idDescuento: null,
+      puedeUsar: true,
+      mensajeError: ''
     }
   };
 
-  // ---------- SISTEMA DE DESCUENTOS ----------
+  // ---------- SISTEMA DE VALIDACIÓN DE DESCUENTOS CON LÍMITES ----------
+  async function validarCodigoDescuento(codigo) {
+    try {
+      console.log('🔍 Validando código de descuento:', codigo);
+      
+      if (!codigo || codigo.trim() === '') {
+        return {
+          valido: false,
+          mensaje: '❌ Por favor ingresa un código',
+          descuento: null
+        };
+      }
+      
+      // 1. Buscar en descuentos locales para ver información
+      let descuentoLocal = null;
+      if (todosDescuentos && Array.isArray(todosDescuentos)) {
+        for (const descuento of todosDescuentos) {
+          if (descuento.Codigo === codigo) {
+            descuentoLocal = descuento;
+            break;
+          }
+        }
+      }
+      
+      // 2. Validar con el servidor (verifica límites y si usuario lo ganó)
+      const url = `${baseUrl}?c=Descuento&a=validar`;
+      console.log('📤 Enviando validación a:', `${url}&codigo=${encodeURIComponent(codigo)}`);
+      
+      const response = await fetch(`${url}&codigo=${encodeURIComponent(codigo)}`, {
+        method: 'GET',
+        credentials: 'include'
+      });
+      
+      const responseText = await response.text();
+      console.log('📥 Respuesta servidor:', responseText);
+      
+      let data;
+      try {
+        data = JSON.parse(responseText);
+      } catch (parseError) {
+        console.error('❌ Error parseando JSON:', parseError);
+        return {
+          valido: false,
+          mensaje: 'Error del servidor',
+          descuento: null
+        };
+      }
+      
+      console.log('✅ JSON parseado:', data);
+      
+      // 3. Procesar respuesta
+      if (data.valido === true || data.success === true) {
+        const descuento = data.descuento || data.data || descuentoLocal;
+        
+        // Calcular usos restantes
+        const usosUsuario = descuento.usos_usuario || descuento.Usos || 0;
+        const maxUsosUsuario = descuento.Max_Usos_Usuario || 0;
+        const usosRestantesUsuario = maxUsosUsuario > 0 ? maxUsosUsuario - usosUsuario : 'Ilimitado';
+        
+        const usosGlobales = descuento.Usos_Globales || 0;
+        const maxUsosGlobal = descuento.Max_Usos_Global || 0;
+        const usosRestantesGlobal = maxUsosGlobal > 0 ? maxUsosGlobal - usosGlobales : 'Ilimitado';
+        
+        console.log('📊 Límites del descuento:', {
+          usosUsuario,
+          maxUsosUsuario,
+          usosRestantesUsuario,
+          usosGlobales,
+          maxUsosGlobal,
+          usosRestantesGlobal
+        });
+        
+        
+        // Preparar mensaje informativo
+        let mensajeExtra = '';
+        if (maxUsosUsuario > 0) {
+          mensajeExtra = ` Puedes usarlo ${usosRestantesUsuario} vez(es) más.`;
+        }
+        
+        return {
+          valido: true,
+          mensaje: (data.mensaje || '✅ Código válido') + mensajeExtra,
+          descuento: descuento,
+          tieneLimites: maxUsosUsuario > 0 || maxUsosGlobal > 0,
+          usosRestantesUsuario: usosRestantesUsuario,
+          usosRestantesGlobal: usosRestantesGlobal
+        };
+        
+      } else {
+        // Código inválido
+        return {
+          valido: false,
+          mensaje: data.mensaje || '❌ Código no válido',
+          descuento: descuentoLocal
+        };
+      }
+      
+    } catch (error) {
+      console.error('❌ Error validando código:', error);
+      return {
+        valido: false,
+        mensaje: '❌ Error de conexión. Verifica tu internet.',
+        descuento: null
+      };
+    }
+  }
+
   function aplicarDescuentoManual(precioBase, tipoDescuento, valorDescuento) {
     let precioFinal = precioBase;
     let descuentoAplicado = 0;
-
-    console.log('Aplicando descuento manual:', { precioBase, tipoDescuento, valorDescuento });
 
     if (tipoDescuento === 'Porcentaje' && valorDescuento > 0) {
       descuentoAplicado = (precioBase * valorDescuento) / 100;
@@ -72,8 +174,6 @@ document.addEventListener("DOMContentLoaded", () => {
     const porcentajeDescuento = (tipoDescuento === 'Porcentaje') 
         ? valorDescuento 
         : (descuentoAplicado / precioBase) * 100;
-
-    console.log('Resultado descuento:', { precioFinal, descuentoAplicado, porcentajeDescuento });
 
     return {
       precioFinal: Math.max(precioFinal, 0),
@@ -149,11 +249,8 @@ document.addEventListener("DOMContentLoaded", () => {
     const ahorro = precioOriginal - precioFinal;
     const porcentajeAhorro = ahorro > 0 ? ((ahorro / precioOriginal) * 100).toFixed(1) : 0;
     
-    console.log('Actualizando precio visual:', { precioFinal, precioOriginal, descuento, ahorro });
-    
-    // ✅ CORRECCIÓN: Solo mostrar "GRATIS" cuando el precio final sea 0
+    // Mostrar "GRATIS" solo cuando el precio final sea 0
     if (precioFinal === 0 || precioFinal === '0' || precioFinal === 0.00) {
-      // Si el precio original también era 0, es gratis de verdad
       if (precioOriginal === 0 || precioOriginal === '0' || precioOriginal === 0.00) {
         precioFinalElement.innerHTML = '<span class="text-success fw-bold">GRATIS</span>';
         precioFinalElement.className = 'precio-final';
@@ -162,7 +259,6 @@ document.addEventListener("DOMContentLoaded", () => {
         descuentoBadgeElement.style.display = 'none';
         ahorroInfoElement.style.display = 'none';
       } else {
-        // Si el precio original > 0 pero ahora es 0 por descuento
         precioFinalElement.innerHTML = '<span class="text-success fw-bold">GRATIS</span>';
         precioFinalElement.className = 'precio-final';
         
@@ -207,115 +303,121 @@ document.addEventListener("DOMContentLoaded", () => {
     seleccionActual.descuentoAplicado = descuento;
   }
 
-  // ---------- SISTEMA DE INGRESO DE CÓDIGO DE DESCUENTO ----------
   function inicializarSistemaDescuentos() {
-    if (!usuarioLogueado) return;
+    if (!usuarioLogueado) {
+      console.log('⚠️ Usuario no logueado, descuentos deshabilitados');
+      if (inputCodigoDescuento) inputCodigoDescuento.disabled = true;
+      if (btnAplicarDescuento) btnAplicarDescuento.disabled = true;
+      return;
+    }
     
     // Cargar descuento de localStorage si existe
     const descuentoGuardado = localStorage.getItem('descuentoActual');
     if (descuentoGuardado && seleccionActual.productoId) {
-      const descuento = JSON.parse(descuentoGuardado);
-      if (validarDescuentoParaProducto(descuento, seleccionActual.productoId)) {
-        aplicarDescuentoDesdeStorage(descuento);
+      try {
+        const descuento = JSON.parse(descuentoGuardado);
+        if (validarDescuentoParaProducto(descuento, seleccionActual.productoId)) {
+          aplicarDescuentoDesdeStorage(descuento);
+        }
+      } catch (e) {
+        console.error('Error al cargar descuento de localStorage:', e);
+        localStorage.removeItem('descuentoActual');
       }
     }
     
-    btnAplicarDescuento.addEventListener('click', async function() {
-      const codigo = inputCodigoDescuento.value.trim().toUpperCase();
-      
-      if (!codigo) {
-        mostrarMensajeDescuento('Por favor ingresa un código de descuento', 'warning');
-        return;
-      }
-      
-      // Mostrar loading
-      btnAplicarDescuento.disabled = true;
-      btnAplicarDescuento.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Validando...';
-      
-      try {
-        const descuentoValido = await validarCodigoDescuento(codigo);
+    if (btnAplicarDescuento) {
+      btnAplicarDescuento.addEventListener('click', async function() {
+        const codigo = inputCodigoDescuento ? inputCodigoDescuento.value.trim().toUpperCase() : '';
         
-        if (descuentoValido) {
-          // Verificar si aplica al producto actual
-          if (validarDescuentoParaProducto(descuentoValido, seleccionActual.productoId)) {
-            aplicarDescuentoManualDesdeCodigo(descuentoValido);
-            guardarDescuentoEnStorage(descuentoValido);
-            mostrarDescuentoActivo(descuentoValido);
-            mostrarMensajeDescuento('✅ ¡Descuento aplicado correctamente!', 'success');
-            inputCodigoDescuento.value = '';
-          } else {
-            mostrarMensajeDescuento('❌ Este descuento no aplica para el producto seleccionado', 'danger');
-          }
-        } else {
-          mostrarMensajeDescuento('❌ Código de descuento inválido o expirado', 'danger');
+        if (!codigo) {
+          mostrarMensajeDescuento('Por favor ingresa un código de descuento', 'warning');
+          return;
         }
-      } catch (error) {
-        console.error('Error validando descuento:', error);
-        mostrarMensajeDescuento('❌ Error al validar el código. Intenta nuevamente.', 'danger');
-      } finally {
-        btnAplicarDescuento.disabled = false;
-        btnAplicarDescuento.innerHTML = '<i class="fas fa-check me-1"></i>Aplicar';
-      }
-    });
+        
+        // Mostrar loading
+        const originalText = btnAplicarDescuento.innerHTML;
+        btnAplicarDescuento.disabled = true;
+        btnAplicarDescuento.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Validando...';
+        
+        try {
+          const resultadoValidacion = await validarCodigoDescuento(codigo);
+          console.log('Resultado validación:', resultadoValidacion);
+          
+          if (resultadoValidacion.valido) {
+            // Verificar si aplica al producto actual
+            if (validarDescuentoParaProducto(resultadoValidacion.descuento, seleccionActual.productoId)) {
+              // ✅ Actualizar estado del descuento
+              seleccionActual.descuentoSeleccionado = {
+                codigo: resultadoValidacion.descuento.Codigo || '',
+                tipo: resultadoValidacion.descuento.Tipo || 'ninguno',
+                valor: parseFloat(resultadoValidacion.descuento.Valor) || 0,
+                idDescuento: resultadoValidacion.descuento.ID_Descuento || null,
+                puedeUsar: true,
+                mensajeError: ''
+              };
+
+              // Actualizar campos hidden
+              if (formCodigoDescuento) formCodigoDescuento.value = resultadoValidacion.descuento.Codigo || '';
+              if (formTipoDescuento) formTipoDescuento.value = resultadoValidacion.descuento.Tipo || '';
+              if (formValorDescuento) formValorDescuento.value = resultadoValidacion.descuento.Valor || 0;
+              if (formIdDescuento) formIdDescuento.value = resultadoValidacion.descuento.ID_Descuento || '';
+
+              // Recalcular precio
+              recalcularPrecioConDescuento();
+              
+              // Guardar en localStorage
+              guardarDescuentoEnStorage(resultadoValidacion.descuento);
+              
+              // Mostrar información del descuento
+              mostrarDescuentoActivo(resultadoValidacion.descuento, resultadoValidacion.usosRestantesUsuario);
+              
+              mostrarMensajeDescuento(`✅ ${resultadoValidacion.mensaje}`, 'success');
+              if (inputCodigoDescuento) inputCodigoDescuento.value = '';
+            } else {
+              mostrarMensajeDescuento('❌ Este descuento no aplica para el producto seleccionado', 'danger');
+            }
+          } else {
+            mostrarMensajeDescuento(`❌ ${resultadoValidacion.mensaje}`, 'danger');
+          }
+        } catch (error) {
+          console.error('Error validando descuento:', error);
+          mostrarMensajeDescuento('❌ Error al validar el código. Intenta nuevamente.', 'danger');
+        } finally {
+          btnAplicarDescuento.disabled = false;
+          btnAplicarDescuento.innerHTML = originalText;
+        }
+      });
+    }
     
     // Permitir presionar Enter
-    inputCodigoDescuento.addEventListener('keypress', function(e) {
-      if (e.key === 'Enter') {
-        btnAplicarDescuento.click();
-      }
-    });
+    if (inputCodigoDescuento) {
+      inputCodigoDescuento.addEventListener('keypress', function(e) {
+        if (e.key === 'Enter') {
+          if (btnAplicarDescuento) btnAplicarDescuento.click();
+        }
+      });
+    }
     
     // Botón para remover descuento
     if (btnRemoverDescuento) {
       btnRemoverDescuento.addEventListener('click', function() {
         removerDescuento();
         localStorage.removeItem('descuentoActual');
-        descuentoActualDiv.style.display = 'none';
+        if (descuentoActualDiv) descuentoActualDiv.style.display = 'none';
         mostrarMensajeDescuento('Descuento removido', 'info');
       });
     }
   }
 
-  async function validarCodigoDescuento(codigo) {
-    try {
-      // Buscar en los descuentos vigentes que ya tenemos cargados
-      for (const descuento of todosDescuentos) {
-        if (descuento.Codigo === codigo) {
-          // Verificar vigencia
-          const ahora = new Date().toISOString();
-          if (descuento.Activo === 1 && 
-              descuento.FechaInicio <= ahora && 
-              descuento.FechaFin >= ahora) {
-            return descuento;
-          }
-        }
-      }
-      
-      // Si no se encuentra localmente, consultar al servidor
-      const formData = new FormData();
-      formData.append('codigo', codigo);
-      
-      const response = await fetch(`${baseUrl}?c=Descuento&a=validarCodigo`, {
-        method: 'POST',
-        body: formData
-      });
-      
-      if (response.ok) {
-        const data = await response.json();
-        if (data.success) {
-          return data.descuento;
-        }
-      }
-      
-      return null;
-    } catch (error) {
-      console.error('Error validando código:', error);
-      return null;
-    }
-  }
-
   function validarDescuentoParaProducto(descuento, productoId) {
-    // Si el descuento es general (sin ID específico), aplica a todos
+    if (!descuento) return false;
+    
+    // Si no hay producto seleccionado aún
+    if (!productoId) {
+      return !descuento.ID_Articulo && !descuento.ID_Producto && !descuento.ID_Categoria;
+    }
+    
+    // Descuento general aplica a todos
     if (!descuento.ID_Articulo && !descuento.ID_Producto && !descuento.ID_Categoria) {
       return true;
     }
@@ -338,40 +440,43 @@ document.addEventListener("DOMContentLoaded", () => {
     return false;
   }
 
-  function aplicarDescuentoManualDesdeCodigo(descuento) {
+  function aplicarDescuentoDesdeStorage(descuento) {
+    // Aplicar descuento desde localStorage
     seleccionActual.descuentoSeleccionado = {
-      codigo: descuento.Codigo,
-      tipo: descuento.Tipo,
-      valor: parseFloat(descuento.Valor),
-      idDescuento: descuento.ID_Descuento
+      codigo: descuento.Codigo || '',
+      tipo: descuento.Tipo || 'ninguno',
+      valor: parseFloat(descuento.Valor) || 0,
+      idDescuento: descuento.ID_Descuento || null,
+      puedeUsar: true,
+      mensajeError: ''
     };
 
     // Actualizar campos hidden
-    if (formCodigoDescuento) formCodigoDescuento.value = descuento.Codigo;
-    if (formTipoDescuento) formTipoDescuento.value = descuento.Tipo;
-    if (formValorDescuento) formValorDescuento.value = descuento.Valor;
-    if (formIdDescuento) formIdDescuento.value = descuento.ID_Descuento;
+    if (formCodigoDescuento) formCodigoDescuento.value = descuento.Codigo || '';
+    if (formTipoDescuento) formTipoDescuento.value = descuento.Tipo || '';
+    if (formValorDescuento) formValorDescuento.value = descuento.Valor || 0;
+    if (formIdDescuento) formIdDescuento.value = descuento.ID_Descuento || '';
 
-    // Recalcular precio
     recalcularPrecioConDescuento();
-  }
-
-  function aplicarDescuentoDesdeStorage(descuento) {
-    aplicarDescuentoManualDesdeCodigo(descuento);
     mostrarDescuentoActivo(descuento);
   }
 
-  function mostrarDescuentoActivo(descuento) {
-    if (descuentoActualDiv && textoDescuentoActivo) {
-      const valorMostrar = descuento.Tipo === 'Porcentaje' 
-        ? `${descuento.Valor}%` 
-        : `$${new Intl.NumberFormat('es-CO').format(descuento.Valor)}`;
-      
-      textoDescuentoActivo.textContent = 
-        `Descuento "${descuento.Codigo}" aplicado: -${valorMostrar}`;
-      
-      descuentoActualDiv.style.display = 'block';
+  function mostrarDescuentoActivo(descuento, usosRestantes = null) {
+    if (!descuentoActualDiv || !textoDescuentoActivo || !descuento) return;
+    
+    const valorMostrar = descuento.Tipo === 'Porcentaje' 
+      ? `${descuento.Valor}%` 
+      : `$${new Intl.NumberFormat('es-CO').format(descuento.Valor)}`;
+    
+    let textoExtra = '';
+    if (usosRestantes !== null && usosRestantes !== 'Ilimitado' && usosRestantes > 0) {
+      textoExtra = ` (Te quedan ${usosRestantes} uso(s))`;
     }
+    
+    textoDescuentoActivo.textContent = 
+      `Descuento "${descuento.Codigo || ''}" aplicado: -${valorMostrar}${textoExtra}`;
+    
+    descuentoActualDiv.style.display = 'block';
   }
 
   function mostrarMensajeDescuento(mensaje, tipo = 'info') {
@@ -384,10 +489,17 @@ document.addEventListener("DOMContentLoaded", () => {
       info: 'alert-info'
     };
     
+    const iconos = {
+      success: 'check-circle',
+      danger: 'exclamation-circle',
+      warning: 'exclamation-triangle',
+      info: 'info-circle'
+    };
+    
     mensajeDescuento.innerHTML = `
       <div class="alert ${clases[tipo]} alert-dismissible fade show py-2" role="alert">
         <div class="d-flex align-items-center">
-          <i class="fas fa-${tipo === 'success' ? 'check-circle' : 'info-circle'} me-2"></i>
+          <i class="fas fa-${iconos[tipo]} me-2"></i>
           <span>${mensaje}</span>
         </div>
         <button type="button" class="btn-close btn-sm" data-bs-dismiss="alert"></button>
@@ -406,7 +518,9 @@ document.addEventListener("DOMContentLoaded", () => {
       codigo: '',
       tipo: 'ninguno',
       valor: 0,
-      idDescuento: null
+      idDescuento: null,
+      puedeUsar: true,
+      mensajeError: ''
     };
 
     // Limpiar campos hidden
@@ -420,112 +534,23 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   function guardarDescuentoEnStorage(descuento) {
-    localStorage.setItem('descuentoActual', JSON.stringify(descuento));
+    try {
+      localStorage.setItem('descuentoActual', JSON.stringify(descuento));
+    } catch (e) {
+      console.error('Error guardando en localStorage:', e);
+    }
   }
 
   function recalcularPrecioConDescuento() {
     const precioBase = seleccionActual.precioBase;
-    const { tipo, valor } = seleccionActual.descuentoSeleccionado;
+    const { tipo, valor, puedeUsar } = seleccionActual.descuentoSeleccionado;
 
-    console.log('Recalculando precio con descuento:', { precioBase, tipo, valor });
-
-    if (tipo === 'ninguno' || valor === 0) {
-      console.log('Sin descuento aplicado');
+    if (tipo === 'ninguno' || valor === 0 || !puedeUsar) {
       actualizarPrecioVisual(precioBase, precioBase, 0);
     } else {
       const infoPrecio = aplicarDescuentoManual(precioBase, tipo, valor);
-      console.log('Precio con descuento aplicado:', infoPrecio);
       actualizarPrecioVisual(infoPrecio.precioFinal, infoPrecio.precioOriginal, infoPrecio.descuento);
     }
-  }
-
-  // ---------- SISTEMA DE FAVORITOS ----------
-  function actualizarEstadoFavorito(esFav) {
-    seleccionActual.esFavorito = esFav;
-  
-    if (btnFavorito) {
-      if (esFav) {
-        btnFavorito.classList.remove('btn-outline-danger');
-        btnFavorito.classList.add('btn-danger');
-        btnFavorito.innerHTML = '<i class="fa fa-heart"></i> Quitar de Me Gusta';
-      } else {
-        btnFavorito.classList.remove('btn-danger');
-        btnFavorito.classList.add('btn-outline-danger');
-        btnFavorito.innerHTML = '<i class="fa fa-heart"></i> Añadir a Me Gusta';
-      }
-    }
-  }
-
-  async function verificarEstadoFavorito() {
-    if (!usuarioLogueado) return;
-
-    try {
-      const formData = new FormData();
-      const idProductoActual = formIdProducto.value;
-      
-      formData.append('id_producto', idProductoActual);
-
-      const response = await fetch(`${baseUrl}?c=Favorito&a=verificarEstado`, {
-        method: 'POST',
-        body: formData
-      });
-      
-      if (!response.ok) return;
-      
-      const texto = await response.text();
-      let data;
-      
-      try {
-        data = JSON.parse(texto);
-      } catch (parseError) {
-        return;
-      }
-      
-      if (data.success) {
-        actualizarEstadoFavorito(data.esFavorito);
-      }
-    } catch (error) {
-      console.warn('Error verificando favorito:', error.message);
-    }
-  }
-
-  function setupFavoritosAJAX() {
-    if (!favForm || !usuarioLogueado) return;
-
-    favForm.addEventListener('submit', async function (e) {
-      e.preventDefault();
-
-      try {
-        const formData = new FormData(this);
-        btnFavorito.disabled = true;
-        btnFavorito.innerHTML = '<i class="fa fa-spinner fa-spin"></i> Procesando...';
-
-        const response = await fetch(`${baseUrl}?c=Favorito&a=toggleAjax`, {
-          method: 'POST',
-          body: formData
-        });
-
-        const data = await response.json();
-
-        if (data.success) {
-          actualizarEstadoFavorito(data.esFavorito);
-
-          Swal.fire({
-            icon: 'success',
-            title: data.action === 'added' ? '❤️ Agregado a favoritos' : '❌ Eliminado de favoritos',
-            showConfirmButton: false,
-            timer: 1000
-          });
-        }
-      } catch (error) {
-        console.error('Error en favoritos:', error);
-      } finally {
-        btnFavorito.disabled = false;
-        btnFavorito.innerHTML = seleccionActual.esFavorito ?
-          '<i class="fa fa-heart"></i> Quitar de Me Gusta' :
-          '<i class="fa fa-heart"></i> Añadir a Me Gusta';
-      }
-    });
   }
 
   // ---------- SISTEMA DE ATRIBUTOS DINÁMICOS ----------
@@ -538,7 +563,7 @@ document.addEventListener("DOMContentLoaded", () => {
     chips.forEach(chip => {
       chip.addEventListener('click', function() {
         if (this.classList.contains('disabled')) {
-          return; // No hacer nada si está deshabilitado
+          return;
         }
         
         const atributoId = this.dataset.atributoId;
@@ -639,14 +664,14 @@ document.addEventListener("DOMContentLoaded", () => {
       if (todosDeshabilitados) {
         mensaje.innerHTML = '<small class="text-danger">No hay productos disponibles con la selección actual</small>';
       } else {
-        const atributoAnterior = document.querySelector(`.atributo-group[data-step="${stepTarget - 1}"] h6`)?.textContent || 'las opciones anteriores';
         mensaje.innerHTML = `<small class="text-muted"><i class="fas fa-info-circle"></i> Opciones disponibles para la selección actual</small>`;
       }
     }
   }
 
   function verificarCombinacionDisponible(combinacion) {
-    // Buscar en las variantes si existe esta combinación
+    if (!variantes || !Array.isArray(variantes)) return false;
+    
     for (const variante of variantes) {
       let coincide = true;
       
@@ -671,15 +696,20 @@ document.addEventListener("DOMContentLoaded", () => {
       }
       
       if (coincide && (variante.Cantidad > 0 || variante.Cantidad === null)) {
-        return true; // Combinación disponible
+        return true;
       }
     }
     
-    return false; // Combinación no disponible
+    return false;
   }
 
   function verificarCombinacionAtributos() {
     console.log('Verificando combinación de atributos...');
+    
+    if (!atributosRequeridos || !Array.isArray(atributosRequeridos)) {
+      console.error('atributosRequeridos no está definido o no es un array');
+      return;
+    }
     
     // Verificar si tenemos todos los atributos requeridos seleccionados
     const todosAtributosSeleccionados = atributosRequeridos.every(id => {
@@ -695,25 +725,31 @@ document.addEventListener("DOMContentLoaded", () => {
       const varianteEncontrada = buscarVariantePorAtributos();
       
       if (varianteEncontrada) {
-        console.log('Variante encontrada:', varianteEncontrada);
+        console.log('✅ Variante encontrada:', varianteEncontrada);
         seleccionarVariante(varianteEncontrada);
       } else {
-        // No se encontró variante para esta combinación
-        console.log('No se encontró variante para esta combinación');
+        console.log('❌ No se encontró variante para esta combinación');
         limpiarSeleccionVariante();
-        stockInfo.textContent = 'Combinación no disponible';
-        stockInfo.className = 'text-danger';
-        btnAddCart.disabled = true;
-        btnAddCart.innerHTML = '<i class="fa fa-times"></i> Combinación no disponible';
+        if (stockInfo) {
+          stockInfo.textContent = 'Combinación no disponible';
+          stockInfo.className = 'text-danger';
+        }
+        if (btnAddCart) {
+          btnAddCart.disabled = true;
+          btnAddCart.innerHTML = '<i class="fa fa-times"></i> Combinación no disponible';
+        }
       }
     } else {
-      // Aún no se han seleccionado todos los atributos
-      console.log('Selecciona todos los atributos...');
+      console.log('⚠️ Selecciona todos los atributos...');
       limpiarSeleccionVariante();
-      stockInfo.textContent = 'Selecciona todas las opciones';
-      stockInfo.className = 'text-muted';
-      btnAddCart.disabled = true;
-      btnAddCart.innerHTML = '<i class="fa fa-shopping-cart"></i> Selecciona todas las opciones';
+      if (stockInfo) {
+        stockInfo.textContent = 'Selecciona todas las opciones';
+        stockInfo.className = 'text-muted';
+      }
+      if (btnAddCart) {
+        btnAddCart.disabled = true;
+        btnAddCart.innerHTML = '<i class="fa fa-shopping-cart"></i> Selecciona todas las opciones';
+      }
     }
   }
 
@@ -721,39 +757,45 @@ document.addEventListener("DOMContentLoaded", () => {
     console.log('🔍 Buscando variante con atributos:', seleccionActual.atributosSeleccionados);
     
     // Buscar en las variantes agrupadas primero
-    for (const grupo of Object.values(variantesAgrupadas)) {
-      const coincide = grupo.atributos.every(atributo => {
-        const valorSeleccionado = seleccionActual.atributosSeleccionados[atributo.id];
-        console.log(`  - Comparando: ${atributo.id}: ${atributo.valor} vs ${valorSeleccionado}`);
-        return valorSeleccionado === atributo.valor;
-      });
-      
-      if (coincide && grupo.variantes.length > 0) {
-        console.log('✅ Variante encontrada en grupo:', grupo.variantes[0]);
-        return grupo.variantes[0];
+    if (variantesAgrupadas && typeof variantesAgrupadas === 'object') {
+      for (const grupo of Object.values(variantesAgrupadas)) {
+        if (grupo.atributos && Array.isArray(grupo.atributos)) {
+          const coincide = grupo.atributos.every(atributo => {
+            const valorSeleccionado = seleccionActual.atributosSeleccionados[atributo.id];
+            console.log(`  - Comparando: ${atributo.id}: ${atributo.valor} vs ${valorSeleccionado}`);
+            return valorSeleccionado === atributo.valor;
+          });
+          
+          if (coincide && grupo.variantes && grupo.variantes.length > 0) {
+            console.log('✅ Variante encontrada en grupo:', grupo.variantes[0]);
+            return grupo.variantes[0];
+          }
+        }
       }
     }
     
     // Si no se encuentra en agrupadas, buscar en todas las variantes
-    for (const variante of variantes) {
-      let coincide = true;
-      
-      for (let i = 1; i <= 3; i++) {
-        const idAtributo = variante[`ID_Atributo${i}`];
-        const valorAtributo = variante[`ValorAtributo${i}`];
+    if (variantes && Array.isArray(variantes)) {
+      for (const variante of variantes) {
+        let coincide = true;
         
-        if (idAtributo && valorAtributo) {
-          const valorSeleccionado = seleccionActual.atributosSeleccionados[idAtributo];
-          if (valorSeleccionado !== valorAtributo) {
-            coincide = false;
-            break;
+        for (let i = 1; i <= 3; i++) {
+          const idAtributo = variante[`ID_Atributo${i}`];
+          const valorAtributo = variante[`ValorAtributo${i}`];
+          
+          if (idAtributo && valorAtributo) {
+            const valorSeleccionado = seleccionActual.atributosSeleccionados[idAtributo];
+            if (valorSeleccionado !== valorAtributo) {
+              coincide = false;
+              break;
+            }
           }
         }
-      }
-      
-      if (coincide) {
-        console.log('✅ Variante encontrada en lista completa:', variante);
-        return variante;
+        
+        if (coincide) {
+          console.log('✅ Variante encontrada en lista completa:', variante);
+          return variante;
+        }
       }
     }
     
@@ -773,7 +815,7 @@ document.addEventListener("DOMContentLoaded", () => {
     seleccionActual.productoId = variante.ID_Producto;
     seleccionActual.stockDisponible = variante.Cantidad || 0;
 
-    // ✅ CORRECCIÓN: Actualizar el campo hidden del formulario
+    // Actualizar campo hidden del formulario
     const formIdProducto = document.getElementById('form-id-producto');
     if (formIdProducto) {
       formIdProducto.value = variante.ID_Producto;
@@ -781,26 +823,24 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     // Actualizar formulario
-    formTipo.value = 'variante';
-    
-    if (favIdProd) {
-      favIdProd.value = variante.ID_Producto;
-    }
+    if (formTipo) formTipo.value = 'variante';
 
     // Actualizar imagen si tiene una específica
-    if (variante.Foto && variante.Foto !== productoBase.Foto) {
+    if (variante.Foto && variante.Foto !== productoBase.Foto && mainImg) {
       mainImg.src = variante.Foto;
     }
 
     // Obtener precio base para esta variante
-    let precioBaseVariante = productoBase.precio; // Precio por defecto del artículo
+    let precioBaseVariante = productoBase.precio || 0;
 
     // Buscar el precio en las variantes
-    for (const v of variantes) {
+    if (variantes && Array.isArray(variantes)) {
+      for (const v of variantes) {
         if (v.ID_Producto === variante.ID_Producto) {
-            precioBaseVariante = v.Precio_Final || productoBase.precio;
-            break;
+          precioBaseVariante = v.Precio_Final || v.Precio || productoBase.precio || 0;
+          break;
         }
+      }
     }
 
     console.log('💰 Precio base de la variante:', precioBaseVariante);
@@ -810,16 +850,18 @@ document.addEventListener("DOMContentLoaded", () => {
     console.log('💰 Info descuento automático:', info);
     
     // Actualizar precio base en el estado
-    seleccionActual.precioBase = info.precioOriginal;
+    seleccionActual.precioBase = info.precioOriginal || precioBaseVariante;
     
     // Luego aplicar descuento seleccionado por el usuario si existe
-    if (seleccionActual.descuentoSeleccionado.valor > 0) {
+    if (seleccionActual.descuentoSeleccionado.valor > 0 && seleccionActual.descuentoSeleccionado.puedeUsar) {
       const infoConDescuentoManual = aplicarDescuentoManual(
         info.precioOriginal, 
         seleccionActual.descuentoSeleccionado.tipo, 
         seleccionActual.descuentoSeleccionado.valor
       );
-      actualizarPrecioVisual(infoConDescuentoManual.precioFinal, infoConDescuentoManual.precioOriginal, infoConDescuentoManual.descuento);
+      actualizarPrecioVisual(infoConDescuentoManual.precioFinal, 
+                            infoConDescuentoManual.precioOriginal, 
+                            infoConDescuentoManual.descuento);
     } else {
       actualizarPrecioVisual(info.precioFinal, info.precioOriginal, info.descuento);
     }
@@ -827,7 +869,6 @@ document.addEventListener("DOMContentLoaded", () => {
     // Actualizar información de stock
     actualizarInfoStock(seleccionActual.stockDisponible);
     actualizarBotonCarrito();
-    verificarEstadoFavorito();
 
     console.log('✅ Variante seleccionada correctamente. ID_Producto:', seleccionActual.productoId);
   }
@@ -836,24 +877,31 @@ document.addEventListener("DOMContentLoaded", () => {
     seleccionActual.varianteSeleccionada = null;
     seleccionActual.productoId = null;
     seleccionActual.stockDisponible = 0;
-    formIdProducto.value = '';
-    stockInfo.textContent = '';
-    cantidadInput.removeAttribute('max');
+    if (formIdProducto) formIdProducto.value = '';
+    if (stockInfo) {
+      stockInfo.textContent = '';
+      stockInfo.className = '';
+    }
+    if (cantidadInput) cantidadInput.removeAttribute('max');
     actualizarBotonCarrito();
   }
 
   // ---------- HELPERS ----------
   function setCantidad(val) {
+    if (!cantidadInput) return;
+    
     const max = parseInt(cantidadInput.max || seleccionActual.stockDisponible || 999, 10);
     let n = parseInt(String(val).replace(/^0+/, ''), 10);
     if (isNaN(n) || n < 1) n = 1;
     if (n > max) n = max;
     cantidadInput.value = n;
-    formCantidad.value = n;
+    if (formCantidad) formCantidad.value = n;
     actualizarBotonCarrito();
   }
 
   function actualizarBotonCarrito() {
+    if (!btnAddCart) return;
+    
     if (!seleccionActual.varianteSeleccionada) {
       btnAddCart.disabled = true;
       btnAddCart.innerHTML = '<i class="fa fa-shopping-cart"></i> Selecciona todas las opciones';
@@ -866,7 +914,7 @@ document.addEventListener("DOMContentLoaded", () => {
       return;
     }
 
-    const cantidad = parseInt(cantidadInput.value, 10) || 1;
+    const cantidad = parseInt(cantidadInput ? cantidadInput.value : 1, 10) || 1;
     if (cantidad > seleccionActual.stockDisponible) {
       btnAddCart.disabled = true;
       btnAddCart.innerHTML = '<i class="fa fa-times"></i> Stock insuficiente';
@@ -878,166 +926,204 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   function actualizarInfoStock(stock) {
+    if (!stockInfo) return;
+    
     if (stock > 0) {
       stockInfo.textContent = `${stock} unidades disponibles`;
       stockInfo.className = 'text-success';
-      cantidadInput.max = stock;
+      if (cantidadInput) cantidadInput.max = stock;
     } else {
       stockInfo.textContent = 'Sin stock disponible';
       stockInfo.className = 'text-danger';
-      cantidadInput.removeAttribute('max');
+      if (cantidadInput) cantidadInput.removeAttribute('max');
     }
-    setCantidad(cantidadInput.value);
+    setCantidad(cantidadInput ? cantidadInput.value : 1);
   }
 
   // ---------- CANTIDAD ----------
-  cantidadInput.addEventListener('input', () => {
-    const val = cantidadInput.value.replace(/\D+/g, '');
-    setCantidad(val || 1);
-  });
+  if (cantidadInput) {
+    cantidadInput.addEventListener('input', () => {
+      const val = cantidadInput.value.replace(/\D+/g, '');
+      setCantidad(val || 1);
+    });
+  }
 
-  btnPlus.addEventListener('click', () => {
-    const max = seleccionActual.stockDisponible;
-    let n = parseInt(cantidadInput.value, 10);
-    if (n < max) setCantidad(n + 1);
-  });
+  if (btnPlus) {
+    btnPlus.addEventListener('click', () => {
+      const max = seleccionActual.stockDisponible;
+      let n = parseInt(cantidadInput ? cantidadInput.value : 1, 10);
+      if (n < max) setCantidad(n + 1);
+    });
+  }
 
-  btnMinus.addEventListener('click', () => {
-    let n = parseInt(cantidadInput.value, 10);
-    if (n > 1) setCantidad(n - 1);
-  });
+  if (btnMinus) {
+    btnMinus.addEventListener('click', () => {
+      let n = parseInt(cantidadInput ? cantidadInput.value : 1, 10);
+      if (n > 1) setCantidad(n - 1);
+    });
+  }
 
   // ---------- CARRITO CON AJAX ----------
-  btnAddCart.addEventListener('click', async () => {
-    if (!usuarioLogueado) {
-      return Swal.fire({
-        icon: 'info',
-        title: 'Inicia sesión',
-        text: 'Debes iniciar sesión para agregar productos al carrito.',
-        confirmButtonText: 'Ir al login'
-      }).then((result) => {
-        if (result.isConfirmed) {
-          window.location.href = `${baseUrl}?c=Usuario&a=login`;
-        }
-      });
-    }
-
-    if (!seleccionActual.varianteSeleccionada) {
-      return Swal.fire({
-        icon: 'warning',
-        title: 'Selecciona opciones',
-        text: 'Debes elegir todas las opciones antes de agregar al carrito.',
-        confirmButtonText: 'Entendido'
-      });
-    }
-
-    const qty = parseInt(cantidadInput.value, 10);
-    if (qty > seleccionActual.stockDisponible) {
-      return Swal.fire({
-        icon: 'error',
-        title: 'Stock insuficiente',
-        text: `Solo hay ${seleccionActual.stockDisponible} unidades disponibles.`,
-        confirmButtonText: 'Entendido'
-      });
-    }
-
-    // Loading
-    const originalText = btnAddCart.innerHTML;
-    btnAddCart.disabled = true;
-    btnAddCart.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Agregando...';
-
-    try {
-      console.log('🛒 Enviando al carrito:', {
-        productoId: seleccionActual.productoId,
-        precioFinal: seleccionActual.precioFinal,
-        esGratis: seleccionActual.precioFinal === 0
-      });
-
-      // ✅ ENVÍO SIMPLE QUE FUNCIONA
-      const params = new URLSearchParams();
-      params.append('id_producto', seleccionActual.productoId);
-      params.append('id_articulo', document.querySelector('input[name="id_articulo"]').value);
-      params.append('cantidad', qty);
-      params.append('precio_final', seleccionActual.precioFinal);
-      params.append('tipo', 'variante');
-
-      // ✅ Asegurar que también se pasen los datos del descuento
-      params.append('codigo_descuento', seleccionActual.descuentoSeleccionado.codigo || '');
-      params.append('tipo_descuento', seleccionActual.descuentoSeleccionado.tipo || '');
-      params.append('valor_descuento', seleccionActual.descuentoSeleccionado.valor || 0);
-      params.append('id_descuento', seleccionActual.descuentoSeleccionado.idDescuento || '');
-
-      const response = await fetch(`${baseUrl}?c=Carrito&a=agregarAjax&${params.toString()}`, {
-        method: 'GET' // ✅ USAR GET QUE SÍ FUNCIONA
-      });
-
-      const result = await response.json();
-
-      if (result.success) {
-        // ✅ ÉXITO
-        await Swal.fire({
-          icon: 'success',
-          title: '✅ ¡Agregado al carrito!',
-          html: `
-            <div class="text-start">
-              <p><strong>${productoBase.nombre}</strong></p>
-              <p>Cantidad: <strong>${qty}</strong></p>
-              <p>Precio: <strong>$${new Intl.NumberFormat('es-CO').format(seleccionActual.precioFinal)}</strong></p>
-            </div>
-          `,
-          showConfirmButton: true,
-          confirmButtonText: 'Seguir comprando',
-          showCancelButton: true,
-          cancelButtonText: 'Ver carrito'
+  if (btnAddCart) {
+    btnAddCart.addEventListener('click', async () => {
+      if (!usuarioLogueado) {
+        return Swal.fire({
+          icon: 'info',
+          title: 'Inicia sesión',
+          text: 'Debes iniciar sesión para agregar productos al carrito.',
+          confirmButtonText: 'Ir al login'
         }).then((result) => {
-          if (result.dismiss === Swal.DismissReason.cancel) {
-            window.location.href = `${baseUrl}?c=Carrito&a=carrito`;
+          if (result.isConfirmed) {
+            window.location.href = `${baseUrl}?c=Usuario&a=login`;
           }
         });
-
-      } else {
-        throw new Error(result.message);
       }
 
-    } catch (error) {
-      Swal.fire({
-        icon: 'error',
-        title: 'Error',
-        text: error.message
-      });
-    } finally {
-      btnAddCart.disabled = false;
-      btnAddCart.innerHTML = originalText;
-    }
-  });
+      if (!seleccionActual.varianteSeleccionada) {
+        return Swal.fire({
+          icon: 'warning',
+          title: 'Selecciona opciones',
+          text: 'Debes elegir todas las opciones antes de agregar al carrito.',
+          confirmButtonText: 'Entendido'
+        });
+      }
+
+      const qty = parseInt(cantidadInput ? cantidadInput.value : 1, 10);
+      if (qty > seleccionActual.stockDisponible) {
+        return Swal.fire({
+          icon: 'error',
+          title: 'Stock insuficiente',
+          text: `Solo hay ${seleccionActual.stockDisponible} unidades disponibles.`,
+          confirmButtonText: 'Entendido'
+        });
+      }
+
+      // Verificar si el descuento sigue siendo válido
+      if (seleccionActual.descuentoSeleccionado.codigo && 
+          !seleccionActual.descuentoSeleccionado.puedeUsar) {
+        return Swal.fire({
+          icon: 'warning',
+          title: 'Descuento no disponible',
+          html: `El código <strong>${seleccionActual.descuentoSeleccionado.codigo}</strong> ya no puede ser usado.<br>
+                 <small>${seleccionActual.descuentoSeleccionado.mensajeError}</small>`,
+          confirmButtonText: 'Remover descuento'
+        }).then(() => {
+          removerDescuento();
+          if (descuentoActualDiv) descuentoActualDiv.style.display = 'none';
+        });
+      }
+
+      // Loading
+      const originalText = btnAddCart.innerHTML;
+      btnAddCart.disabled = true;
+      btnAddCart.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Agregando...';
+
+      try {
+        console.log('🛒 Enviando al carrito:', {
+          productoId: seleccionActual.productoId,
+          precioFinal: seleccionActual.precioFinal,
+          esGratis: seleccionActual.precioFinal === 0,
+          descuento: seleccionActual.descuentoSeleccionado
+        });
+
+        // Preparar parámetros
+        const params = new URLSearchParams();
+        params.append('id_producto', seleccionActual.productoId);
+        
+        const idArticuloInput = document.querySelector('input[name="id_articulo"]');
+        if (idArticuloInput) {
+          params.append('id_articulo', idArticuloInput.value);
+        } else {
+          params.append('id_articulo', productoBase.id || '');
+        }
+        
+        params.append('cantidad', qty);
+        params.append('precio_final', seleccionActual.precioFinal);
+        params.append('tipo', 'variante');
+
+        // Datos del descuento
+        params.append('codigo_descuento', seleccionActual.descuentoSeleccionado.codigo || '');
+        params.append('tipo_descuento', seleccionActual.descuentoSeleccionado.tipo || '');
+        params.append('valor_descuento', seleccionActual.descuentoSeleccionado.valor || 0);
+        params.append('id_descuento', seleccionActual.descuentoSeleccionado.idDescuento || '');
+
+        const response = await fetch(`${baseUrl}?c=Carrito&a=agregarAjax&${params.toString()}`, {
+          method: 'GET'
+        });
+
+        const result = await response.json();
+
+        if (result.success) {
+          // ✅ ÉXITO
+          await Swal.fire({
+            icon: 'success',
+            title: '✅ ¡Agregado al carrito!',
+            html: `
+              <div class="text-start">
+                <p><strong>${productoBase.nombre || 'Producto'}</strong></p>
+                <p>Cantidad: <strong>${qty}</strong></p>
+                <p>Precio: <strong>$${new Intl.NumberFormat('es-CO').format(seleccionActual.precioFinal)}</strong></p>
+                ${seleccionActual.descuentoSeleccionado.codigo ? 
+                  `<p>Descuento aplicado: <strong>${seleccionActual.descuentoSeleccionado.codigo}</strong></p>` : ''}
+              </div>
+            `,
+            showConfirmButton: true,
+            confirmButtonText: 'Seguir comprando',
+            showCancelButton: true,
+            cancelButtonText: 'Ver carrito'
+          }).then((result) => {
+            if (result.dismiss === Swal.DismissReason.cancel) {
+              window.location.href = `${baseUrl}?c=Carrito&a=carrito`;
+            }
+          });
+
+        } else {
+          throw new Error(result.message || 'Error al agregar al carrito');
+        }
+
+      } catch (error) {
+        console.error('Error al agregar al carrito:', error);
+        Swal.fire({
+          icon: 'error',
+          title: 'Error',
+          text: error.message || 'No se pudo agregar el producto al carrito'
+        });
+      } finally {
+        btnAddCart.disabled = false;
+        btnAddCart.innerHTML = originalText;
+      }
+    });
+  }
 
   // ---------- INICIALIZACIÓN ----------
   async function inicializar() {
-    actualizarEstadoFavorito(seleccionActual.esFavorito);
-    setupFavoritosAJAX();
-    inicializarSistemaDescuentos();  // Cambiado de inicializarSelectorDescuentos()
+    inicializarSistemaDescuentos();
     inicializarSelectoresAtributos();
   
     setCantidad(1);
 
     // Mostrar mensaje inicial
-    stockInfo.textContent = 'Selecciona todas las opciones';
-    stockInfo.className = 'text-muted';
-    btnAddCart.disabled = true;
-    btnAddCart.innerHTML = '<i class="fa fa-shopping-cart"></i> Selecciona todas las opciones';
-
-    setTimeout(verificarEstadoFavorito, 300);
+    if (stockInfo) {
+      stockInfo.textContent = 'Selecciona todas las opciones';
+      stockInfo.className = 'text-muted';
+    }
+    
+    if (btnAddCart) {
+      btnAddCart.disabled = true;
+      btnAddCart.innerHTML = '<i class="fa fa-shopping-cart"></i> Selecciona todas las opciones';
+    }
   }
 
   // 🔍 DEBUG: Verificar datos del producto
   function debugProducto() {
-      console.log('=== DEBUG PRODUCTO ===');
-      console.log('Precio base del producto:', productoBase.precio);
-      console.log('Variantes disponibles:', variantes.length);
-      console.log('Primera variante:', variantes[0]);
-      console.log('Info descuento:', infoDescuento);
-      console.log('Todos descuentos:', todosDescuentos);
-      console.log('======================');
+    console.log('=== DEBUG PRODUCTO ===');
+    console.log('Precio base del producto:', productoBase?.precio);
+    console.log('Variantes disponibles:', variantes?.length || 0);
+    console.log('Primera variante:', variantes?.[0]);
+    console.log('Info descuento:', infoDescuento);
+    console.log('Todos descuentos:', todosDescuentos);
+    console.log('Atributos requeridos:', atributosRequeridos);
+    console.log('======================');
   }
 
   // Llamar al debug después de inicializar
