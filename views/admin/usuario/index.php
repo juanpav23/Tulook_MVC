@@ -137,7 +137,8 @@
                             <tr>
                                 <th>ID</th>
                                 <th>Cédula</th>
-                                <th>Nombre Completo</th>
+                                <th>Nombres</th>
+                                <th>Apellido</th>
                                 <th>Email</th>
                                 <th>Rol</th>
                                 <th>Estado</th>
@@ -156,7 +157,8 @@
                                         <?php endif; ?>
                                     </td>
                                     <td><?= htmlspecialchars($usuario['N_Documento']) ?></td>
-                                    <td><?= htmlspecialchars($usuario['Nombre_Completo']) ?></td>
+                                    <td><?= htmlspecialchars($usuario['Nombre']) ?></td>
+                                    <td><?= htmlspecialchars($usuario['Apellido']) ?></td>
                                     <td><?= htmlspecialchars($usuario['Correo']) ?></td>
                                     <td>
                                         <?php if ($_SESSION['ID_Usuario'] == 1 || ($_SESSION['ID_Usuario'] != $usuario['ID_Usuario'] && $usuario['ID_Rol'] != 1)): ?>

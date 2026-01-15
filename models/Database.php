@@ -18,5 +18,16 @@ class Database {
         }
         return $this->conn;
     }
+
+    public function __call($name, $arguments) {
+        error_log("⚠️ Intento de acceder a acción no definida: $name");
+        
+        // Redirigir al dashboard principal
+        $_SESSION['msg'] = "La página solicitada no existe. Redirigiendo al dashboard.";
+        $_SESSION['msg_type'] = "warning";
+        
+        header("Location: " . BASE_URL . "?c=Admin&a=index");
+        exit;
+    }
 }
 ?>
