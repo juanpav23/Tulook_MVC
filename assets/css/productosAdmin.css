@@ -1,0 +1,347 @@
+/* productosAdmin.css - Estilos para la gestión de productos */
+
+:root {
+    --primary-dark: #1B202D;
+    --primary-blue: #2A3448;
+    --accent-blue: #3A4A6B;
+    --secondary-blue: #4A5B7D;
+    --light-blue: #5B6E8F;
+    --light-bg: #f5f7fa;
+    --text-dark: #2c3e50;
+    --text-light: #6c757d;
+    --border-radius: 12px;
+    --card-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+    --transition: all 0.3s ease;
+    --success-color: #28a745;
+    --danger-color: #dc3545;
+    --warning-color: #ffc107;
+    --info-color: #17a2b8;
+}
+
+/* Alertas con gradiente */
+.alert-gradient {
+    background: linear-gradient(135deg, var(--primary-blue) 0%, var(--primary-dark) 100%);
+    color: white;
+    border: none;
+    border-radius: var(--border-radius);
+}
+
+/* Alertas generales */
+.alert {
+    border-radius: var(--border-radius);
+    border: none;
+    box-shadow: var(--card-shadow);
+}
+
+.alert-success {
+    background-color: rgba(40, 167, 69, 0.1);
+    border-left: 4px solid var(--success-color);
+    color: var(--text-dark);
+}
+
+.alert-danger {
+    background-color: rgba(220, 53, 69, 0.1);
+    border-left: 4px solid var(--danger-color);
+    color: var(--text-dark);
+}
+
+.alert-warning {
+    background-color: rgba(255, 193, 7, 0.1);
+    border-left: 4px solid var(--warning-color);
+    color: var(--text-dark);
+}
+
+.alert-info {
+    background-color: rgba(23, 162, 184, 0.1);
+    border-left: 4px solid var(--info-color);
+    color: var(--text-dark);
+}
+
+/* Cards con diseño moderno */
+.card {
+    border-radius: var(--border-radius);
+    border: none;
+    overflow: hidden;
+}
+
+.card-header.bg-gradient-primary {
+    background: linear-gradient(135deg, var(--primary-blue) 0%, var(--primary-dark) 100%) !important;
+}
+
+/* Efectos hover para filas de tabla */
+.hover-shadow:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+    transition: var(--transition);
+    background-color: rgba(27, 32, 45, 0.02);
+}
+
+/* Badges con colores del tema */
+.badge.bg-primary {
+    background-color: var(--primary-dark) !important;
+    color: white !important;
+}
+
+.badge.bg-info {
+    background-color: var(--accent-blue) !important;
+    color: white !important;
+}
+
+.badge.bg-warning {
+    background-color: var(--light-blue) !important;
+    color: white !important;
+}
+
+.badge.bg-success {
+    background-color: var(--secondary-blue) !important;
+    color: white !important;
+}
+
+.badge.bg-secondary {
+    background-color: var(--text-light) !important;
+    color: white !important;
+}
+
+.badge.bg-danger {
+    background-color: var(--danger-color) !important;
+    color: white !important;
+}
+
+/* Estadísticas */
+.stats-card {
+    border-left: 4px solid var(--accent-blue);
+    background: white;
+}
+
+.stats-card .border-end {
+    border-right: 1px solid rgba(0,0,0,0.1) !important;
+}
+
+.stats-card h2 {
+    font-family: 'Montserrat', sans-serif;
+}
+
+.stats-card .text-primary {
+    color: var(--primary-dark) !important;
+}
+
+.stats-card .text-success {
+    color: var(--secondary-blue) !important;
+}
+
+.stats-card .text-warning {
+    color: var(--light-blue) !important;
+}
+
+.stats-card .text-info {
+    color: var(--accent-blue) !important;
+}
+
+/* Botones con el tema */
+.btn-primary {
+    background-color: var(--primary-dark);
+    border-color: var(--primary-dark);
+    color: white;
+}
+
+.btn-primary:hover {
+    background-color: var(--primary-blue);
+    border-color: var(--primary-blue);
+    color: white;
+}
+
+.btn-success {
+    background-color: var(--secondary-blue);
+    border-color: var(--secondary-blue);
+    color: white;
+}
+
+.btn-success:hover {
+    background-color: var(--light-blue);
+    border-color: var(--light-blue);
+    color: white;
+}
+
+.btn-outline-primary {
+    color: var(--primary-dark);
+    border-color: var(--primary-dark);
+}
+
+.btn-outline-primary:hover {
+    background-color: var(--primary-dark);
+    border-color: var(--primary-dark);
+    color: white;
+}
+
+.btn-outline-info {
+    color: var(--accent-blue);
+    border-color: var(--accent-blue);
+}
+
+.btn-outline-info:hover {
+    background-color: var(--accent-blue);
+    border-color: var(--accent-blue);
+    color: white;
+}
+
+.btn-outline-danger {
+    color: var(--danger-color);
+    border-color: var(--danger-color);
+}
+
+.btn-outline-danger:hover {
+    background-color: var(--danger-color);
+    border-color: var(--danger-color);
+    color: white;
+}
+
+.btn-outline-secondary {
+    color: var(--text-light);
+    border-color: var(--text-light);
+}
+
+.btn-outline-secondary:hover {
+    background-color: var(--text-light);
+    border-color: var(--text-light);
+    color: white;
+}
+
+/* Inputs y selects */
+.form-control, .form-select {
+    border-radius: 8px;
+    border: 1px solid #dee2e6;
+    transition: var(--transition);
+}
+
+.form-control:focus, .form-select:focus {
+    border-color: var(--accent-blue);
+    box-shadow: 0 0 0 0.25rem rgba(58, 74, 107, 0.25);
+}
+
+/* Tabla */
+.table-dark {
+    background-color: var(--primary-dark) !important;
+}
+
+.table th {
+    font-weight: 600;
+    text-transform: uppercase;
+    font-size: 0.85rem;
+    letter-spacing: 0.5px;
+}
+
+.table td {
+    vertical-align: middle;
+    padding: 1rem 0.75rem;
+}
+
+/* Imágenes de productos */
+.product-image {
+    transition: var(--transition);
+}
+
+.product-image:hover {
+    transform: scale(1.05);
+}
+
+/* Sin resultados */
+.no-results {
+    background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+    border-radius: var(--border-radius);
+}
+
+/* Tooltips personalizados */
+.tooltip-inner {
+    background-color: var(--primary-dark);
+    border-radius: 6px;
+    font-size: 0.85rem;
+}
+
+.tooltip.bs-tooltip-top .tooltip-arrow::before {
+    border-top-color: var(--primary-dark);
+}
+
+.tooltip.bs-tooltip-bottom .tooltip-arrow::before {
+    border-bottom-color: var(--primary-dark);
+}
+
+.tooltip.bs-tooltip-start .tooltip-arrow::before {
+    border-left-color: var(--primary-dark);
+}
+
+.tooltip.bs-tooltip-end .tooltip-arrow::before {
+    border-right-color: var(--primary-dark);
+}
+
+/* Colores de texto específicos */
+.text-primary {
+    color: var(--primary-dark) !important;
+}
+
+.text-success {
+    color: var(--secondary-blue) !important;
+}
+
+.text-warning {
+    color: var(--light-blue) !important;
+}
+
+.text-info {
+    color: var(--accent-blue) !important;
+}
+
+.text-danger {
+    color: var(--danger-color) !important;
+}
+
+/* Badges en la tabla */
+.table .badge.bg-info {
+    background-color: rgba(58, 74, 107, 0.1) !important;
+    color: var(--accent-blue) !important;
+    border: 1px solid rgba(58, 74, 107, 0.25);
+}
+
+.table .badge.bg-warning {
+    background-color: rgba(91, 110, 143, 0.1) !important;
+    color: var(--light-blue) !important;
+    border: 1px solid rgba(91, 110, 143, 0.25);
+}
+
+.table .badge.bg-primary {
+    background-color: rgba(27, 32, 45, 0.1) !important;
+    color: var(--primary-dark) !important;
+    border: 1px solid rgba(27, 32, 45, 0.25);
+}
+
+/* Precio en tabla */
+.fw-bold.text-success {
+    color: var(--secondary-blue) !important;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    .card-body {
+        padding: 1rem !important;
+    }
+    
+    .table-responsive {
+        font-size: 0.9rem;
+    }
+    
+    .product-image {
+        width: 60px !important;
+        height: 60px !important;
+    }
+    
+    .stats-card .row > div {
+        border-right: none !important;
+        border-bottom: 1px solid rgba(0,0,0,0.1);
+        padding-bottom: 1rem;
+        margin-bottom: 1rem;
+    }
+    
+    .stats-card .row > div:last-child {
+        border-bottom: none;
+        margin-bottom: 0;
+    }
+}

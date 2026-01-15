@@ -1,0 +1,344 @@
+/* AdminFavoritos.css - DISEÑO MODERNIZADO BASADO EN DASHBOARD */
+
+/* Variables de color basadas en el tema principal del dashboard */
+:root {
+    --primary-dark: #1B202D;
+    --primary-blue: #2A3448;
+    --accent-blue: #3A4A6B;
+    --secondary-blue: #4A5B7D;
+    --light-blue: #5B6E8F;
+    --light-bg: #f5f7fa;
+    --text-dark: #2c3e50;
+    --text-light: #6c757d;
+    --border-radius: 12px;
+    --card-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+    --card-shadow-hover: 0 8px 20px rgba(0, 0, 0, 0.12);
+    --transition: all 0.3s ease;
+}
+
+/* Asegurar que los elementos usen el diseño del dashboard */
+.favoritos-container .dashboard-body {
+    min-height: 100vh;
+}
+
+/* Sobrescribir algunos estilos específicos para favoritos */
+.favoritos-container .user-avatar {
+    background: linear-gradient(135deg, #e74c3c, #c0392b) !important;
+}
+
+.favoritos-container .user-avatar i {
+    font-size: 1.2rem;
+}
+
+/* Colores específicos para las tarjetas de estadísticas de favoritos */
+.favoritos-container .stat-card.primary .card-icon {
+    background: linear-gradient(135deg, rgba(231, 76, 60, 0.1), rgba(192, 57, 43, 0.1));
+    color: #e74c3c;
+}
+
+.favoritos-container .stat-card.accent .card-icon {
+    background: linear-gradient(135deg, rgba(52, 152, 219, 0.1), rgba(41, 128, 185, 0.1));
+    color: #3498db;
+}
+
+.favoritos-container .stat-card.info .card-icon {
+    background: linear-gradient(135deg, rgba(46, 204, 113, 0.1), rgba(39, 174, 96, 0.1));
+    color: #2ecc71;
+}
+
+.favoritos-container .stat-card.secondary .card-icon {
+    background: linear-gradient(135deg, rgba(155, 89, 182, 0.1), rgba(142, 68, 173, 0.1));
+    color: #9b59b6;
+}
+
+/* Estilos específicos para las tablas de favoritos */
+.favoritos-container .table th {
+    background: var(--primary-dark);
+    color: white;
+    font-weight: 600;
+    font-family: 'Montserrat', sans-serif;
+    font-size: 0.9rem;
+    border: none;
+}
+
+.favoritos-container .table td {
+    vertical-align: middle;
+    border-color: #eee;
+}
+
+.favoritos-container .table-hover tbody tr:hover {
+    background-color: rgba(27, 32, 45, 0.02);
+}
+
+/* Badges específicos para favoritos */
+.favoritos-container .badge.bg-dark {
+    background-color: var(--primary-dark) !important;
+}
+
+.favoritos-container .badge.bg-primary {
+    background-color: var(--accent-blue) !important;
+}
+
+.favoritos-container .badge.bg-secondary {
+    background-color: var(--secondary-blue) !important;
+}
+
+.favoritos-container .badge.bg-success {
+    background-color: #2ecc71 !important;
+}
+
+.favoritos-container .badge.bg-danger {
+    background-color: #e74c3c !important;
+}
+
+/* Estilos para las listas de favoritos */
+.favoritos-container .dashboard-list .list-item {
+    padding: 1rem 0;
+    border-bottom: 1px solid #eee;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.favoritos-container .dashboard-list .list-item:last-child {
+    border-bottom: none;
+    padding-bottom: 0;
+}
+
+.favoritos-container .dashboard-list .list-item:first-child {
+    padding-top: 0;
+}
+
+.favoritos-container .dashboard-list .item-image {
+    width: 50px;
+    height: 50px;
+    border-radius: 8px;
+    object-fit: cover;
+    margin-right: 15px;
+    border: 1px solid #eee;
+}
+
+.favoritos-container .dashboard-list .item-info h6 {
+    font-weight: 600;
+    margin-bottom: 0.25rem;
+    font-size: 0.95rem;
+    color: var(--text-dark);
+}
+
+.favoritos-container .dashboard-list .item-info small {
+    color: var(--text-light);
+    font-size: 0.85rem;
+}
+
+/* Estilos para los botones de acción rápida específicos de favoritos */
+.favoritos-container .quick-action-btn .action-icon {
+    color: var(--primary-dark);
+}
+
+.favoritos-container .quick-action-btn:hover .action-icon {
+    background: var(--accent-blue);
+    color: white;
+}
+
+/* Estilos para los encabezados de sección */
+.favoritos-container .section-header-modern {
+    background: linear-gradient(135deg, #f8f9fa, #e9ecef);
+    border-radius: var(--border-radius);
+    padding: 1.5rem;
+    margin-bottom: 1.5rem;
+    border-left: 4px solid var(--primary-dark);
+}
+
+.favoritos-container .section-header-modern h3 {
+    font-family: 'Montserrat', sans-serif;
+    font-weight: 700;
+    color: var(--primary-dark);
+}
+
+/* Estilos para las tarjetas de contenido */
+.favoritos-container .content-card {
+    background: white;
+    border-radius: var(--border-radius);
+    box-shadow: var(--card-shadow);
+    border: none;
+    margin-bottom: 1.5rem;
+    height: 100%;
+}
+
+.favoritos-container .content-card .card-header {
+    background: var(--primary-dark);
+    color: white;
+    border-radius: var(--border-radius) var(--border-radius) 0 0 !important;
+    padding: 1.25rem 1.5rem;
+    border: none;
+    font-family: 'Montserrat', sans-serif;
+    font-weight: 600;
+    letter-spacing: 0.5px;
+}
+
+.favoritos-container .content-card .card-header.bg-primary {
+    background: var(--accent-blue) !important;
+}
+
+.favoritos-container .content-card .card-header.bg-secondary {
+    background: var(--secondary-blue) !important;
+}
+
+.favoritos-container .content-card .card-header i {
+    margin-right: 10px;
+    font-size: 1.1rem;
+}
+
+.favoritos-container .content-card .card-body {
+    padding: 1.5rem;
+}
+
+/* Botón de volver al inicio */
+.favoritos-container .back-to-top-section {
+    background: white;
+    border-radius: var(--border-radius);
+    padding: 2rem;
+    margin: 2rem 0;
+    box-shadow: var(--card-shadow);
+    border-top: 4px solid var(--primary-dark);
+}
+
+.favoritos-container .back-to-top-btn {
+    padding: 0.75rem 2rem;
+    border-radius: 30px;
+    font-weight: 600;
+    transition: var(--transition);
+    opacity: 1;
+    visibility: visible;
+}
+
+.favoritos-container .back-to-top-btn:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 6px 15px rgba(0, 0, 0, 0.15);
+}
+
+/* Campos de formulario */
+.favoritos-container .form-control,
+.favoritos-container .form-select {
+    border: 1px solid #dee2e6;
+    border-radius: 8px;
+    transition: var(--transition);
+    font-family: 'Poppins', sans-serif;
+}
+
+.favoritos-container .form-control:focus,
+.favoritos-container .form-select:focus {
+    border-color: var(--accent-blue);
+    box-shadow: 0 0 0 3px rgba(58, 74, 107, 0.1);
+}
+
+.favoritos-container .input-group-text {
+    background-color: #f8f9fa;
+    border: 1px solid #dee2e6;
+    color: var(--text-light);
+}
+
+/* Botones */
+.favoritos-container .btn-dark {
+    background-color: var(--primary-dark);
+    border-color: var(--primary-dark);
+}
+
+.favoritos-container .btn-dark:hover {
+    background-color: var(--primary-blue);
+    border-color: var(--primary-blue);
+}
+
+.favoritos-container .btn-outline-dark {
+    color: var(--primary-dark);
+    border-color: var(--primary-dark);
+}
+
+.favoritos-container .btn-outline-dark:hover {
+    background-color: var(--primary-dark);
+    color: white;
+    border-color: var(--primary-dark);
+}
+
+/* Alerts */
+.favoritos-container .alert {
+    border-radius: 8px;
+    border: none;
+}
+
+.favoritos-container .alert-info {
+    background: rgba(58, 74, 107, 0.1);
+    color: var(--accent-blue);
+    border-left: 4px solid var(--accent-blue);
+}
+
+.favoritos-container .alert-success {
+    background: rgba(46, 204, 113, 0.1);
+    color: #27ae60;
+    border-left: 4px solid #27ae60;
+}
+
+.favoritos-container .alert-warning {
+    background: rgba(241, 196, 15, 0.1);
+    color: #f39c12;
+    border-left: 4px solid #f39c12;
+}
+
+.favoritos-container .alert-danger {
+    background: rgba(231, 76, 60, 0.1);
+    color: #c0392b;
+    border-left: 4px solid #c0392b;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    .favoritos-container .content-card .card-body {
+        padding: 1.25rem;
+    }
+    
+    .favoritos-container .section-header-modern {
+        padding: 1rem;
+    }
+    
+    .favoritos-container .section-header-modern .d-flex {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 1rem;
+    }
+    
+    .favoritos-container .section-header-modern .section-actions {
+        align-self: flex-end;
+        width: 100%;
+        text-align: right;
+    }
+    
+    .favoritos-container .dashboard-list .item-image {
+        width: 40px;
+        height: 40px;
+    }
+    
+    .favoritos-container .back-to-top-section {
+        padding: 1.5rem;
+    }
+    
+    .favoritos-container .back-to-top-btn {
+        padding: 0.75rem 1.5rem;
+        font-size: 0.9rem;
+    }
+}
+
+@media (max-width: 576px) {
+    .favoritos-container .content-card .card-header {
+        padding: 1rem 1.25rem;
+    }
+    
+    .favoritos-container .back-to-top-section {
+        padding: 1rem;
+        margin: 1rem 0;
+    }
+    
+    .favoritos-container .back-to-top-btn {
+        width: 100%;
+        padding: 0.75rem;
+    }
+}

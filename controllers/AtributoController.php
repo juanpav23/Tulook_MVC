@@ -24,20 +24,19 @@ class AtributoController {
         $stmt->execute([(int)$_SESSION['rol']]);
         $rol = $stmt->fetchColumn();
 
-        // Permitir rol 1 (Administrador) y rol 2 (Editor)
         if (!$rol || (strtolower($rol) !== 'administrador' && strtolower($rol) !== 'editor')) {
             header("Location: " . BASE_URL);
             exit;
         }
     }
 
-    // 📋 LISTAR ATRIBUTOS CON BÚSQUEDA
+    // 📋 LISTAR ATRIBUTOS CON BÚSQUEDA Y FILTROS
     public function index() {
         $termino = $_GET['buscar'] ?? '';
         $tipo = $_GET['tipo'] ?? '';
         $estado = $_GET['estado'] ?? '';
+        $enUso = $_GET['en_uso'] ?? '';
         
-        // Validar estado
         if ($estado === 'activo') {
             $filtroEstado = 1;
         } elseif ($estado === 'inactivo') {
@@ -46,12 +45,17 @@ class AtributoController {
             $filtroEstado = '';
         }
 
-        if (!empty($termino) || !empty($tipo) || $filtroEstado !== '') {
-            $atributos = $this->atributoModel->buscar($termino, $tipo, $filtroEstado);
+        if (!empty($termino) || !empty($tipo) || $filtroEstado !== '' || !empty($enUso)) {
+            $atributos = $this->atributoModel->buscar($termino, $tipo, $filtroEstado, $enUso);
             $modoBusqueda = true;
         } else {
             $atributos = $this->atributoModel->obtenerTodos();
             $modoBusqueda = false;
+        }
+
+        // Para cada atributo, verificar si está en uso
+        foreach ($atributos as &$attr) {
+            $attr['en_uso'] = $this->atributoModel->estaEnUso($attr['ID_AtributoValor']);
         }
 
         $tipos = $this->atributoModel->obtenerTipos();
@@ -87,11 +91,10 @@ class AtributoController {
                 exit;
             }
 
-            // Crear atributo (el orden se asigna automáticamente)
             $resultado = $this->atributoModel->crear($tipoId, $valor, $activo);
 
             if ($resultado) {
-                $_SESSION['mensaje'] = "✅ Atributo creado correctamente (orden asignado automáticamente)";
+                $_SESSION['mensaje'] = "✅ Atributo creado correctamente";
                 $_SESSION['mensaje_tipo'] = "success";
             } else {
                 $_SESSION['mensaje'] = "❌ Error al crear el atributo";
@@ -127,6 +130,7 @@ class AtributoController {
             exit;
         }
 
+        $esUnica = ($id == 16 || strtolower($atributo['Valor']) === 'única');
         $tipos = $this->atributoModel->obtenerTipos();
         require "views/admin/layout_admin.php";
     }
@@ -163,7 +167,7 @@ class AtributoController {
             $resultado = $this->atributoModel->actualizar($id, $tipoId, $valor, $activo);
 
             if ($resultado) {
-                $_SESSION['mensaje'] = "✅ Atributo actualizado correctamente (orden se mantiene automático)";
+                $_SESSION['mensaje'] = "✅ Atributo actualizado correctamente";
                 $_SESSION['mensaje_tipo'] = "success";
             } else {
                 $_SESSION['mensaje'] = "❌ Error al actualizar el atributo";
@@ -174,7 +178,7 @@ class AtributoController {
             exit;
 
         } catch (Exception $e) {
-            $_SESSION['mensaje'] = "⚠ Error: " . $e->getMessage();
+            $_SESSION['mensaje'] = "⚠ " . $e->getMessage();
             $_SESSION['mensaje_tipo'] = "danger";
             header("Location: " . BASE_URL . "?c=Atributo&a=editar&id=" . $id);
             exit;
@@ -193,21 +197,19 @@ class AtributoController {
             exit;
         }
 
-        // Verificar si el atributo está en uso antes de desactivar
-        if ($estado == 0 && $this->atributoModel->estaEnUso($id)) {
-            $_SESSION['mensaje'] = "⚠ No se puede desactivar: El atributo está en uso por productos";
-            $_SESSION['mensaje_tipo'] = "warning";
-            header("Location: " . BASE_URL . "?c=Atributo&a=index");
-            exit;
-        }
+        try {
+            $resultado = $this->atributoModel->cambiarEstado($id, $estado);
 
-        $resultado = $this->atributoModel->cambiarEstado($id, $estado);
+            if ($resultado) {
+                $_SESSION['mensaje'] = $estado ? "✅ Atributo activado correctamente" : "✅ Atributo desactivado correctamente";
+                $_SESSION['mensaje_tipo'] = "success";
+            } else {
+                $_SESSION['mensaje'] = "❌ Error al cambiar el estado del atributo";
+                $_SESSION['mensaje_tipo'] = "danger";
+            }
 
-        if ($resultado) {
-            $_SESSION['mensaje'] = $estado ? "✅ Atributo activado correctamente" : "✅ Atributo desactivado correctamente";
-            $_SESSION['mensaje_tipo'] = "success";
-        } else {
-            $_SESSION['mensaje'] = "❌ Error al cambiar el estado del atributo";
+        } catch (Exception $e) {
+            $_SESSION['mensaje'] = "⚠ " . $e->getMessage();
             $_SESSION['mensaje_tipo'] = "danger";
         }
 
@@ -235,6 +237,40 @@ class AtributoController {
 
         $productos = $this->atributoModel->obtenerProductosPorAtributo($id);
         require "views/admin/layout_admin.php";
+    }
+
+    // 🗑️ ELIMINAR ATRIBUTO
+    public function eliminar() {
+        try {
+            $id = (int)($_GET['id'] ?? 0);
+            
+            if ($id <= 0) {
+                $_SESSION['mensaje'] = "❌ ID de atributo inválido";
+                $_SESSION['mensaje_tipo'] = "danger";
+                header("Location: " . BASE_URL . "?c=Atributo&a=index");
+                exit;
+            }
+            
+            $atributo = $this->atributoModel->obtenerPorId($id);
+            $nombreAtributo = $atributo ? $atributo['Valor'] : '';
+
+            $resultado = $this->atributoModel->eliminar($id);
+            
+            if ($resultado) {
+                $_SESSION['mensaje'] = "✅ Atributo '{$nombreAtributo}' eliminado correctamente";
+                $_SESSION['mensaje_tipo'] = "success";
+            } else {
+                $_SESSION['mensaje'] = "❌ Error al eliminar el atributo";
+                $_SESSION['mensaje_tipo'] = "danger";
+            }
+            
+        } catch (Exception $e) {
+            $_SESSION['mensaje'] = "⚠ " . $e->getMessage();
+            $_SESSION['mensaje_tipo'] = "danger";
+        }
+        
+        header("Location: " . BASE_URL . "?c=Atributo&a=index");
+        exit;
     }
 }
 ?>

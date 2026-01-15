@@ -1,7 +1,8 @@
+<link rel="stylesheet" href="<?= BASE_URL ?>assets/css/atributos.css">
 <div class="container-fluid">
     <!-- Encabezado -->
     <div class="d-flex justify-content-between align-items-center mb-4">
-        <h2><i class="fas fa-list-alt me-2"></i>Gestión de Atributos</h2>
+        <h2 class="text-primary-dark"><i class="fas fa-list-alt me-2"></i>Gestión de Atributos</h2>
         <a href="<?= BASE_URL ?>?c=Atributo&a=crear" class="btn btn-primary">
             <i class="fas fa-plus me-1"></i> Nuevo Atributo
         </a>
@@ -16,22 +17,27 @@
         <?php unset($_SESSION['mensaje'], $_SESSION['mensaje_tipo']); ?>
     <?php endif; ?>
 
-    <!-- Barra de Búsqueda y Filtros -->
-    <div class="card mb-4">
+    <!-- Barra de Búsqueda y Filtros CON NUEVO FILTRO DE USO -->
+    <div class="card mb-4 stats-card">
         <div class="card-header bg-light">
-            <h5 class="mb-0"><i class="fas fa-filter me-2"></i>Filtrar Atributos</h5>
+            <div class="d-flex justify-content-between align-items-center">
+                <h5 class="mb-0 text-primary-dark"><i class="fas fa-filter me-2"></i>Filtrar Atributos</h5>
+                <?php if (isset($_GET['buscar']) || isset($_GET['tipo']) || isset($_GET['estado']) || isset($_GET['en_uso'])): ?>
+                    <span class="badge bg-primary text-light">Filtros activos</span>
+                <?php endif; ?>
+            </div>
         </div>
         <div class="card-body">
             <form action="<?= BASE_URL ?>?c=Atributo&a=index" method="get" class="row g-3 align-items-end">
                 <input type="hidden" name="c" value="Atributo">
                 <input type="hidden" name="a" value="index">
                 
-                <div class="col-md-3">
-                    <label for="buscar" class="form-label">Buscar</label>
+                <div class="col-md-2">
+                    <label for="buscar" class="form-label text-primary-dark">Buscar</label>
                     <div class="input-group">
-                        <span class="input-group-text"><i class="fas fa-search"></i></span>
+                        <span class="input-group-text bg-primary-light border-primary"><i class="fas fa-search text-primary-dark"></i></span>
                         <input type="text" 
-                               class="form-control" 
+                               class="form-control border-primary" 
                                id="buscar" 
                                name="buscar" 
                                value="<?= htmlspecialchars($_GET['buscar'] ?? '') ?>" 
@@ -39,9 +45,9 @@
                     </div>
                 </div>
                 
-                <div class="col-md-3">
-                    <label for="tipo" class="form-label">Tipo</label>
-                    <select class="form-select" id="tipo" name="tipo">
+                <div class="col-md-2">
+                    <label for="tipo" class="form-label text-primary-dark">Tipo</label>
+                    <select class="form-select border-primary" id="tipo" name="tipo">
                         <option value="">Todos los tipos</option>
                         <?php foreach ($tipos as $tipo): ?>
                             <option value="<?= $tipo['ID_TipoAtributo'] ?>" 
@@ -52,81 +58,115 @@
                     </select>
                 </div>
                 
-                <div class="col-md-3">
-                    <label for="estado" class="form-label">Estado</label>
-                    <select class="form-select" id="estado" name="estado">
+                <div class="col-md-2">
+                    <label for="estado" class="form-label text-primary-dark">Estado</label>
+                    <select class="form-select border-primary" id="estado" name="estado">
                         <option value="">Todos</option>
                         <option value="activo" <?= ($_GET['estado'] ?? '') === 'activo' ? 'selected' : '' ?>>Activos</option>
                         <option value="inactivo" <?= ($_GET['estado'] ?? '') === 'inactivo' ? 'selected' : '' ?>>Inactivos</option>
                     </select>
                 </div>
                 
-                <div class="col-md-3">
-                    <button type="submit" class="btn btn-primary w-100">
-                        <i class="fas fa-filter me-1"></i> Filtrar
-                    </button>
+                <!-- NUEVO FILTRO: EN USO -->
+                <div class="col-md-2">
+                    <label for="en_uso" class="form-label text-primary-dark">En Uso</label>
+                    <select class="form-select border-primary" id="en_uso" name="en_uso">
+                        <option value="">Todos</option>
+                        <option value="si" <?= ($_GET['en_uso'] ?? '') === 'si' ? 'selected' : '' ?>>En uso</option>
+                        <option value="no" <?= ($_GET['en_uso'] ?? '') === 'no' ? 'selected' : '' ?>>No en uso</option>
+                    </select>
+                </div>
+                
+                <div class="col-md-4">
+                    <div class="d-grid gap-2 d-md-flex">
+                        <button type="submit" class="btn btn-primary me-2">
+                            <i class="fas fa-filter me-1"></i> Filtrar
+                        </button>
+                        <?php if (isset($_GET['buscar']) || isset($_GET['tipo']) || isset($_GET['estado']) || isset($_GET['en_uso'])): ?>
+                            <a href="<?= BASE_URL ?>?c=Atributo&a=index" class="btn btn-outline-primary-light text-primary-dark">
+                                <i class="fas fa-times me-1"></i> Limpiar filtros
+                            </a>
+                        <?php endif; ?>
+                    </div>
                 </div>
             </form>
         </div>
     </div>
 
     <!-- Estadísticas -->
+    <?php 
+    // Calcular estadísticas de uso
+    $totalEnUso = 0;
+    $totalNoEnUso = 0;
+    foreach ($atributos as $attr) {
+        if ($attr['en_uso']) {
+            $totalEnUso++;
+        } else {
+            $totalNoEnUso++;
+        }
+    }
+    ?>
     <div class="row mb-4">
         <div class="col-md-3">
-            <div class="card bg-primary text-white">
+            <div class="card stats-card">
                 <div class="card-body">
-                    <h5 class="card-title">Total Atributos</h5>
-                    <h3 class="card-text"><?= $estadisticas['total'] ?? 0 ?></h3>
-                    <small><i class="fas fa-database"></i> En sistema</small>
+                    <h5 class="card-title text-primary-dark">Total Atributos</h5>
+                    <h3 class="card-text text-primary-dark"><?= $estadisticas['total'] ?? 0 ?></h3>
+                    <small class="text-primary-light"><i class="fas fa-database me-1"></i> En sistema</small>
                 </div>
             </div>
         </div>
         <div class="col-md-3">
-            <div class="card bg-success text-white">
+            <div class="card stats-card">
                 <div class="card-body">
-                    <h5 class="card-title">Activos</h5>
-                    <h3 class="card-text"><?= $estadisticas['activos'] ?? 0 ?></h3>
-                    <small><i class="fas fa-check-circle"></i> Disponibles</small>
+                    <h5 class="card-title text-primary">Activos</h5>
+                    <h3 class="card-text text-primary"><?= $estadisticas['activos'] ?? 0 ?></h3>
+                    <small class="text-primary-light"><i class="fas fa-check-circle me-1"></i> Disponibles</small>
                 </div>
             </div>
         </div>
         <div class="col-md-3">
-            <div class="card bg-secondary text-white">
+            <div class="card stats-card">
                 <div class="card-body">
-                    <h5 class="card-title">Inactivos</h5>
-                    <h3 class="card-text"><?= $estadisticas['inactivos'] ?? 0 ?></h3>
-                    <small><i class="fas fa-pause"></i> No disponibles</small>
+                    <h5 class="card-title text-success">En Uso</h5>
+                    <h3 class="card-text text-success"><?= $totalEnUso ?></h3>
+                    <small class="text-primary-light"><i class="fas fa-box me-1"></i> Usados por productos</small>
                 </div>
             </div>
         </div>
         <div class="col-md-3">
-            <div class="card bg-info text-white">
+            <div class="card stats-card">
                 <div class="card-body">
-                    <h5 class="card-title">Tipos</h5>
-                    <h3 class="card-text"><?= $estadisticas['tipos_diferentes'] ?? 0 ?></h3>
-                    <small><i class="fas fa-tags"></i> Diferentes</small>
+                    <h5 class="card-title text-primary-light">No en Uso</h5>
+                    <h3 class="card-text text-primary-light"><?= $totalNoEnUso ?></h3>
+                    <small class="text-primary-light"><i class="fas fa-box-open me-1"></i> Disponibles</small>
                 </div>
             </div>
         </div>
     </div>
 
     <!-- Tabla de Atributos -->
-    <div class="card">
+    <div class="card stats-card">
         <div class="card-header bg-light">
-            <h5 class="mb-0"><i class="fas fa-table me-2"></i>Lista de Atributos</h5>
+            <div class="d-flex justify-content-between align-items-center">
+                <h5 class="mb-0 text-primary-dark"><i class="fas fa-table me-2"></i>Lista de Atributos</h5>
+                <span class="badge bg-primary text-light">
+                    Mostrando <?= count($atributos) ?> de <?= $estadisticas['total'] ?? 0 ?> atributos
+                </span>
+            </div>
         </div>
         <div class="card-body">
             <?php if (empty($atributos)): ?>
-                <div class="text-center py-5">
-                    <i class="fas fa-inbox fa-3x text-muted mb-3"></i>
-                    <h5 class="text-muted">No hay atributos registrados</h5>
+                <div class="text-center py-5 no-results">
+                    <i class="fas fa-inbox fa-3x text-primary-light mb-3"></i>
+                    <h5 class="text-primary-light">No hay atributos registrados</h5>
                     <?php if (isset($modoBusqueda) && $modoBusqueda): ?>
-                        <p class="text-muted">No hay resultados para los filtros aplicados</p>
+                        <p class="text-primary-light">No hay resultados para los filtros aplicados</p>
                         <a href="<?= BASE_URL ?>?c=Atributo&a=index" class="btn btn-primary">
                             <i class="fas fa-times me-1"></i> Limpiar filtros
                         </a>
                     <?php else: ?>
-                        <p class="text-muted">Comienza creando tu primer atributo</p>
+                        <p class="text-primary-light">Comienza creando tu primer atributo</p>
                         <a href="<?= BASE_URL ?>?c=Atributo&a=crear" class="btn btn-primary">
                             <i class="fas fa-plus me-1"></i> Crear primer atributo
                         </a>
@@ -135,66 +175,118 @@
             <?php else: ?>
                 <div class="table-responsive">
                     <table class="table table-striped table-hover">
-                        <thead class="table-dark">
+                        <thead class="table-primary-dark">
                             <tr>
-                                <th>ID</th>
                                 <th>Tipo</th>
                                 <th>Valor</th>
                                 <th>Orden</th>
                                 <th>Estado</th>
+                                <th>Uso</th>
                                 <th>Acciones</th>
                             </tr>
                         </thead>
                         <tbody>
-                            <?php foreach ($atributos as $attr): ?>
-                                <tr>
-                                    <td>#<?= $attr['ID_AtributoValor'] ?></td>
+                            <?php 
+                            usort($atributos, function($a, $b) {
+                                $tipoCompare = strcmp($a['TipoNombre'], $b['TipoNombre']);
+                                if ($tipoCompare !== 0) {
+                                    return $tipoCompare;
+                                }
+                                return $a['Orden'] - $b['Orden'];
+                            });
+                            
+                            foreach ($atributos as $attr): 
+                                $esUnica = ($attr['ID_AtributoValor'] == 16 || strtolower($attr['Valor']) === 'única');
+                                $puedeEliminar = !$attr['en_uso'] && !$esUnica;
+                                $puedeEditar = !$esUnica;
+                                $puedeCambiarEstado = !$esUnica && (!$attr['en_uso'] || $attr['Activo'] == 1);
+                            ?>
+                                <tr class="hover-shadow-detalle">
                                     <td>
-                                        <span class="badge bg-info">
+                                        <span class="badge bg-primary-light text-primary-dark border border-primary">
                                             <?= htmlspecialchars($attr['TipoNombre']) ?>
                                         </span>
                                         <?php if (!empty($attr['TipoDescripcion'])): ?>
-                                            <br><small class="text-muted"><?= $attr['TipoDescripcion'] ?></small>
+                                            <br><small class="text-primary-light"><?= $attr['TipoDescripcion'] ?></small>
                                         <?php endif; ?>
                                     </td>
                                     <td>
-                                        <strong><?= htmlspecialchars($attr['Valor']) ?></strong>
+                                        <strong class="text-primary-dark"><?= htmlspecialchars($attr['Valor']) ?></strong>
+                                        <?php if ($esUnica): ?>
+                                            <br><small class="text-warning"><i class="fas fa-shield-alt me-1"></i> Valor universal</small>
+                                        <?php endif; ?>
                                     </td>
                                     <td>
-                                        <span class="badge bg-info" title="Orden automático basado en el valor">
-                                            <i class="fas fa-robot me-1"></i> Auto
+                                        <span class="badge bg-primary-light text-primary-dark border border-primary">
+                                            <i class="fas fa-sort-numeric-up me-1"></i> #<?= $attr['Orden'] ?>
                                         </span>
-                                        <br>
-                                        <small class="text-muted">#<?= $attr['Orden'] ?></small>
                                     </td>
                                     <td>
-                                        <span class="badge bg-<?= $attr['Activo'] ? 'success' : 'secondary' ?>">
+                                        <span class="badge bg-<?= $attr['Activo'] ? 'primary' : 'secondary' ?>">
                                             <?= $attr['Activo'] ? 'Activo' : 'Inactivo' ?>
                                         </span>
                                     </td>
                                     <td>
+                                        <?php if ($attr['en_uso']): ?>
+                                            <span class="badge bg-success text-white">
+                                                <i class="fas fa-box me-1"></i> En uso
+                                            </span>
+                                        <?php else: ?>
+                                            <span class="badge bg-light text-primary-dark border border-primary">
+                                                <i class="fas fa-box-open me-1"></i> No en uso
+                                            </span>
+                                        <?php endif; ?>
+                                    </td>
+                                    <td>
                                         <div class="btn-group btn-group-sm">
                                             <a href="<?= BASE_URL ?>?c=Atributo&a=detalle&id=<?= $attr['ID_AtributoValor'] ?>" 
-                                            class="btn btn-outline-info" title="Ver detalles">
+                                            class="btn btn-outline-primary" title="Ver detalles">
                                                 <i class="fas fa-eye"></i>
                                             </a>
-                                            <a href="<?= BASE_URL ?>?c=Atributo&a=editar&id=<?= $attr['ID_AtributoValor'] ?>" 
-                                            class="btn btn-outline-primary" title="Editar">
-                                                <i class="fas fa-edit"></i>
-                                            </a>
                                             
-                                            <?php if ($attr['Activo']): ?>
+                                            <?php if ($puedeEditar): ?>
+                                                <a href="<?= BASE_URL ?>?c=Atributo&a=editar&id=<?= $attr['ID_AtributoValor'] ?>" 
+                                                class="btn btn-outline-primary-light text-primary-dark" title="Editar">
+                                                    <i class="fas fa-edit"></i>
+                                                </a>
+                                            <?php else: ?>
+                                                <button class="btn btn-outline-secondary" disabled title="Este valor universal no se puede editar">
+                                                    <i class="fas fa-edit"></i>
+                                                </button>
+                                            <?php endif; ?>
+                                            
+                                            <?php if ($attr['Activo'] && $puedeCambiarEstado): ?>
                                                 <a href="<?= BASE_URL ?>?c=Atributo&a=cambiarEstado&id=<?= $attr['ID_AtributoValor'] ?>&estado=0" 
-                                                class="btn btn-outline-warning" title="Desactivar"
+                                                class="btn btn-outline-primary-light text-primary-dark" title="Desactivar"
                                                 onclick="return confirm('¿Estás seguro de desactivar este atributo?')">
                                                     <i class="fas fa-pause"></i>
                                                 </a>
-                                            <?php else: ?>
+                                            <?php elseif (!$attr['Activo'] && $puedeCambiarEstado): ?>
                                                 <a href="<?= BASE_URL ?>?c=Atributo&a=cambiarEstado&id=<?= $attr['ID_AtributoValor'] ?>&estado=1" 
-                                                class="btn btn-outline-success" title="Activar"
+                                                class="btn btn-outline-primary" title="Activar"
                                                 onclick="return confirm('¿Estás seguro de activar este atributo?')">
                                                     <i class="fas fa-play"></i>
                                                 </a>
+                                            <?php elseif (!$puedeCambiarEstado): ?>
+                                                <button class="btn btn-outline-secondary" disabled title="No se puede cambiar estado">
+                                                    <i class="fas fa-ban"></i>
+                                                </button>
+                                            <?php endif; ?>
+                                            
+                                            <?php if ($puedeEliminar): ?>
+                                                <a href="<?= BASE_URL ?>?c=Atributo&a=eliminar&id=<?= $attr['ID_AtributoValor'] ?>" 
+                                                class="btn btn-outline-danger" title="Eliminar"
+                                                onclick="return confirmEliminarAtributo(event, '<?= htmlspecialchars($attr['Valor']) ?>', <?= $attr['ID_AtributoValor'] ?>)">
+                                                    <i class="fas fa-trash"></i>
+                                                </a>
+                                            <?php elseif ($esUnica): ?>
+                                                <button class="btn btn-outline-secondary" disabled title="Este valor universal no se puede eliminar">
+                                                    <i class="fas fa-shield-alt"></i>
+                                                </button>
+                                            <?php else: ?>
+                                                <button class="btn btn-outline-secondary" disabled title="Este atributo está en uso y no puede eliminarse">
+                                                    <i class="fas fa-ban"></i>
+                                                </button>
                                             <?php endif; ?>
                                         </div>
                                     </td>
@@ -203,7 +295,39 @@
                         </tbody>
                     </table>
                 </div>
+                
+                <!-- Información del filtro aplicado -->
+                <?php if ($modoBusqueda): ?>
+                    <div class="alert alert-info mt-3">
+                        <small>
+                            <i class="fas fa-info-circle me-1"></i>
+                            Mostrando <?= count($atributos) ?> atributos con los filtros aplicados:
+                            <?php 
+                            $filtrosAplicados = [];
+                            if (!empty($_GET['buscar'])) $filtrosAplicados[] = "búsqueda: '{$_GET['buscar']}'";
+                            if (!empty($_GET['tipo'])) {
+                                $tipoNombre = '';
+                                foreach ($tipos as $tipo) {
+                                    if ($tipo['ID_TipoAtributo'] == $_GET['tipo']) {
+                                        $tipoNombre = $tipo['Nombre'];
+                                        break;
+                                    }
+                                }
+                                $filtrosAplicados[] = "tipo: '{$tipoNombre}'";
+                            }
+                            if (!empty($_GET['estado'])) $filtrosAplicados[] = "estado: '{$_GET['estado']}'";
+                            if (!empty($_GET['en_uso'])) {
+                                $usoTexto = ($_GET['en_uso'] == 'si') ? 'en uso' : 'no en uso';
+                                $filtrosAplicados[] = "{$usoTexto}";
+                            }
+                            echo implode(', ', $filtrosAplicados);
+                            ?>
+                        </small>
+                    </div>
+                <?php endif; ?>
             <?php endif; ?>
         </div>
     </div>
 </div>
+
+<script src="<?= BASE_URL ?>assets/js/atributo.js"></script>

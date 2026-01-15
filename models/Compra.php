@@ -51,60 +51,74 @@ class Compra {
     // 📝 AGREGAR ITEM A FACTURA
     // =======================================================
     public function agregarItem($id_factura, $id_producto, $cantidad, $precio_unitario, $subtotal, $descuento_aplicado = 0) {
-        try {
-            // DEBUG DETALLADO
-            error_log("DEBUG agregarItem:");
-            error_log("  - Factura ID: " . $id_factura);
-            error_log("  - Producto ID: " . $id_producto);
-            error_log("  - Cantidad: " . $cantidad);
-            error_log("  - Precio Unitario: " . $precio_unitario);
-            error_log("  - Subtotal: " . $subtotal);
-            error_log("  - Descuento: " . $descuento_aplicado);
-            
-            // Verificar si el producto existe
-            $check_sql = "SELECT ID_Producto FROM producto WHERE ID_Producto = ?";
-            $check_stmt = $this->conn->prepare($check_sql);
-            $check_stmt->execute([$id_producto]);
-            $product_exists = $check_stmt->fetch();
-            
-            if (!$product_exists) {
-                error_log("ERROR: Producto ID $id_producto no existe en la tabla producto");
-                return false;
-            }
-            
-            $sql = "INSERT INTO factura_producto (ID_Factura, ID_Producto, Cantidad, Precio_Unitario, Subtotal, Descuento_Aplicado) 
-                    VALUES (?, ?, ?, ?, ?, ?)";
-            
-            $stmt = $this->conn->prepare($sql);
-            $params = [
-                $id_factura, 
-                $id_producto,
-                $cantidad, 
-                $precio_unitario, 
-                $subtotal, 
-                $descuento_aplicado
-            ];
-            
-            error_log("  - Parámetros SQL: " . print_r($params, true));
-            
-            $result = $stmt->execute($params);
-            
-            if (!$result) {
-                $errorInfo = $stmt->errorInfo();
-                error_log("ERROR SQL: " . implode(", ", $errorInfo));
-                return false;
-            }
-            
-            $lastId = $this->conn->lastInsertId();
-            error_log("  - Item insertado con ID: " . $lastId);
-            
-            return true;
-        } catch (PDOException $e) {
-            error_log("EXCEPCIÓN en agregarItem: " . $e->getMessage());
-            error_log("Trace: " . $e->getTraceAsString());
+    try {
+        // DEBUG DETALLADO
+        error_log("DEBUG agregarItem:");
+        error_log("  - Factura ID: " . $id_factura);
+        error_log("  - Producto ID: " . $id_producto);
+        error_log("  - Cantidad: " . $cantidad);
+        error_log("  - Precio Unitario: " . $precio_unitario);
+        error_log("  - Subtotal: " . $subtotal);
+        error_log("  - Descuento: " . $descuento_aplicado);
+        
+        // Verificar si el producto existe
+        $check_sql = "SELECT ID_Producto, Cantidad FROM producto WHERE ID_Producto = ?";
+        $check_stmt = $this->conn->prepare($check_sql);
+        $check_stmt->execute([$id_producto]);
+        $producto = $check_stmt->fetch(PDO::FETCH_ASSOC);
+        
+        if (!$producto) {
+            error_log("ERROR: Producto ID $id_producto no existe");
             return false;
         }
+        
+        // Verificar stock
+        if ($producto['Cantidad'] < $cantidad) {
+            error_log("ERROR: Stock insuficiente. Disponible: " . $producto['Cantidad']);
+            return false;
+        }
+        
+        // Insertar item (columnas según tu tabla)
+        $sql = "INSERT INTO factura_producto 
+                (ID_Factura, ID_Producto, Cantidad, Precio_Unitario, Precio, Subtotal, Descuento_Aplicado) 
+                VALUES (?, ?, ?, ?, ?, ?, ?)";
+        
+        // El campo "Precio" es el mismo que Precio_Unitario según tu estructura
+        $precio = $precio_unitario;
+        
+        $stmt = $this->conn->prepare($sql);
+        $params = [
+            $id_factura, 
+            $id_producto,
+            $cantidad, 
+            $precio_unitario,
+            $precio, // Agregar campo Precio
+            $subtotal, 
+            $descuento_aplicado
+        ];
+        
+        error_log("  - Parámetros SQL: " . print_r($params, true));
+        
+        $result = $stmt->execute($params);
+        
+        if (!$result) {
+            $errorInfo = $stmt->errorInfo();
+            error_log("ERROR SQL: " . implode(", ", $errorInfo));
+            return false;
+        }
+        
+        // Descontar stock inmediatamente
+        $this->descontarStock($id_producto, $cantidad);
+        
+        $lastId = $this->conn->lastInsertId();
+        error_log("  - Item insertado con ID: " . $lastId);
+        
+        return true;
+    } catch (PDOException $e) {
+        error_log("EXCEPCIÓN en agregarItem: " . $e->getMessage());
+        return false;
     }
+}
     
     // =======================================================
     // 📦 VERIFICAR STOCK DISPONIBLE
@@ -137,35 +151,73 @@ class Compra {
         }
     }
     
-    // =======================================================
-    // 📄 OBTENER DETALLE DE FACTURA
-    // =======================================================
-    public function obtenerFacturaDetalle($id_factura) {
-        try {
-            $sql = "SELECT 
-                        f.*,
-                        u.Nombre,
-                        u.Apellido,
-                        u.Correo,
-                        d.Direccion,
-                        d.Ciudad,
-                        d.Departamento,
-                        d.CodigoPostal,
-                        mp.T_Pago
-                    FROM factura f
-                    JOIN usuario u ON f.ID_Usuario = u.ID_Usuario
-                    LEFT JOIN direccion d ON f.ID_Direccion = d.ID_Direccion
-                    LEFT JOIN metodo_pago mp ON f.ID_Metodo_Pago = mp.ID_Metodo_Pago
-                    WHERE f.ID_Factura = ?";
-            
-            $stmt = $this->conn->prepare($sql);
-            $stmt->execute([$id_factura]);
-            return $stmt->fetch(PDO::FETCH_ASSOC);
-        } catch (PDOException $e) {
-            error_log("Error obteniendo detalle de factura: " . $e->getMessage());
+   public function obtenerFacturaDetalle($id_factura) {
+    try {
+        // ✅ CORREGIR LA CONSULTA PARA OBTENER DIRECCIÓN CORRECTAMENTE
+        $sql = "SELECT 
+                    f.*,
+                    u.Nombre,
+                    u.Apellido,
+                    u.Correo,
+                    u.Celular,
+                    u.N_Documento,
+                    u.ID_TD,
+                    COALESCE(d.Direccion, 'No especificada') as Direccion,
+                    COALESCE(d.Ciudad, 'No especificada') as Ciudad,
+                    COALESCE(d.Departamento, 'No especificada') as Departamento,
+                    COALESCE(d.CodigoPostal, '') as CodigoPostal,
+                    mp.T_Pago
+                FROM factura f
+                JOIN usuario u ON f.ID_Usuario = u.ID_Usuario
+                LEFT JOIN direccion d ON f.ID_Direccion = d.ID_Direccion
+                LEFT JOIN metodo_pago mp ON f.ID_Metodo_Pago = mp.ID_Metodo_Pago
+                WHERE f.ID_Factura = ?";
+        
+        $stmt = $this->conn->prepare($sql);
+        $stmt->execute([$id_factura]);
+        $factura = $stmt->fetch(PDO::FETCH_ASSOC);
+        
+        if (!$factura) {
             return [];
         }
+        
+        // ✅ SI LOS CAMPOS TIENEN "NO", REEMPLAZAR CON VALORES POR DEFECTO
+        if (isset($factura['Direccion']) && $factura['Direccion'] === 'NO') {
+            $factura['Direccion'] = 'No especificada';
+        }
+        if (isset($factura['Ciudad']) && $factura['Ciudad'] === 'NO') {
+            $factura['Ciudad'] = 'No especificada';
+        }
+        if (isset($factura['Departamento']) && $factura['Departamento'] === 'NO') {
+            $factura['Departamento'] = 'No especificada';
+        }
+        
+        // ✅ OBTENER TIPO DE DOCUMENTO
+        $factura['Tipo_Documento'] = 'No especificado';
+        
+        if (!empty($factura['ID_TD']) && $factura['ID_TD'] > 0) {
+            try {
+                $sql_tipo = "SELECT Documento FROM tipo_documento WHERE ID_TD = ?";
+                $stmt_tipo = $this->conn->prepare($sql_tipo);
+                $stmt_tipo->execute([$factura['ID_TD']]);
+                $tipo_doc = $stmt_tipo->fetch(PDO::FETCH_ASSOC);
+                
+                if ($tipo_doc && !empty($tipo_doc['Documento'])) {
+                    $factura['Tipo_Documento'] = $tipo_doc['Documento'];
+                }
+            } catch (PDOException $e) {
+                error_log("Error obteniendo tipo documento: " . $e->getMessage());
+            }
+        }
+        
+        return $factura;
+        
+    } catch (PDOException $e) {
+        error_log("Error obteniendo detalle de factura: " . $e->getMessage());
+        return [];
     }
+}
+    
     
     // =======================================================
     // 🛍️ OBTENER ITEMS DE FACTURA
@@ -271,34 +323,37 @@ class Compra {
     // 📧 OBTENER DATOS PARA ENVÍO DE CORREO
     // =======================================================
     public function obtenerDatosFacturaParaCorreo($id_factura) {
-        try {
-            $sql = "SELECT 
-                        f.ID_Factura,
-                        f.Fecha_Factura,
-                        f.Subtotal,
-                        f.IVA,
-                        f.Monto_Total,
-                        u.Nombre,
-                        u.Apellido,
-                        u.Correo,
-                        d.Direccion,
-                        d.Ciudad,
-                        d.Departamento,
-                        mp.T_Pago
-                    FROM factura f
-                    JOIN usuario u ON f.ID_Usuario = u.ID_Usuario
-                    LEFT JOIN direccion d ON f.ID_Direccion = d.ID_Direccion
-                    LEFT JOIN metodo_pago mp ON f.ID_Metodo_Pago = mp.ID_MetodoPago
-                    WHERE f.ID_Factura = ?";
-            
-            $stmt = $this->conn->prepare($sql);
-            $stmt->execute([$id_factura]);
-            return $stmt->fetch(PDO::FETCH_ASSOC);
-        } catch (PDOException $e) {
-            error_log("Error obteniendo datos para correo: " . $e->getMessage());
-            return [];
-        }
+    try {
+        $sql = "SELECT 
+                    f.ID_Factura,
+                    f.Fecha_Factura,
+                    f.Subtotal,
+                    f.IVA,
+                    f.Monto_Total,
+                    f.Estado,
+                    u.Nombre,
+                    u.Apellido,
+                    u.Correo,
+                    u.Celular,
+                    d.Direccion,
+                    d.Ciudad,
+                    d.Departamento,
+                    d.CodigoPostal,
+                    mp.T_Pago
+                FROM factura f
+                JOIN usuario u ON f.ID_Usuario = u.ID_Usuario
+                LEFT JOIN direccion d ON f.ID_Direccion = d.ID_Direccion
+                LEFT JOIN metodo_pago mp ON f.ID_Metodo_Pago = mp.ID_Metodo_Pago
+                WHERE f.ID_Factura = ?";
+        
+        $stmt = $this->conn->prepare($sql);
+        $stmt->execute([$id_factura]);
+        return $stmt->fetch(PDO::FETCH_ASSOC);
+    } catch (PDOException $e) {
+        error_log("Error obteniendo datos para correo: " . $e->getMessage());
+        return [];
     }
+}
     
     // =======================================================
     // 🧮 CALCULAR IVA PARA UN MONTO

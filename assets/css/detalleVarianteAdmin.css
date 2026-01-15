@@ -1,0 +1,249 @@
+/* detalleVarianteAdmin.css - Estilos para detalle de producto y gestión de variantes */
+
+:root {
+    --primary-color: #1B202D;
+    --primary-dark: #141821;
+    --primary-light: #242a3a;
+    --primary-lighter: #2d3447;
+    --light-bg: #f5f7fa;
+    --text-dark: #2c3e50;
+    --text-light: #6c757d;
+    --border-radius: 12px;
+    --card-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+    --transition: all 0.3s ease;
+    --danger-color: #dc3545;
+}
+
+/* Estilos generales para la vista de detalle */
+.detalle-producto-container .text-primary-dark {
+    color: var(--primary-color) !important;
+}
+
+.detalle-producto-container .badge.bg-primary {
+    background-color: var(--primary-color) !important;
+    color: white !important;
+}
+
+.detalle-producto-container .badge.bg-primary-dark {
+    background-color: var(--primary-color) !important;
+    color: white !important;
+}
+
+.detalle-producto-container .badge.bg-primary-light {
+    background-color: var(--primary-light) !important;
+    color: white !important;
+}
+
+.detalle-producto-container .badge.bg-primary-light.text-primary-dark {
+    background-color: rgba(27, 32, 45, 0.1) !important;
+    color: var(--primary-color) !important;
+}
+
+/* Tabla de variantes en detalle */
+.table-primary-dark {
+    background-color: var(--primary-color) !important;
+    color: white !important;
+}
+
+.table-primary-dark th {
+    font-weight: 600;
+    text-transform: uppercase;
+    font-size: 0.85rem;
+    letter-spacing: 0.5px;
+    border-bottom: 2px solid rgba(255, 255, 255, 0.1);
+}
+
+/* Badges en tabla */
+.table .badge.bg-primary {
+    background-color: rgba(27, 32, 45, 0.1) !important;
+    color: var(--primary-color) !important;
+    border: 1px solid rgba(27, 32, 45, 0.25);
+}
+
+.table .badge.bg-primary-light {
+    background-color: rgba(36, 42, 58, 0.1) !important;
+    color: var(--primary-light) !important;
+    border: 1px solid rgba(36, 42, 58, 0.25);
+}
+
+/* Estados en tabla */
+.table .badge.bg-primary.text-light {
+    background-color: var(--primary-color) !important;
+    color: white !important;
+    border: none;
+}
+
+.table .badge.bg-primary-light.text-primary-dark {
+    background-color: rgba(27, 32, 45, 0.1) !important;
+    color: var(--primary-color) !important;
+    border: 1px solid rgba(27, 32, 45, 0.25);
+}
+
+/* Botones específicos para detalle */
+.btn-detalle-primary {
+    background-color: var(--primary-color);
+    border-color: var(--primary-color);
+    color: white;
+}
+
+.btn-detalle-primary:hover {
+    background-color: var(--primary-dark);
+    border-color: var(--primary-dark);
+    color: white;
+}
+
+.btn-detalle-outline-primary {
+    color: var(--primary-color);
+    border-color: var(--primary-color);
+}
+
+.btn-detalle-outline-primary:hover {
+    background-color: var(--primary-color);
+    border-color: var(--primary-color);
+    color: white;
+}
+
+.btn-detalle-outline-primary-light {
+    color: var(--primary-light);
+    border-color: var(--primary-light);
+}
+
+.btn-detalle-outline-primary-light:hover {
+    background-color: var(--primary-light);
+    border-color: var(--primary-light);
+    color: white;
+}
+
+/* Botón rojo SOLO para eliminar */
+.btn-detalle-outline-danger {
+    color: var(--danger-color);
+    border-color: var(--danger-color);
+}
+
+.btn-detalle-outline-danger:hover {
+    background-color: var(--danger-color);
+    border-color: var(--danger-color);
+    color: white;
+}
+
+/* Formulario de agregar variante */
+.form-detalle-variante .form-label {
+    color: var(--primary-color);
+    font-weight: 600;
+}
+
+.form-detalle-variante .form-control:focus,
+.form-detalle-variante .form-select:focus {
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 0.25rem rgba(27, 32, 45, 0.25);
+}
+
+/* Card para subida de imagen */
+.card-border-primary {
+    border-color: var(--primary-color) !important;
+}
+
+.card-border-primary .card-header {
+    background-color: var(--primary-color) !important;
+    color: white !important;
+}
+
+.card-border-primary-light .card-header {
+    background-color: var(--primary-light) !important;
+    color: white !important;
+}
+
+/* Modal para editar variante */
+.modal-header.bg-primary {
+    background-color: var(--primary-color) !important;
+    color: white !important;
+}
+
+.modal-header.bg-primary-light {
+    background-color: var(--primary-light) !important;
+    color: var(--primary-color) !important;
+}
+
+/* Efectos hover para la vista de detalle */
+.hover-shadow-detalle:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+    transition: var(--transition);
+    background-color: rgba(27, 32, 45, 0.02);
+}
+
+/* Responsive para detalle */
+@media (max-width: 768px) {
+    .detalle-producto-container .table-responsive {
+        font-size: 0.9rem;
+    }
+    
+    .detalle-producto-container .btn-group-sm {
+        flex-direction: column;
+        gap: 5px;
+    }
+    
+    .detalle-producto-container .btn-group-sm .btn {
+        width: 100%;
+    }
+}
+
+/* Clases de utilidad para detalle */
+.border-primary-detalle {
+    border-color: var(--primary-color) !important;
+}
+
+.border-primary-light-detalle {
+    border-color: var(--primary-light) !important;
+}
+
+.text-primary-detalle {
+    color: var(--primary-color) !important;
+}
+
+.text-primary-light-detalle {
+    color: var(--primary-light) !important;
+}
+
+.bg-primary-detalle {
+    background-color: var(--primary-color) !important;
+}
+
+.bg-primary-light-detalle {
+    background-color: rgba(27, 32, 45, 0.1) !important;
+}
+
+/* Estilos para los atributos en detalle */
+.atributo-detalle-item {
+    background-color: rgba(27, 32, 45, 0.05);
+    border-radius: 6px;
+    padding: 8px 12px;
+    margin-bottom: 8px;
+    border-left: 3px solid var(--primary-color);
+}
+
+.atributo-detalle-item:hover {
+    background-color: rgba(27, 32, 45, 0.1);
+    transform: translateX(2px);
+    transition: var(--transition);
+}
+
+/* Estilos para vista previa de imagen */
+.vista-previa-detalle {
+    border: 2px dashed rgba(27, 32, 45, 0.2);
+    border-radius: 8px;
+    background-color: rgba(27, 32, 45, 0.02);
+}
+
+.vista-previa-detalle:hover {
+    border-color: var(--primary-color);
+    background-color: rgba(27, 32, 45, 0.05);
+    transition: var(--transition);
+}
+
+/* Estilos para el mensaje de producto especial */
+.alert-primary-dark {
+    background-color: rgba(27, 32, 45, 0.1) !important;
+    border-color: var(--primary-color) !important;
+    color: var(--primary-color) !important;
+}
