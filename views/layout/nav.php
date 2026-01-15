@@ -1,5 +1,5 @@
 <?php
-// views/layout/nav.php - VERSIÓN CORREGIDA
+// views/layout/nav.php - VERSIÓN CORREGIDA Y COMPLETA
 
 // Función para obtener BASE_URL de forma confiable
 function getBaseUrlForNav() {
@@ -89,6 +89,13 @@ $textoPanel = $esAdministrador ? 'Panel Admin' : ($esEditor ? 'Panel Editor' : '
               <?php endforeach; ?>
             <?php endif; ?>
           </ul>
+        </li>
+
+        <!-- ENLACE DE SEGUIMIENTO DE PEDIDOS -->
+        <li class="nav-item">
+          <a class="nav-link" href="<?php echo BASE_URL; ?>views/seguimiento/consultar.php">
+            <i class="fas fa-truck"></i> Seguir Pedido
+          </a>
         </li>
 
         <?php if ($tieneAccesoAdmin): ?>

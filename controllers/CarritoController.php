@@ -1,21 +1,20 @@
 <?php
-// controllers/CarritoController.php - VERSIÓN LIMPIA
+// controllers/CarritoController.php - VERSIÓN CORREGIDA CON MÉTODOS EXISTENTES
 require_once "models/Producto.php";
+require_once "models/Descuento.php";
 
 class CarritoController {
     private $db;
+    private $descuentoModel;
 
     public function __construct($db) {
         if (session_status() === PHP_SESSION_NONE) session_start();
         $this->db = $db;
+        $this->descuentoModel = new Descuento($db);
         
-        // ✅ VERIFICAR SI EL USUARIO ESTÁ LOGUEADO PARA TODAS LAS ACCIONES DEL CARRITO
         $this->verificarAutenticacion();
     }
 
-    // =======================================================
-    // 🔐 VERIFICAR AUTENTICACIÓN
-    // =======================================================
     private function verificarAutenticacion() {
         if (!isset($_SESSION['ID_Usuario']) || empty($_SESSION['ID_Usuario'])) {
             $_SESSION['redirect_url'] = $_SERVER['REQUEST_URI'] ?? BASE_URL . '?c=Carrito&a=carrito';
@@ -24,15 +23,13 @@ class CarritoController {
         }
     }
 
-    // =======================================================
-    // 🛒 Mostrar el carrito CON NOMBRES DE ATRIBUTOS
-    // =======================================================
     public function carrito() {
         $carrito = $_SESSION['carrito'] ?? [];
         
         // Inicializar variables para la vista
         $total = 0;
         $total_descuentos = 0;
+        $subtotal_sin_descuentos = 0;
         
         // Procesar cada item del carrito para agregar nombres de atributos
         foreach ($carrito as &$item) {
@@ -43,6 +40,7 @@ class CarritoController {
             $subtotal_original = $precio_original * $item['Cantidad'];
             
             $total += $subtotal;
+            $subtotal_sin_descuentos += $subtotal_original;
             $total_descuentos += ($subtotal_original - $subtotal);
             
             // Si ya tiene Atributos con nombres, no hacer nada
@@ -94,18 +92,28 @@ class CarritoController {
                 $item['Atributos'] = $atributosArray;
             }
         }
-        unset($item); // Romper la referencia
+        unset($item);
         
-        // Actualizar la sesión con los atributos procesados
         $_SESSION['carrito'] = $carrito;
+        
+        // ✅ CORRECCIÓN: Usar el método CORRECTO de tu modelo
+        $id_usuario = $_SESSION['ID_Usuario'];
+        $descuentos_disponibles = [];
+        
+        if ($this->descuentoModel) {
+            try {
+                // ✅ Usar el método que realmente existe en tu modelo
+                $descuentos_disponibles = $this->descuentoModel->obtenerDescuentosVigentesUsuario($id_usuario);
+            } catch (Exception $e) {
+                error_log("Error obteniendo descuentos en carrito: " . $e->getMessage());
+                $descuentos_disponibles = [];
+            }
+        }
         
         // Incluir la vista
         include "views/carrito/carrito.php";
     }
 
-    // =======================================================
-    // 🔍 OBTENER NOMBRE DE ATRIBUTO POR ID
-    // =======================================================
     private function getNombreAtributo($idAtributo) {
         try {
             if (!$idAtributo) return null;
@@ -122,16 +130,15 @@ class CarritoController {
         }
     }
 
-    // =======================================================
-    // ➕ Agregar producto al carrito CON DESCUENTOS CORREGIDO
-    // =======================================================
     public function agregar() {
+        $id_usuario = $_SESSION['ID_Usuario'];
+        
         $id_producto = $_POST['id_producto'] ?? ($_GET['id'] ?? null);
         $id_articulo = $_POST['id_articulo'] ?? null;
         $cantidad    = isset($_POST['cantidad']) ? (int)$_POST['cantidad'] : 1;
         $tipo        = $_POST['tipo'] ?? 'variante';
         
-        // ✅ Campos de descuento
+        // Campos de descuento
         $precio_final = $_POST['precio_final'] ?? null;
         $codigo_descuento = $_POST['codigo_descuento'] ?? '';
         $tipo_descuento = $_POST['tipo_descuento'] ?? '';
@@ -149,9 +156,8 @@ class CarritoController {
         $producto = new Producto($this->db);
         $data = null;
 
-        // 🔹 Caso 1: Variante (producto)
+        // Caso 1: Variante (producto)
         if ($tipo === 'variante' && $id_producto) {
-            // Obtener información detallada del producto con atributos
             $sql = "SELECT 
                         p.ID_Producto,
                         p.ID_Articulo,
@@ -179,22 +185,74 @@ class CarritoController {
             
             if ($data) {
                 $data['Tipo'] = 'variante';
-                // ✅ CORRECCIÓN: Usar precio_final SIEMPRE que venga del formulario
-                if ($precio_final !== null && $precio_final !== '') {
-                    $data['Precio'] = floatval($precio_final);
-                } else {
-                    $data['Precio'] = floatval($data['Precio_Final']);
-                }
-
-                // DEBUG: Verificar valores
-                error_log("🛒 Carrito (normal) - precio_final recibido: " . $precio_final);
-                error_log("🛒 Carrito (normal) - Precio_Final de BD: " . $data['Precio_Final']);
-                error_log("🛒 Carrito (normal) - Precio final a usar: " . $data['Precio']);
+                $precio_original = floatval($data['Precio_Final']);
                 
-                // 🔍 OBTENER ATRIBUTOS CON NOMBRES
+                // ✅ Usar método CORRECTO: puedeUsarDescuento() de tu modelo
+                $precio_a_usar = $precio_original;
+                $descuento_info = [
+                    'Codigo' => '',
+                    'Tipo' => '',
+                    'Valor' => 0,
+                    'ID_Descuento' => null,
+                    'Aplicado' => false
+                ];
+                
+                // Si viene un descuento, validarlo
+                if (!empty($id_descuento) && is_numeric($id_descuento)) {
+                    error_log("Validando descuento ID: " . $id_descuento);
+                    
+                    // ✅ Usar el método de tu modelo
+                    if ($this->descuentoModel->puedeUsarDescuento($id_descuento, $id_usuario)) {
+                        // Obtener detalles del descuento
+                        $detalle_descuento = $this->descuentoModel->obtenerPorId($id_descuento);
+                        
+                        if ($detalle_descuento) {
+                            $codigo_descuento = $detalle_descuento['Codigo'] ?? $codigo_descuento;
+                            $tipo_descuento = $detalle_descuento['Tipo'] ?? $tipo_descuento;
+                            $valor_descuento = $detalle_descuento['Valor'] ?? $valor_descuento;
+                            
+                            // Calcular precio con descuento
+                            if ($tipo_descuento === 'Porcentaje') {
+                                $descuento_monto = $precio_original * ($valor_descuento / 100);
+                            } else {
+                                $descuento_monto = $valor_descuento;
+                            }
+                            
+                            $precio_a_usar = $precio_original - $descuento_monto;
+                            if ($precio_a_usar < 0) $precio_a_usar = 0;
+                            
+                            $descuento_info = [
+                                'Codigo' => $codigo_descuento,
+                                'Tipo' => $tipo_descuento,
+                                'Valor' => floatval($valor_descuento),
+                                'ID_Descuento' => intval($id_descuento),
+                                'Aplicado' => true
+                            ];
+                            
+                            error_log("Descuento aplicado. Precio original: " . $precio_original . ", Precio final: " . $precio_a_usar);
+                        }
+                    } else {
+                        error_log("Descuento NO puede ser usado o límite alcanzado");
+                    }
+                } elseif ($precio_final !== null && $precio_final !== '' && floatval($precio_final) < $precio_original) {
+                    // Si viene precio_final y es menor al original
+                    $precio_a_usar = floatval($precio_final);
+                    $descuento_valor = $precio_original - $precio_a_usar;
+                    
+                    $descuento_info = [
+                        'Codigo' => $codigo_descuento,
+                        'Tipo' => 'ValorFijo',
+                        'Valor' => $descuento_valor,
+                        'ID_Descuento' => $id_descuento ? intval($id_descuento) : null,
+                        'Aplicado' => true
+                    ];
+                }
+                
+                $data['Precio'] = $precio_a_usar;
+
+                // Obtener atributos con nombres
                 $atributosArray = [];
                 
-                // Atributo 1
                 if (!empty($data['ID_Atributo1']) && !empty($data['ValorAtributo1'])) {
                     $nombreAtributo1 = $this->getNombreAtributo($data['ID_Atributo1']);
                     if ($nombreAtributo1) {
@@ -206,7 +264,6 @@ class CarritoController {
                     }
                 }
                 
-                // Atributo 2
                 if (!empty($data['ID_Atributo2']) && !empty($data['ValorAtributo2'])) {
                     $nombreAtributo2 = $this->getNombreAtributo($data['ID_Atributo2']);
                     if ($nombreAtributo2) {
@@ -218,7 +275,6 @@ class CarritoController {
                     }
                 }
                 
-                // Atributo 3
                 if (!empty($data['ID_Atributo3']) && !empty($data['ValorAtributo3'])) {
                     $nombreAtributo3 = $this->getNombreAtributo($data['ID_Atributo3']);
                     if ($nombreAtributo3) {
@@ -231,19 +287,7 @@ class CarritoController {
                 }
                 
                 $data['Atributos'] = $atributosArray;
-                
-                // 🔍 OBTENER COLOR HEX SI ES UN COLOR
-                $codigoHex = null;
-                foreach ($atributosArray as $atributo) {
-                    if ($atributo['nombre'] === 'Color' && $atributo['id'] == 2) {
-                        $color_info = $producto->getColorInfo($atributo['id']);
-                        if ($color_info && isset($color_info['CodigoHex'])) {
-                            $codigoHex = $color_info['CodigoHex'];
-                        }
-                        break;
-                    }
-                }
-                $data['CodigoHex'] = $codigoHex;
+                $data['Descuento'] = $descuento_info;
                 
             } else {
                 $_SESSION['mensaje_error'] = "❌ Producto no encontrado.";
@@ -252,7 +296,7 @@ class CarritoController {
             }
         }
 
-        // 🔹 Caso 2: Base (artículo)
+        // Caso 2: Base (artículo)
         if ($tipo === 'base' && $id_articulo) {
             $data = $producto->readBase($id_articulo);
             if ($data) {
@@ -261,6 +305,15 @@ class CarritoController {
                 $data['Nombre_Producto'] = $data['N_Articulo'];
                 $data['Atributos'] = [];
                 $data['Precio'] = $precio_final ? floatval($precio_final) : floatval($data['Precio']);
+                
+                $descuento_info = [
+                    'Codigo' => $codigo_descuento,
+                    'Tipo' => $tipo_descuento,
+                    'Valor' => floatval($valor_descuento),
+                    'ID_Descuento' => $id_descuento ? intval($id_descuento) : null,
+                    'Aplicado' => !empty($codigo_descuento) || floatval($valor_descuento) > 0
+                ];
+                $data['Descuento'] = $descuento_info;
             } else {
                 $_SESSION['mensaje_error'] = "❌ Artículo no encontrado.";
                 header("Location: " . BASE_URL);
@@ -274,7 +327,7 @@ class CarritoController {
             exit;
         }
 
-        // ✅ Validar stock
+        // Validar stock
         $stock_disponible = (int)($data['Cantidad'] ?? 999);
         if ($stock_disponible <= 0) {
             $_SESSION['mensaje_error'] = "❌ Este producto está agotado.";
@@ -288,28 +341,32 @@ class CarritoController {
             exit;
         }
 
-        // 🧺 Inicializar carrito
+        // Inicializar carrito
         if (!isset($_SESSION['carrito'])) {
             $_SESSION['carrito'] = [];
         }
 
-        // 🔁 Verificar si ya está en el carrito
+        // Verificar si ya está en el carrito
         $encontrado = false;
-        foreach ($_SESSION['carrito'] as &$item) {
+        $indice_encontrado = -1;
+        
+        foreach ($_SESSION['carrito'] as $index => &$item) {
             $mismoProducto = false;
             
             if ($tipo === 'variante') {
                 $mismoProducto = (
                     $item['ID_Producto'] == $data['ID_Producto'] &&
                     $item['Tipo'] === 'variante' &&
-                    $item['Precio'] == $data['Precio']
+                    $item['Precio'] == $data['Precio'] &&
+                    $item['Descuento']['ID_Descuento'] == ($data['Descuento']['ID_Descuento'] ?? null)
                 );
             } else {
                 $mismoProducto = (
                     $item['ID_Articulo'] == $data['ID_Articulo'] &&
                     $item['Tipo'] === 'base' &&
                     $item['ID_Producto'] === null &&
-                    $item['Precio'] == $data['Precio']
+                    $item['Precio'] == $data['Precio'] &&
+                    $item['Descuento']['ID_Descuento'] == ($data['Descuento']['ID_Descuento'] ?? null)
                 );
             }
 
@@ -322,24 +379,24 @@ class CarritoController {
                 }
                 $item['Cantidad'] = $nueva_cantidad;
                 $encontrado = true;
+                $indice_encontrado = $index;
                 break;
             }
         }
         unset($item);
 
         if (!$encontrado) {
-            $precio_final_carrito = $precio_final ? floatval($precio_final) : $data['Precio'];
+            $precio_final_carrito = $data['Precio'];
             
             $item_carrito = [
                 'ID_Producto' => $data['ID_Producto'] ?? null,
                 'ID_Articulo' => $data['ID_Articulo'] ?? $id_articulo,
                 'N_Articulo'  => $data['N_Articulo'] ?? $data['Nombre_Producto'] ?? 'Producto ' . ($id_producto ?? $id_articulo),
                 'Foto'        => $data['Foto'] ?? 'assets/img/placeholder.png',
-                'Precio'      => $precio_final_carrito, // USAR PRECIO FINAL CON DESCUENTO
+                'Precio'      => $precio_final_carrito,
                 'Precio_Original' => $data['Precio_Base'] ?? $data['Precio_Final'] ?? $data['Precio'],
                 'Tipo'        => $data['Tipo'],
                 'Cantidad'    => $cantidad,
-                // ATRIBUTOS DINÁMICOS
                 'Atributos' => $data['Atributos'] ?? [],
                 'ID_Atributo1' => $data['ID_Atributo1'] ?? null,
                 'ValorAtributo1' => $data['ValorAtributo1'] ?? null,
@@ -352,12 +409,11 @@ class CarritoController {
                 'N_Color' => $data['Nombre_Color'] ?? $data['ValorAtributo2'] ?? null,
                 'N_Talla' => $data['Nombre_Talla'] ?? $data['ValorAtributo1'] ?? null,
 
-                // SIEMPRE GUARDAR INFORMACIÓN DE DESCUENTO INCLUSO CON PRECIO 0
-                'Descuento' => [
+                'Descuento' => $data['Descuento'] ?? [
                     'Codigo' => $codigo_descuento,
                     'Tipo' => $tipo_descuento,
                     'Valor' => floatval($valor_descuento),
-                    'ID_Descuento' => $id_descuento,
+                    'ID_Descuento' => $id_descuento ? intval($id_descuento) : null,
                     'Aplicado' => !empty($codigo_descuento) || floatval($valor_descuento) > 0
                 ]
             ];
@@ -365,49 +421,17 @@ class CarritoController {
             $_SESSION['carrito'][] = $item_carrito;
         }
 
-        $_SESSION['mensaje_ok'] = "Producto agregado al carrito correctamente.";
+        $_SESSION['mensaje_ok'] = "✅ Producto agregado al carrito correctamente.";
         header("Location: " . BASE_URL . "?c=Carrito&a=carrito");
         exit;
     }
 
     // =======================================================
-    // 🔍 OBTENER NOMBRES DE ATRIBUTOS PARA LA VISTA
-    // =======================================================
-    public function getNombresAtributosParaVista($atributosIds = []) {
-        $nombres = [];
-        
-        if (empty($atributosIds)) {
-            return $nombres;
-        }
-        
-        try {
-            // Crear una cadena de placeholders para la consulta
-            $placeholders = str_repeat('?,', count($atributosIds) - 1) . '?';
-            
-            $sql = "SELECT ID_TipoAtributo, Nombre FROM tipo_atributo 
-                    WHERE ID_TipoAtributo IN ($placeholders)";
-            
-            $stmt = $this->db->prepare($sql);
-            $stmt->execute($atributosIds);
-            $resultados = $stmt->fetchAll(PDO::FETCH_ASSOC);
-            
-            // Convertir a array asociativo [ID_TipoAtributo => Nombre]
-            foreach ($resultados as $row) {
-                $nombres[$row['ID_TipoAtributo']] = $row['Nombre'];
-            }
-            
-            return $nombres;
-            
-        } catch (Exception $e) {
-            error_log("Error obteniendo nombres de atributos: " . $e->getMessage());
-            return [];
-        }
-    }
-
-    // =======================================================
-    // ➕ Agregar producto al carrito VÍA AJAX
+    // ➕ Agregar producto al carrito VÍA AJAX (CORREGIDO)
     // =======================================================
     public function agregarAjax() {
+        $id_usuario = $_SESSION['ID_Usuario'];
+        
         $datos = array_merge($_GET, $_POST);
         
         if (empty($datos)) {
@@ -444,16 +468,38 @@ class CarritoController {
             $data = null;
 
             if ($tipo === 'variante' && $id_producto) {
-                $data = $producto->readOne($id_producto);
-                if (!$data) {
-                    $data = $this->crearDatosBasicosProducto($id_producto, null, null, $precio_final);
+                $sql = "SELECT 
+                            p.ID_Producto,
+                            p.ID_Articulo,
+                            p.Nombre_Producto,
+                            p.Cantidad,
+                            COALESCE(p.Foto, a.Foto) as Foto,
+                            a.N_Articulo,
+                            pr.Valor as Precio_Base,
+                            (pr.Valor + (pr.Valor * (p.Porcentaje / 100))) AS Precio_Final,
+                            a.ID_SubCategoria
+                        FROM producto p
+                        INNER JOIN articulo a ON p.ID_Articulo = a.ID_Articulo
+                        LEFT JOIN precio pr ON a.ID_Precio = pr.ID_Precio
+                        WHERE p.ID_Producto = ? AND p.Activo = 1";
+                
+                $stmt = $this->db->prepare($sql);
+                $stmt->execute([$id_producto]);
+                $data = $stmt->fetch(PDO::FETCH_ASSOC);
+                
+                if ($data) {
+                    $data['Tipo'] = 'variante';
+                    $data['Precio'] = floatval($data['Precio_Final']);
                 }
             }
 
             if ($tipo === 'base' && $id_articulo) {
                 $data = $producto->readBase($id_articulo);
-                if (!$data) {
-                    $data = $this->crearDatosBasicosArticulo($id_articulo, $precio_final);
+                if ($data) {
+                    $data['Tipo'] = 'base';
+                    $data['ID_Producto'] = null;
+                    $data['Nombre_Producto'] = $data['N_Articulo'];
+                    $data['Atributos'] = [];
                 }
             }
 
@@ -466,16 +512,47 @@ class CarritoController {
             }
 
             $precio_original = $data['Precio'] ?? $data['Precio_Final'] ?? $data['Precio_Base'] ?? 0;
-            if ($precio_final !== null && $precio_final !== '') {
+            $precio_a_usar = $precio_original;
+            
+            // Validar descuento si viene
+            $descuento_info = [
+                'Codigo' => $codigo_descuento,
+                'Tipo' => $tipo_descuento,
+                'Valor' => floatval($valor_descuento),
+                'ID_Descuento' => $id_descuento ? intval($id_descuento) : null,
+                'Aplicado' => false
+            ];
+            
+            if (!empty($id_descuento) && is_numeric($id_descuento)) {
+                if ($this->descuentoModel->puedeUsarDescuento($id_descuento, $id_usuario)) {
+                    $detalle_descuento = $this->descuentoModel->obtenerPorId($id_descuento);
+                    
+                    if ($detalle_descuento) {
+                        $tipo_descuento = $detalle_descuento['Tipo'] ?? $tipo_descuento;
+                        $valor_descuento = $detalle_descuento['Valor'] ?? $valor_descuento;
+                        
+                        if ($tipo_descuento === 'Porcentaje') {
+                            $descuento_monto = $precio_original * ($valor_descuento / 100);
+                        } else {
+                            $descuento_monto = $valor_descuento;
+                        }
+                        
+                        $precio_a_usar = $precio_original - $descuento_monto;
+                        if ($precio_a_usar < 0) $precio_a_usar = 0;
+                        
+                        $descuento_info = [
+                            'Codigo' => $detalle_descuento['Codigo'] ?? $codigo_descuento,
+                            'Tipo' => $tipo_descuento,
+                            'Valor' => floatval($valor_descuento),
+                            'ID_Descuento' => intval($id_descuento),
+                            'Aplicado' => true
+                        ];
+                    }
+                }
+            } elseif ($precio_final !== null && $precio_final !== '' && floatval($precio_final) < $precio_original) {
                 $precio_a_usar = floatval($precio_final);
-            } else {
-                $precio_a_usar = $precio_original;
+                $descuento_info['Aplicado'] = true;
             }
-
-            // DEBUG: Verificar valores
-            error_log("🛒 Carrito - precio_final recibido: " . $precio_final);
-            error_log("🛒 Carrito - precio_original: " . $precio_original);
-            error_log("🛒 Carrito - precio_a_usar: " . $precio_a_usar);
 
             $stock_disponible = (int)($data['Cantidad'] ?? 999);
             if ($stock_disponible <= 0) {
@@ -500,14 +577,16 @@ class CarritoController {
                     $mismoProducto = (
                         $item['ID_Producto'] == $data['ID_Producto'] &&
                         $item['Tipo'] === 'variante' &&
-                        $item['Precio'] == $precio_a_usar
+                        $item['Precio'] == $precio_a_usar &&
+                        $item['Descuento']['ID_Descuento'] == $descuento_info['ID_Descuento']
                     );
                 } else {
                     $mismoProducto = (
                         $item['ID_Articulo'] == $data['ID_Articulo'] &&
                         $item['Tipo'] === 'base' &&
                         $item['ID_Producto'] === null &&
-                        $item['Precio'] == $precio_a_usar
+                        $item['Precio'] == $precio_a_usar &&
+                        $item['Descuento']['ID_Descuento'] == $descuento_info['ID_Descuento']
                     );
                 }
 
@@ -534,7 +613,6 @@ class CarritoController {
                     'Precio_Original' => $precio_original,
                     'Tipo'        => $tipo,
                     'Cantidad'    => $cantidad,
-                    // ✅ ATRIBUTOS DINÁMICOS
                     'Atributos' => $data['Atributos'] ?? [],
                     'ID_Atributo1' => $data['ID_Atributo1'] ?? null,
                     'ValorAtributo1' => $data['ValorAtributo1'] ?? null,
@@ -544,18 +622,10 @@ class CarritoController {
                     'ValorAtributo3' => $data['ValorAtributo3'] ?? null,
                     'CodigoHex'   => $data['CodigoHex'] ?? null,
 
-                    // ✅ AGREGAR CAMPOS DE COMPATIBILIDAD PARA CHECKOUT (NUEVO)
                     'N_Color' => $data['Nombre_Color'] ?? $data['ValorAtributo2'] ?? null,
                     'N_Talla' => $data['Nombre_Talla'] ?? $data['ValorAtributo1'] ?? null,
 
-                    // ✅ ✅✅ CORRECCIÓN CRÍTICA: SIEMPRE GUARDAR INFORMACIÓN DE DESCUENTO INCLUSO CON PRECIO 0
-                    'Descuento' => [
-                        'Codigo' => $codigo_descuento,
-                        'Tipo' => $tipo_descuento,
-                        'Valor' => floatval($valor_descuento),
-                        'ID_Descuento' => $id_descuento,
-                        'Aplicado' => !empty($codigo_descuento) || floatval($valor_descuento) > 0
-                    ]
+                    'Descuento' => $descuento_info
                 ];
 
                 $_SESSION['carrito'][] = $item_carrito;
@@ -568,134 +638,25 @@ class CarritoController {
             ]);
             
         } catch (Exception $e) {
+            error_log("Error en agregarAjax: " . $e->getMessage());
             echo json_encode([
                 'success' => false, 
-                'message' => 'Error interno del servidor.'
+                'message' => 'Error interno del servidor'
             ]);
         }
         exit;
     }
 
-    // =======================================================
-    // 🆕 MÉTODOS AUXILIARES
-    // =======================================================
-
-    private function crearDatosBasicosProducto($id_producto, $id_color, $id_talla, $precio_final) {
-        // Consultar producto con información de atributos
-        $sql = "SELECT 
-                    p.ID_Producto,
-                    p.ID_Articulo,
-                    p.Nombre_Producto,
-                    p.Cantidad,
-                    p.Foto,
-                    p.ID_Atributo1,
-                    p.ValorAtributo1,
-                    p.ID_Atributo2,
-                    p.ValorAtributo2,
-                    p.ID_Atributo3,
-                    p.ValorAtributo3,
-                    a.N_Articulo,
-                    pr.Valor as Precio_Base,
-                    (pr.Valor + (pr.Valor * (p.Porcentaje / 100))) AS Precio_Final_Calculado
-                FROM producto p
-                LEFT JOIN articulo a ON p.ID_Articulo = a.ID_Articulo
-                LEFT JOIN precio pr ON a.ID_Precio = pr.ID_Precio
-                WHERE p.ID_Producto = ?";
-        
-        $stmt = $this->db->prepare($sql);
-        $stmt->execute([$id_producto]);
-        $producto_data = $stmt->fetch(PDO::FETCH_ASSOC);
-        
-        if ($producto_data) {
-            // Extraer color y talla de los atributos
-            $color = '';
-            $talla = '';
-            
-            // Buscar color (ID_TipoAtributo = 2)
-            if ($producto_data['ID_Atributo1'] == 2) $color = $producto_data['ValorAtributo1'];
-            elseif ($producto_data['ID_Atributo2'] == 2) $color = $producto_data['ValorAtributo2'];
-            elseif ($producto_data['ID_Atributo3'] == 2) $color = $producto_data['ValorAtributo3'];
-            
-            // Buscar talla (ID_TipoAtributo = 3)
-            if ($producto_data['ID_Atributo1'] == 3) $talla = $producto_data['ValorAtributo1'];
-            elseif ($producto_data['ID_Atributo2'] == 3) $talla = $producto_data['ValorAtributo2'];
-            elseif ($producto_data['ID_Atributo3'] == 3) $talla = $producto_data['ValorAtributo3'];
-            
-            return [
-                'ID_Producto' => $producto_data['ID_Producto'],
-                'ID_Articulo' => $producto_data['ID_Articulo'],
-                'N_Articulo' => $producto_data['N_Articulo'] ?? 'Producto ' . $id_producto,
-                'Nombre_Producto' => $producto_data['Nombre_Producto'] ?? $producto_data['N_Articulo'],
-                'Precio' => $precio_final ? floatval($precio_final) : floatval($producto_data['Precio_Final_Calculado'] ?? 0),
-                'Precio_Base' => floatval($producto_data['Precio_Base'] ?? 0),
-                'Foto' => $producto_data['Foto'] ?? 'assets/img/placeholder.png',
-                'Tipo' => 'variante',
-                // Usar ID_AtributoX para identificar
-                'ID_Color' => ($producto_data['ID_Atributo1'] == 2) ? $producto_data['ID_Atributo1'] : 
-                            (($producto_data['ID_Atributo2'] == 2) ? $producto_data['ID_Atributo2'] : 
-                            (($producto_data['ID_Atributo3'] == 2) ? $producto_data['ID_Atributo3'] : null)),
-                'ID_Talla' => ($producto_data['ID_Atributo1'] == 3) ? $producto_data['ID_Atributo1'] : 
-                            (($producto_data['ID_Atributo2'] == 3) ? $producto_data['ID_Atributo2'] : 
-                            (($producto_data['ID_Atributo3'] == 3) ? $producto_data['ID_Atributo3'] : null)),
-                'Nombre_Talla' => $talla ?: 'Única',
-                'Nombre_Color' => $color ?: 'Sin color',
-                'Cantidad' => intval($producto_data['Cantidad'] ?? 0)
-            ];
-        }
-        
-        // Si no encuentra, devolver datos básicos
-        return [
-            'ID_Producto' => $id_producto,
-            'ID_Articulo' => null,
-            'N_Articulo' => 'Producto ' . $id_producto,
-            'Nombre_Producto' => 'Producto ' . $id_producto,
-            'Precio' => $precio_final ? floatval($precio_final) : 0,
-            'Precio_Base' => $precio_final ? floatval($precio_final) : 0,
-            'Foto' => 'assets/img/placeholder.png',
-            'Tipo' => 'variante',
-            'ID_Color' => $id_color,
-            'ID_Talla' => $id_talla,
-            'Nombre_Talla' => $id_talla ? 'Talla ' . $id_talla : 'Única',
-            'Nombre_Color' => $id_color ? 'Color ' . $id_color : 'Sin color',
-            'Cantidad' => 999
-        ];
-    }
-
-    private function crearDatosBasicosArticulo($id_articulo, $precio_final) {
-        return [
-            'ID_Producto' => null,
-            'ID_Articulo' => $id_articulo,
-            'N_Articulo' => 'Artículo ' . $id_articulo,
-            'Nombre_Producto' => 'Artículo ' . $id_articulo,
-            'Precio' => $precio_final ? floatval($precio_final) : 0,
-            'Precio_Base' => $precio_final ? floatval($precio_final) : 0,
-            'Foto' => 'assets/img/placeholder.png',
-            'Tipo' => 'base',
-            'ID_Color' => 'base',
-            'ID_Talla' => null,
-            'Nombre_Talla' => 'Única',
-            'Nombre_Color' => 'Base',
-            'Cantidad' => 999
-        ];
-    }
-
-    // =======================================================
-    // Eliminar producto del carrito
-    // =======================================================
     public function eliminar() {
         if (isset($_GET['id']) && isset($_SESSION['carrito'][$_GET['id']])) {
             $producto_eliminado = $_SESSION['carrito'][$_GET['id']]['N_Articulo'];
             unset($_SESSION['carrito'][$_GET['id']]);
             $_SESSION['carrito'] = array_values($_SESSION['carrito']);
-            // $_SESSION['mensaje_ok'] = "{$producto_eliminado} eliminado del carrito.";
         }
         header("Location: " . BASE_URL . "?c=Carrito&a=carrito");
         exit;
     }
 
-    // =======================================================
-    // 🧹 Vaciar todo el carrito
-    // =======================================================
     public function vaciar() {
         unset($_SESSION['carrito']);
         $_SESSION['mensaje_ok'] = "Carrito vaciado correctamente.";
@@ -703,9 +664,6 @@ class CarritoController {
         exit;
     }
 
-    // =======================================================
-    // 🔄 Actualizar cantidad en carrito
-    // =======================================================
     public function actualizarCantidad() {
         if (isset($_POST['index']) && isset($_POST['cantidad']) && isset($_SESSION['carrito'][$_POST['index']])) {
             $index = (int)$_POST['index'];
@@ -719,16 +677,14 @@ class CarritoController {
             $producto = new Producto($this->db);
             
             if ($item['Tipo'] === 'variante' && $item['ID_Producto']) {
-                $stock_disponible = $producto->verificarStock($item['ID_Producto'], $nueva_cantidad, 'variante');
-            } else {
-                $stock_disponible = $producto->verificarStock($item['ID_Articulo'], $nueva_cantidad, 'base');
-            }
-            
-            if (!$stock_disponible) {
-                // $_SESSION['mensaje_error'] = "No hay suficiente stock disponible.";
-            } else {
-                $_SESSION['carrito'][$index]['Cantidad'] = $nueva_cantidad;
-                // $_SESSION['mensaje_ok'] = "Cantidad actualizada correctamente.";
+                $sql = "SELECT Cantidad FROM producto WHERE ID_Producto = ?";
+                $stmt = $this->db->prepare($sql);
+                $stmt->execute([$item['ID_Producto']]);
+                $stock = $stmt->fetch(PDO::FETCH_ASSOC);
+                
+                if ($stock && $stock['Cantidad'] >= $nueva_cantidad) {
+                    $_SESSION['carrito'][$index]['Cantidad'] = $nueva_cantidad;
+                }
             }
         }
         

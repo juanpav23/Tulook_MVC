@@ -167,6 +167,21 @@ unset($_SESSION['form_data']);
             padding-bottom: 0.5rem;
             border-bottom: 2px solid #e3e6f0;
         }
+        
+        .toggle-descuento {
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        
+        .toggle-descuento:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.1);
+        }
+        
+        .toggle-descuento.active {
+            border-color: var(--primary-color) !important;
+            background-color: rgba(78, 115, 223, 0.05) !important;
+        }
     </style>
 </head>
 <body>
@@ -242,7 +257,8 @@ unset($_SESSION['form_data']);
                                                    maxlength="20"
                                                    pattern="[A-Z0-9_]+"
                                                    title="Solo mayúsculas, números y guiones bajos"
-                                                   oninput="this.value = this.value.toUpperCase()">
+                                                   oninput="this.value = this.value.toUpperCase()"
+                                                   id="inputCodigo">
                                             <?php if (isset($formErrors['codigo'])): ?>
                                                 <div class="invalid-feedback">
                                                     <?= $formErrors['codigo'] ?>
@@ -325,6 +341,102 @@ unset($_SESSION['form_data']);
                                                 <?= $formErrors['aplicacion'] ?>
                                             </div>
                                         <?php endif; ?>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Sección: Condiciones y Límites (NUEVA) -->
+                            <div class="form-section">
+                                <h6 class="form-section-title">
+                                    <i class="fas fa-sliders-h me-2"></i>Condiciones y Límites
+                                </h6>
+                                
+                                <div class="row mb-4">
+                                    <div class="col-md-4">
+                                        <label class="form-label">
+                                            <i class="fas fa-dollar-sign text-success me-1"></i>Monto Mínimo para Ganar
+                                        </label>
+                                        <div class="input-group">
+                                            <span class="input-group-text">
+                                                <i class="fas fa-trophy"></i>
+                                            </span>
+                                            <input type="number" 
+                                                   class="form-control <?= isset($formErrors['monto_minimo']) ? 'is-invalid' : '' ?>" 
+                                                   name="monto_minimo" 
+                                                   step="0.01" 
+                                                   min="0" 
+                                                   value="<?= $formData['monto_minimo'] ?? 0 ?>" 
+                                                   placeholder="0.00"
+                                                   id="montoMinimo">
+                                            <span class="input-group-text">$</span>
+                                        </div>
+                                        <div class="form-text mt-2">
+                                            <i class="fas fa-info-circle me-1"></i>
+                                            Monto que debe alcanzar el usuario para ganar este descuento
+                                        </div>
+                                    </div>
+                                    
+                                    <div class="col-md-4">
+                                        <label class="form-label">
+                                            <i class="fas fa-globe text-info me-1"></i>Máximo Usos Globales
+                                        </label>
+                                        <div class="input-group">
+                                            <span class="input-group-text">
+                                                <i class="fas fa-globe-americas"></i>
+                                            </span>
+                                            <input type="number" 
+                                                   class="form-control <?= isset($formErrors['max_usos_global']) ? 'is-invalid' : '' ?>" 
+                                                   name="max_usos_global" 
+                                                   min="0" 
+                                                   value="<?= $formData['max_usos_global'] ?? 0 ?>" 
+                                                   placeholder="0 = ilimitado"
+                                                   id="maxUsosGlobal">
+                                        </div>
+                                        <div class="form-text mt-2">
+                                            <i class="fas fa-info-circle me-1"></i>
+                                            Límite total de usos. 0 = sin límite
+                                        </div>
+                                    </div>
+                                    
+                                    <div class="col-md-4">
+                                        <label class="form-label">
+                                            <i class="fas fa-user text-warning me-1"></i>Máximo Usos por Usuario
+                                        </label>
+                                        <div class="input-group">
+                                            <span class="input-group-text">
+                                                <i class="fas fa-user-check"></i>
+                                            </span>
+                                            <input type="number" 
+                                                   class="form-control <?= isset($formErrors['max_usos_usuario']) ? 'is-invalid' : '' ?>" 
+                                                   name="max_usos_usuario" 
+                                                   min="0" 
+                                                   value="<?= $formData['max_usos_usuario'] ?? 0 ?>" 
+                                                   placeholder="0 = ilimitado"
+                                                   id="maxUsosUsuario">
+                                        </div>
+                                        <div class="form-text mt-2">
+                                            <i class="fas fa-info-circle me-1"></i>
+                                            Límite por usuario. 0 = sin límite
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <div class="row">
+                                    <div class="col-12">
+                                        <div class="alert alert-info border-0">
+                                            <div class="d-flex">
+                                                <i class="fas fa-lightbulb text-info fs-5 me-3 mt-1"></i>
+                                                <div>
+                                                    <h6 class="alert-heading mb-2">Cómo funciona:</h6>
+                                                    <ul class="mb-0">
+                                                        <li><strong>Monto mínimo = 0:</strong> Descuento aplicable inmediatamente</li>
+                                                        <li><strong>Monto mínimo > 0:</strong> Descuento se gana al alcanzar el monto en una compra</li>
+                                                        <li>El código se genera automáticamente cuando se gana el descuento</li>
+                                                        <li>El descuento ganado se aplica en compras futuras</li>
+                                                    </ul>
+                                                </div>
+                                            </div>
+                                        </div>
                                     </div>
                                 </div>
                             </div>
@@ -587,7 +699,7 @@ unset($_SESSION['form_data']);
         fechaFin.addEventListener('change', validarFechas);
 
         // Validación en tiempo real para el código
-        const codigoInput = document.querySelector('input[name="codigo"]');
+        const codigoInput = document.getElementById('inputCodigo');
         codigoInput.addEventListener('input', function(e) {
             const valor = e.target.value;
             const regex = /^[A-Z0-9_]*$/;
@@ -623,6 +735,35 @@ unset($_SESSION['form_data']);
             } else if (tipoApp === 'categoria' && !document.getElementById('selectCategoria').value) {
                 e.preventDefault();
                 alert('Por favor selecciona una categoría.');
+                return false;
+            }
+            
+            // Validar límites lógicos
+            const montoMinimo = parseFloat(document.getElementById('montoMinimo').value);
+            const maxGlobal = parseInt(document.getElementById('maxUsosGlobal').value);
+            const maxUsuario = parseInt(document.getElementById('maxUsosUsuario').value);
+            
+            if (montoMinimo < 0) {
+                e.preventDefault();
+                alert('El monto mínimo no puede ser negativo.');
+                return false;
+            }
+            
+            if (maxGlobal < 0) {
+                e.preventDefault();
+                alert('El máximo de usos globales no puede ser negativo.');
+                return false;
+            }
+            
+            if (maxUsuario < 0) {
+                e.preventDefault();
+                alert('El máximo de usos por usuario no puede ser negativo.');
+                return false;
+            }
+            
+            if (maxUsuario > 0 && maxGlobal > 0 && maxUsuario > maxGlobal) {
+                e.preventDefault();
+                alert('El límite por usuario no puede ser mayor al límite global.');
                 return false;
             }
         });

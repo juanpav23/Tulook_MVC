@@ -1,13 +1,36 @@
 <div class="container-fluid">
+    <!-- Mensajes de sesión PHP - CORREGIDO -->
+    <?php 
+    // Mostrar mensajes de sesión si existen
+    if (session_status() == PHP_SESSION_NONE) {
+        session_start();
+    }
+    
+    // Mostrar mensajes de CRUD
+    if (isset($_SESSION['msg'])): ?>
+        <div class="alert alert-<?= $_SESSION['msg_type'] ?? 'info' ?> alert-dismissible fade show mb-4 shadow-sm" role="alert">
+            <i class="fas <?= ($_SESSION['msg_type'] ?? '') == 'success' ? 'fa-check-circle' : 
+                           (($_SESSION['msg_type'] ?? '') == 'danger' ? 'fa-exclamation-triangle' : 
+                           (($_SESSION['msg_type'] ?? '') == 'warning' ? 'fa-exclamation-circle' : 'fa-info-circle')) ?> me-2"></i>
+            <?= $_SESSION['msg'] ?>
+            <button type="button" class="btn-close" data-bs-dismiss="alert" onclick="clearSessionMessages()"></button>
+        </div>
+        <?php 
+        // Limpiar mensajes después de mostrarlos
+        unset($_SESSION['msg']);
+        unset($_SESSION['msg_type']);
+        ?>
+    <?php endif; ?>
+
     <!-- HEADER MEJORADO -->
     <div class="d-flex justify-content-between align-items-center mb-4">
         <div>
-            <h2 class="fw-bold text-primary mb-1">
+            <h2 class="fw-bold mb-1" style="color: var(--primary-dark);">
                 <i class="fas fa-box-open me-2"></i> Gestión de Productos Base
             </h2>
             <p class="text-muted mb-0">Administra y busca todos los productos base del sistema</p>
         </div>
-        <a href="<?= BASE_URL; ?>?c=Admin&a=productoForm" class="btn btn-success btn-lg shadow">
+        <a href="<?= BASE_URL; ?>?c=Admin&a=productoForm" class="btn btn-success btn-lg shadow" style="background-color: var(--secondary-blue); border-color: var(--secondary-blue);">
             <i class="fas fa-plus-circle me-1"></i> Nuevo Producto
         </a>
     </div>
@@ -23,22 +46,23 @@
             </div>
         </div>
         <div class="card-body">
-            <form action="<?= BASE_URL; ?>?c=Admin&a=buscarProductos" method="GET" class="row g-3">
+            <form action="<?= BASE_URL; ?>?c=Admin&a=buscarProductos" method="GET" class="row g-3" id="searchForm">
                 <input type="hidden" name="c" value="Admin">
                 <input type="hidden" name="a" value="buscarProductos">
                 
                 <!-- BÚSQUEDA PRINCIPAL -->
                 <div class="col-md-12">
-                    <label class="form-label fw-bold text-dark">Búsqueda por texto</label>
+                    <label class="form-label fw-bold text-dark">Búsqueda por texto (opcional)</label>
                     <div class="input-group input-group-lg">
                         <span class="input-group-text bg-light border-end-0">
                             <i class="fas fa-search text-muted"></i>
                         </span>
                         <input type="text" 
-                               name="q" 
-                               class="form-control border-start-0 ps-0" 
-                               placeholder="Buscar productos por nombre, categoría, subcategoría o género..."
-                               value="<?= htmlspecialchars($terminoBusqueda ?? '') ?>">
+                            name="q" 
+                            class="form-control border-start-0 ps-0" 
+                            placeholder="Buscar productos por nombre, categoría, subcategoría o género..."
+                            value="<?= htmlspecialchars($terminoBusqueda ?? '') ?>"
+                            id="searchInput">
                     </div>
                 </div>
 
@@ -47,8 +71,8 @@
                     <label class="form-label fw-bold text-dark">
                         <i class="fas fa-filter me-1 text-primary"></i>Categoría
                     </label>
-                    <select name="categoria" class="form-select">
-                        <option value="" disabled selected>Todas las categorías</option>
+                    <select name="categoria" class="form-select" id="filterCategoria">
+                        <option value="">Todas las categorías</option>
                         <?php foreach ($categorias as $cat): ?>
                             <option value="<?= $cat['ID_Categoria'] ?>" 
                                 <?= ($filtrosAplicados['categoria'] ?? '') == $cat['ID_Categoria'] ? 'selected' : '' ?>>
@@ -62,8 +86,8 @@
                     <label class="form-label fw-bold text-dark">
                         <i class="fas fa-venus-mars me-1 text-info"></i>Género
                     </label>
-                    <select name="genero" class="form-select">
-                        <option value="" disabled selected>Todos los géneros</option>
+                    <select name="genero" class="form-select" id="filterGenero">
+                        <option value="">Todos los géneros</option>
                         <?php foreach ($generos as $gen): ?>
                             <option value="<?= $gen['ID_Genero'] ?>" 
                                 <?= ($filtrosAplicados['genero'] ?? '') == $gen['ID_Genero'] ? 'selected' : '' ?>>
@@ -77,8 +101,8 @@
                     <label class="form-label fw-bold text-dark">
                         <i class="fas fa-tags me-1 text-warning"></i>Subcategoría
                     </label>
-                    <select name="subcategoria" class="form-select">
-                        <option value="" disabled selected>Todas las subcategorías</option>
+                    <select name="subcategoria" class="form-select" id="filterSubcategoria">
+                        <option value="">Todas las subcategorías</option>
                         <?php foreach ($subcategorias as $sub): ?>
                             <option value="<?= $sub['ID_SubCategoria'] ?>" 
                                 <?= ($filtrosAplicados['subcategoria'] ?? '') == $sub['ID_SubCategoria'] ? 'selected' : '' ?>>
@@ -92,7 +116,7 @@
                     <label class="form-label fw-bold text-dark">
                         <i class="fas fa-power-off me-1 text-success"></i>Estado
                     </label>
-                    <select name="estado" class="form-select">
+                    <select name="estado" class="form-select" id="filterEstado">
                         <option value="">Todos los estados</option>
                         <option value="1" <?= ($filtrosAplicados['estado'] ?? '') === '1' ? 'selected' : '' ?>>Activos</option>
                         <option value="0" <?= ($filtrosAplicados['estado'] ?? '') === '0' ? 'selected' : '' ?>>Inactivos</option>
@@ -102,10 +126,10 @@
                 <!-- BOTONES DE ACCIÓN -->
                 <div class="col-md-12 mt-3">
                     <div class="d-flex gap-2 justify-content-end">
-                        <button type="submit" class="btn btn-primary btn-lg px-4">
+                        <button type="submit" class="btn btn-primary btn-lg px-4" id="searchButton">
                             <i class="fas fa-search me-1"></i> Buscar
                         </button>
-                        <a href="<?= BASE_URL; ?>?c=Admin&a=productos" class="btn btn-outline-secondary btn-lg px-4">
+                        <a href="<?= BASE_URL; ?>?c=Admin&a=productos" class="btn btn-outline-secondary btn-lg px-4" id="clearButton">
                             <i class="fas fa-refresh me-1"></i> Limpiar
                         </a>
                     </div>
@@ -118,7 +142,7 @@
     <?php if (!empty($articulos) || isset($terminoBusqueda)): ?>
     <div class="row mb-4">
         <div class="col-12">
-            <div class="card border-0 shadow-sm">
+            <div class="card border-0 shadow-sm stats-card">
                 <div class="card-body py-3">
                     <div class="row text-center">
                         <div class="col-md-3">
@@ -214,7 +238,7 @@
         <div class="card-body p-0">
             <?php if (!empty($articulos)): ?>
                 <div class="table-responsive">
-                    <table class="table table-hover align-middle mb-0">
+                    <table class="table table-hover align-middle mb-0" id="productosTable">
                         <thead class="table-dark">
                             <tr>
                                 <th class="ps-3">Producto</th>
@@ -264,7 +288,7 @@
                                             }
                                         ?>
                                         <img src="<?= htmlspecialchars($rutaFoto); ?>"
-                                            class="img-thumbnail rounded-3 shadow-sm"
+                                            class="img-thumbnail rounded-3 shadow-sm product-image"
                                             style="width:80px; height:60px; object-fit:cover;"
                                             alt="<?= htmlspecialchars($a['N_Articulo']); ?>">
                                     </td>
@@ -274,9 +298,18 @@
                                         </span>
                                     </td>
                                     <td class="text-center">
-                                        <span class="badge bg-<?= !empty($a['Activo']) ? 'success' : 'secondary'; ?> rounded-pill">
-                                            <?= !empty($a['Activo']) ? 'Activo' : 'Inactivo'; ?>
-                                        </span>
+                                        <!-- INTERRUPTOR MEJORADO PARA ACTIVAR/DESACTIVAR -->
+                                        <div class="form-check form-switch d-inline-block">
+                                            <input class="form-check-input" type="checkbox" role="switch" 
+                                                   id="activo_<?= $a['ID_Articulo'] ?>"
+                                                   <?= !empty($a['Activo']) ? 'checked' : '' ?>
+                                                   onchange="toggleEstadoProducto(<?= $a['ID_Articulo'] ?>, this.checked)">
+                                            <label class="form-check-label" for="activo_<?= $a['ID_Articulo'] ?>">
+                                                <span class="badge <?= !empty($a['Activo']) ? 'bg-success' : 'bg-secondary' ?> rounded-pill">
+                                                    <?= !empty($a['Activo']) ? 'Activo' : 'Inactivo' ?>
+                                                </span>
+                                            </label>
+                                        </div>
                                     </td>
                                     <td>
                                         <div class="d-flex justify-content-center gap-1">
@@ -307,7 +340,7 @@
                     </table>
                 </div>
             <?php else: ?>
-                <div class="text-center py-5">
+                <div class="text-center py-5 no-results">
                     <div class="mb-4">
                         <i class="fas fa-search fa-4x text-muted opacity-50"></i>
                     </div>
@@ -332,48 +365,83 @@
     </div>
 </div>
 
-<style>
-.alert-gradient {
-    background: linear-gradient(135deg, #697992ff 0%, #0d2f5cff 100%);
-    color: white;
-    border: none;
-}
-
-.hover-shadow:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 4px 15px rgba(0,0,0,0.1);
-    transition: all 0.3s ease;
-}
-
-.bg-gradient-primary {
-    background: linear-gradient(135deg, #697992ff 0%, #0d2f5cff 100%) !important;
-}
-
-.card {
-    border-radius: 15px;
-}
-
-.btn {
-    border-radius: 10px;
-}
-
-.badge {
-    font-size: 0.75em;
-}
-
-/* Espaciado mejorado para la tabla */
-.table th.ps-3,
-.table td.ps-3 {
-    padding-left: 1.5rem !important;
-}
-</style>
-
+<!-- Incluir CSS -->
+<link rel="stylesheet" href="<?= BASE_URL ?>assets/css/productosAdmin.css">
+<!-- Incluir JavaScript -->
 <script>
-document.addEventListener('DOMContentLoaded', function() {
-    // Inicializar tooltips
-    var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'))
-    var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
-        return new bootstrap.Tooltip(tooltipTriggerEl)
+// Función para limpiar mensajes de sesión
+function clearSessionMessages() {
+    fetch('<?= BASE_URL ?>?c=Admin&a=clearMessages');
+}
+
+// Función para cambiar estado del producto con interruptor
+function toggleEstadoProducto(idProducto, estado) {
+    if (confirm(`¿Estás seguro de ${estado ? 'activar' : 'desactivar'} este producto?`)) {
+        fetch(`<?= BASE_URL ?>?c=Admin&a=toggleEstadoProducto&id=${idProducto}&estado=${estado ? 1 : 0}`)
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    // Actualizar badge visualmente
+                    const badge = document.querySelector(`#activo_${idProducto}`).nextElementSibling.querySelector('.badge');
+                    if (estado) {
+                        badge.className = 'badge bg-success rounded-pill';
+                        badge.textContent = 'Activo';
+                    } else {
+                        badge.className = 'badge bg-secondary rounded-pill';
+                        badge.textContent = 'Inactivo';
+                    }
+                    
+                    // Mostrar mensaje de éxito
+                    showToast(data.message, 'success');
+                } else {
+                    // Revertir el interruptor si hay error
+                    document.querySelector(`#activo_${idProducto}`).checked = !estado;
+                    showToast(data.message, 'danger');
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                document.querySelector(`#activo_${idProducto}`).checked = !estado;
+                showToast('Error al cambiar el estado', 'danger');
+            });
+    } else {
+        // Revertir el interruptor si el usuario cancela
+        document.querySelector(`#activo_${idProducto}`).checked = !estado;
+    }
+}
+
+// Función para mostrar toast
+function showToast(message, type = 'info') {
+    const toastContainer = document.createElement('div');
+    toastContainer.className = 'toast-container position-fixed top-0 end-0 p-3';
+    toastContainer.style.zIndex = '1050';
+    
+    const toast = document.createElement('div');
+    toast.className = `toast align-items-center text-white bg-${type} border-0`;
+    toast.setAttribute('role', 'alert');
+    toast.setAttribute('aria-live', 'assertive');
+    toast.setAttribute('aria-atomic', 'true');
+    
+    const toastBody = document.createElement('div');
+    toastBody.className = 'd-flex';
+    
+    toastBody.innerHTML = `
+        <div class="toast-body">
+            ${message}
+        </div>
+        <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
+    `;
+    
+    toast.appendChild(toastBody);
+    toastContainer.appendChild(toast);
+    document.body.appendChild(toastContainer);
+    
+    const bsToast = new bootstrap.Toast(toast, { delay: 3000 });
+    bsToast.show();
+    
+    toast.addEventListener('hidden.bs.toast', () => {
+        toastContainer.remove();
     });
-});
+}
 </script>
+<script src="<?= BASE_URL ?>assets/js/productos.js"></script>

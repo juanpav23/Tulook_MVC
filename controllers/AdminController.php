@@ -117,6 +117,10 @@ class AdminController {
         $generos = $this->db->query("SELECT * FROM genero ORDER BY N_Genero")->fetchAll(PDO::FETCH_ASSOC);
         $subcategorias = $this->db->query("SELECT * FROM subcategoria ORDER BY SubCategoria")->fetchAll(PDO::FETCH_ASSOC);
 
+        // Inicializar variables para búsqueda
+        $terminoBusqueda = '';
+        $filtrosAplicados = [];
+        
         include "views/admin/layout_admin.php";
     }
 
@@ -262,7 +266,7 @@ class AdminController {
         echo json_encode($atributosData);
     }
 
-    // 💾 GUARDAR O ACTUALIZAR PRODUCTO BASE
+    // 💾 GUARDAR O ACTUALIZAR PRODUCTO BASE - CORREGIDO (IMAGEN NO OBLIGATORIA EN EDICIÓN)
     public function saveProducto() {
         try {
             $id = isset($_POST['ID_Articulo']) ? (int)$_POST['ID_Articulo'] : null;
@@ -272,22 +276,27 @@ class AdminController {
             $gen = (int)($_POST['ID_Genero'] ?? 0);
             $idPrecio = (int)($_POST['ID_Precio'] ?? 0);
             $activo = isset($_POST['Activo']) ? 1 : 0;
+            
+            // Inicializar variables
+            $tieneVariantes = false;
+            $huboCambiosCategorias = false;
+            $articuloActual = null;
 
-            // Si es edición y tiene variantes, verificar que no se modifiquen categorías
+            // Si es edición, obtener datos actuales
             if ($id) {
+                // Obtener datos actuales del artículo
+                $stmt = $this->db->prepare("SELECT ID_Categoria, ID_SubCategoria, ID_Genero, Foto FROM articulo WHERE ID_Articulo = ?");
+                $stmt->execute([$id]);
+                $articuloActual = $stmt->fetch(PDO::FETCH_ASSOC);
+                
+                // Verificar si tiene variantes
                 $tieneVariantes = $this->tieneVariantes($id);
                 
-                if ($tieneVariantes) {
-                    // Obtener datos actuales del artículo
-                    $stmt = $this->db->prepare("SELECT ID_Categoria, ID_SubCategoria, ID_Genero FROM articulo WHERE ID_Articulo = ?");
-                    $stmt->execute([$id]);
-                    $articuloActual = $stmt->fetch(PDO::FETCH_ASSOC);
-                    
-                    // Verificar si se intentan modificar categorías
-                    if ($articuloActual && 
-                        ($articuloActual['ID_Categoria'] != $cat || 
+                if ($tieneVariantes && $articuloActual) {
+                    // Verificar si se intentan modificar categorías (producto con variantes)
+                    if ($articuloActual['ID_Categoria'] != $cat || 
                         $articuloActual['ID_SubCategoria'] != $subcat || 
-                        $articuloActual['ID_Genero'] != $gen)) {
+                        $articuloActual['ID_Genero'] != $gen) {
                         
                         $_SESSION['msg'] = "❌ No se pueden modificar la categoría, subcategoría o género porque este producto ya tiene variantes creadas.";
                         $_SESSION['msg_type'] = "warning";
@@ -295,30 +304,158 @@ class AdminController {
                         exit;
                     }
                 }
+                
+                // Verificar si hubo cambios en categorías (para productos sin variantes)
+                if (!$tieneVariantes && $articuloActual) {
+                    $huboCambiosCategorias = 
+                        ($articuloActual['ID_Categoria'] != $cat) ||
+                        ($articuloActual['ID_SubCategoria'] != $subcat) ||
+                        ($articuloActual['ID_Genero'] != $gen);
+                }
             }
             
-            // ⚙️ Manejo de la imagen
+            // ⭐⭐ MANEJO DE IMAGEN - LÓGICA CORREGIDA ⭐⭐
             $fotoFinal = $_POST['foto_actual'] ?? '';
 
-            if (!empty($_FILES['foto']['name'])) {
-                $nombreArchivo = basename($_FILES['foto']['name']);
-                
-                if (!empty($_POST['Foto'])) {
-                    $rutaDestino = $_POST['Foto'];
-                } else {
-                    $rutaDestino = 'ImgProducto/' . $nombreArchivo;
-                }
+            // Determinar si se requiere nueva imagen
+            $requiereNuevaImagen = false;
 
-                $directorio = dirname($rutaDestino);
+            if (!$id) {
+                // Caso 1: Producto nuevo - siempre requiere imagen
+                $requiereNuevaImagen = true;
+            } elseif ($id && !$tieneVariantes && $huboCambiosCategorias) {
+                // Caso 2: Producto existente sin variantes CON cambios en categorías
+                $requiereNuevaImagen = true;
+                
+                // Eliminar imagen anterior si hay cambios en categorías
+                if (!empty($_POST['foto_actual']) && file_exists($_POST['foto_actual'])) {
+                    @unlink($_POST['foto_actual']);
+                    $fotoFinal = ''; // Limpiar la ruta
+                }
+            }
+            // Caso 3: Producto existente sin variantes SIN cambios en categorías -> NO requiere nueva imagen
+            // Caso 4: Producto con variantes -> NO requiere nueva imagen (categorías bloqueadas)
+
+            echo "DEBUG - ID: $id, TieneVariantes: " . ($tieneVariantes ? 'SI' : 'NO') . 
+                ", HuboCambiosCategorias: " . ($huboCambiosCategorias ? 'SI' : 'NO') . 
+                ", RequiereNuevaImagen: " . ($requiereNuevaImagen ? 'SI' : 'NO');
+
+            // Validar que se suba imagen si es requerida
+            if ($requiereNuevaImagen && empty($_FILES['foto']['name'])) {
+                $mensaje = !$id ? 
+                    "❌ Error: Debes seleccionar una imagen para el producto nuevo." : 
+                    "❌ Error: Has cambiado la categoría, género o subcategoría. Debes seleccionar una nueva imagen.";
+                
+                $_SESSION['msg'] = $mensaje;
+                $_SESSION['msg_type'] = "danger";
+                header("Location: " . BASE_URL . "?c=Admin&a=productoForm" . ($id ? "&id=$id" : ""));
+                exit;
+            }
+            
+            // Si hay imagen subida, procesarla
+            if (!empty($_FILES['foto']['name'])) {
+                // Obtener información de categoría, género y subcategoría para construir ruta
+                $categoriaNombre = '';
+                $generoNombre = '';
+                $subcategoriaNombre = '';
+                
+                if ($cat && $gen && $subcat) {
+                    $sql = "SELECT 
+                            (SELECT N_Categoria FROM categoria WHERE ID_Categoria = ?) as categoria,
+                            (SELECT N_Genero FROM genero WHERE ID_Genero = ?) as genero,
+                            (SELECT SubCategoria FROM subcategoria WHERE ID_SubCategoria = ?) as subcategoria";
+                    $stmt = $this->db->prepare($sql);
+                    $stmt->execute([$cat, $gen, $subcat]);
+                    $info = $stmt->fetch(PDO::FETCH_ASSOC);
+                    
+                    $categoriaNombre = $info['categoria'] ?? 'General';
+                    $generoNombre = $info['genero'] ?? 'Unisex';
+                    $subcategoriaNombre = $info['subcategoria'] ?? 'General';
+                } elseif ($id && $articuloActual) {
+                    // Si es edición y no tenemos nuevos datos, usar los actuales
+                    $sql = "SELECT 
+                            (SELECT N_Categoria FROM categoria WHERE ID_Categoria = a.ID_Categoria) as categoria,
+                            (SELECT N_Genero FROM genero WHERE ID_Genero = a.ID_Genero) as genero,
+                            (SELECT SubCategoria FROM subcategoria WHERE ID_SubCategoria = a.ID_SubCategoria) as subcategoria
+                            FROM articulo a WHERE a.ID_Articulo = ?";
+                    $stmt = $this->db->prepare($sql);
+                    $stmt->execute([$id]);
+                    $info = $stmt->fetch(PDO::FETCH_ASSOC);
+                    
+                    $categoriaNombre = $info['categoria'] ?? 'General';
+                    $generoNombre = $info['genero'] ?? 'Unisex';
+                    $subcategoriaNombre = $info['subcategoria'] ?? 'General';
+                }
+                
+                // Crear directorios según estructura
+                $carpetaBase = 'ImgProducto';
+                
+                // Limpiar nombres para la ruta
+                $categoriaNombre = $this->limpiarParaRuta($categoriaNombre);
+                $generoNombre = $this->limpiarParaRuta($generoNombre);
+                $subcategoriaNombre = $this->limpiarParaRuta($subcategoriaNombre);
+                
+                $directorio = $carpetaBase . '/' . $categoriaNombre . '/' . $generoNombre . '/' . $subcategoriaNombre;
+                
                 if (!is_dir($directorio)) {
                     mkdir($directorio, 0777, true);
                 }
-
+                
+                // Generar nombre único automáticamente
+                $nombreArchivo = $_FILES['foto']['name'];
+                $extension = pathinfo($nombreArchivo, PATHINFO_EXTENSION);
+                $nombreUnico = time() . '_' . uniqid() . '.' . $extension;
+                $rutaDestino = $directorio . '/' . $nombreUnico;
+                
+                // Validar tamaño (15MB máximo)
+                if ($_FILES['foto']['size'] > 15 * 1024 * 1024) {
+                    $_SESSION['msg'] = "❌ Error: La imagen es demasiado grande. Máximo 15MB.";
+                    $_SESSION['msg_type'] = "danger";
+                    header("Location: " . BASE_URL . "?c=Admin&a=productoForm" . ($id ? "&id=$id" : ""));
+                    exit;
+                }
+                
+                // Validar tipo de archivo
+                $tiposPermitidos = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp'];
+                if (!in_array($_FILES['foto']['type'], $tiposPermitidos)) {
+                    $_SESSION['msg'] = "❌ Error: Formato de imagen no permitido. Use JPG, PNG, GIF o WebP.";
+                    $_SESSION['msg_type'] = "danger";
+                    header("Location: " . BASE_URL . "?c=Admin&a=productoForm" . ($id ? "&id=$id" : ""));
+                    exit;
+                }
+                
+                // Mover archivo
                 if (move_uploaded_file($_FILES['foto']['tmp_name'], $rutaDestino)) {
                     $fotoFinal = $rutaDestino;
+                    
+                    // Eliminar imagen anterior si existe y es diferente a la nueva
+                    if ($id && !empty($_POST['foto_actual']) && $_POST['foto_actual'] !== $rutaDestino && file_exists($_POST['foto_actual'])) {
+                        @unlink($_POST['foto_actual']);
+                    }
+                } else {
+                    $_SESSION['msg'] = "❌ Error al subir la imagen.";
+                    $_SESSION['msg_type'] = "danger";
+                    header("Location: " . BASE_URL . "?c=Admin&a=productoForm" . ($id ? "&id=$id" : ""));
+                    exit;
                 }
-            } elseif (!empty($_POST['Foto'])) {
-                $fotoFinal = trim($_POST['Foto']);
+            } elseif ($id) {
+                // Si es edición y no se subió nueva imagen
+                if ($requiereNuevaImagen) {
+                    // Si requiere nueva imagen pero no se subió, mostrar error
+                    $_SESSION['msg'] = "❌ Error: Has cambiado la categoría, género o subcategoría. Debes seleccionar una nueva imagen.";
+                    $_SESSION['msg_type'] = "danger";
+                    header("Location: " . BASE_URL . "?c=Admin&a=productoForm&id=$id");
+                    exit;
+                } else {
+                    // Si no requiere nueva imagen, mantener la imagen actual
+                    $fotoFinal = $articuloActual['Foto'] ?? '';
+                }
+            } elseif (empty($fotoFinal) && !$id) {
+                // Si es nuevo producto y no tiene imagen, error
+                $_SESSION['msg'] = "❌ Error: Debes seleccionar una imagen para el producto.";
+                $_SESSION['msg_type'] = "danger";
+                header("Location: " . BASE_URL . "?c=Admin&a=productoForm");
+                exit;
             }
 
             // 🔍 VERIFICAR DUPLICADO ANTES DE GUARDAR (SOLO DATOS)
@@ -361,6 +498,14 @@ class AdminController {
                     : "❌ Error al actualizar el producto.";
                 $_SESSION['msg_type'] = $ok ? "success" : "danger";
             } else {
+                // Para producto nuevo, validar que tenga imagen
+                if (empty($fotoFinal)) {
+                    $_SESSION['msg'] = "❌ Error: Debes seleccionar una imagen para el producto.";
+                    $_SESSION['msg_type'] = "danger";
+                    header("Location: " . BASE_URL . "?c=Admin&a=productoForm");
+                    exit;
+                }
+                
                 $insert = $this->db->prepare("
                     INSERT INTO articulo 
                         (N_Articulo, Foto, ID_Categoria, ID_SubCategoria, ID_Genero, ID_Precio, Activo)
@@ -388,123 +533,206 @@ class AdminController {
         }
     }
 
-    // ➕ GUARDAR NUEVA VARIANTE
-    public function agregarVariante() {
-        $idArticulo = (int)($_POST['ID_Articulo'] ?? 0);
-        $porcentaje = (float)($_POST['Porcentaje'] ?? 0);
-        $activo = isset($_POST['Activo']) ? 1 : 0;
-        
-        // VALIDACIÓN DE PORCENTAJE (NEGATIVO O POSITIVO)
-        if ($porcentaje < -90 || $porcentaje > 300) {
-            $_SESSION['msg'] = "❌ Error: El porcentaje debe estar entre -90% (descuento) y +300% (aumento).";
-            $_SESSION['msg_type'] = "danger";
-            header("Location: " . BASE_URL . "?c=Admin&a=detalleProducto&id=$idArticulo");
-            exit;
-        }
-        
-        // CAMBIO: Establecer límite de 99,999
-        $cantidad = isset($_POST['Cantidad']) ? (int)$_POST['Cantidad'] : 0;
-        if ($cantidad > 99999) {
-            $cantidad = 99999;
-        }
-        if ($cantidad < 0) {
-            $cantidad = 0;
-        }
-        
-        $foto = trim($_POST['Foto'] ?? '');
-        $nombreProducto = trim($_POST['Nombre_Producto'] ?? '');
-
-        if ($idArticulo <= 0) {
-            header("Location: " . BASE_URL . "?c=Admin&a=detalleProducto&id=$idArticulo");
-            exit;
-        }
-
-        // Obtener información del artículo para saber la subcategoría
-        $sql = "SELECT a.ID_SubCategoria, sc.AtributosRequeridos 
-                FROM articulo a 
-                LEFT JOIN subcategoria sc ON sc.ID_SubCategoria = a.ID_SubCategoria 
-                WHERE a.ID_Articulo = ?";
-        $stmt = $this->db->prepare($sql);
-        $stmt->execute([$idArticulo]);
-        $articuloInfo = $stmt->fetch(PDO::FETCH_ASSOC);
-        
-        if (!$articuloInfo) {
-            $_SESSION['msg'] = "❌ Error: Artículo no encontrado";
-            $_SESSION['msg_type'] = "danger";
-            header("Location: " . BASE_URL . "?c=Admin&a=detalleProducto&id=$idArticulo");
-            exit;
-        }
-
-        // Procesar atributos dinámicos
-        $atributosIds = explode(',', $articuloInfo['AtributosRequeridos'] ?? '');
-        $atributosData = [];
-        
-        for ($i = 0; $i < 3; $i++) {
-            $atributoKey = "atributo" . ($i + 1);
-            $valorKey = "valor_atributo" . ($i + 1);
-            
-            if (isset($atributosIds[$i])) {
-                $idTipoAtributo = trim($atributosIds[$i]);
-                $valorAtributo = $_POST[$valorKey] ?? '';
-                
-                $atributosData[] = [
-                    'id_tipo' => $idTipoAtributo,
-                    'valor' => $valorAtributo
-                ];
-            }
-        }
-
-        // Manejar subida de imagen
-        if (!empty($_FILES['imagen_variante']['name']) && !empty($foto)) {
-            $directorio = dirname($foto);
-            if (!is_dir($directorio)) {
-                mkdir($directorio, 0777, true);
-            }
-
-            if (move_uploaded_file($_FILES['imagen_variante']['tmp_name'], $foto)) {
-                // Imagen subida correctamente
-            }
-        }
-
-        // Verificar variante duplicada
-        $varianteDuplicada = $this->verificarVarianteDuplicada($idArticulo, $atributosData);
-        
-        if ($varianteDuplicada) {
-            $_SESSION['msg'] = "❌ Ya existe una variante con esta combinación de atributos.";
-            $_SESSION['msg_type'] = "warning";
-            header("Location: " . BASE_URL . "?c=Admin&a=detalleProducto&id=$idArticulo");
-            exit;
-        }
-
-        // ✅ INSERT ACTUALIZADO CON ATRIBUTOS DINÁMICOS
-        $sql = "INSERT INTO producto (ID_Articulo, Foto, Porcentaje, Cantidad, Nombre_Producto, Activo";
-        $values = "VALUES (?, ?, ?, ?, ?, ?";
-        $insertParams = [$idArticulo, $foto, $porcentaje, $cantidad, $nombreProducto, $activo];
-        
-        // Agregar atributos dinámicos
-        for ($i = 0; $i < count($atributosData); $i++) {
-            $columnaId = "ID_Atributo" . ($i + 1);
-            $columnaValor = "ValorAtributo" . ($i + 1);
-            
-            $sql .= ", $columnaId, $columnaValor";
-            $values .= ", ?, ?";
-            $insertParams[] = $atributosData[$i]['id_tipo'];
-            $insertParams[] = $atributosData[$i]['valor'];
-        }
-        
-        $sql .= ") " . $values . ")";
-        
-        $stmt = $this->db->prepare($sql);
-        $stmt->execute($insertParams);
-
-        $_SESSION['msg'] = "✅ Variante agregada correctamente.";
-        $_SESSION['msg_type'] = "success";
-
-        header("Location: " . BASE_URL . "?c=Admin&a=detalleProducto&id=$idArticulo");
-        exit;
+    private function limpiarParaRuta($texto) {
+        $texto = preg_replace('/[^a-zA-Z0-9áéíóúÁÉÍÓÚñÑ]/', '_', $texto);
+        $texto = preg_replace('/_+/', '_', $texto);
+        $texto = trim($texto, '_');
+        return $texto;
     }
 
-    // 🔄 ACTIVAR/DESACTIVAR VARIANTE
+    // ➕ GUARDAR NUEVA VARIANTE - CORREGIDO
+    public function agregarVariante() {
+        try {
+            $idArticulo = (int)($_POST['ID_Articulo'] ?? 0);
+            $porcentaje = (float)($_POST['Porcentaje'] ?? 0);
+            $activo = isset($_POST['Activo']) ? 1 : 0;
+            
+            // VALIDACIÓN DE PORCENTAJE (NEGATIVO O POSITIVO)
+            if ($porcentaje < -90 || $porcentaje > 300) {
+                $_SESSION['msg'] = "❌ Error: El porcentaje debe estar entre -90% (descuento) y +300% (aumento).";
+                $_SESSION['msg_type'] = "danger";
+                header("Location: " . BASE_URL . "?c=Admin&a=detalleProducto&id=$idArticulo");
+                exit;
+            }
+            
+            // CAMBIO: Establecer límite de 99,999
+            $cantidad = isset($_POST['Cantidad']) ? (int)$_POST['Cantidad'] : 0;
+            if ($cantidad > 99999) {
+                $cantidad = 99999;
+            }
+            if ($cantidad < 0) {
+                $cantidad = 0;
+            }
+            
+            $nombreProducto = trim($_POST['Nombre_Producto'] ?? '');
+
+            if ($idArticulo <= 0) {
+                $_SESSION['msg'] = "❌ Error: ID de artículo no válido.";
+                $_SESSION['msg_type'] = "danger";
+                header("Location: " . BASE_URL . "?c=Admin&a=detalleProducto&id=$idArticulo");
+                exit;
+            }
+
+            // Obtener información del artículo para saber la subcategoría
+            $sql = "SELECT a.ID_SubCategoria, sc.AtributosRequeridos 
+                    FROM articulo a 
+                    LEFT JOIN subcategoria sc ON sc.ID_SubCategoria = a.ID_SubCategoria 
+                    WHERE a.ID_Articulo = ?";
+            $stmt = $this->db->prepare($sql);
+            $stmt->execute([$idArticulo]);
+            $articuloInfo = $stmt->fetch(PDO::FETCH_ASSOC);
+            
+            if (!$articuloInfo) {
+                $_SESSION['msg'] = "❌ Error: Artículo no encontrado";
+                $_SESSION['msg_type'] = "danger";
+                header("Location: " . BASE_URL . "?c=Admin&a=detalleProducto&id=$idArticulo");
+                exit;
+            }
+
+            // Procesar atributos dinámicos
+            $atributosIds = explode(',', $articuloInfo['AtributosRequeridos'] ?? '');
+            $atributosData = [];
+            
+            for ($i = 0; $i < 3; $i++) {
+                $atributoKey = "atributo" . ($i + 1);
+                $valorKey = "valor_atributo" . ($i + 1);
+                
+                if (isset($atributosIds[$i])) {
+                    $idTipoAtributo = trim($atributosIds[$i]);
+                    $valorAtributo = $_POST[$valorKey] ?? '';
+                    
+                    $atributosData[] = [
+                        'id_tipo' => $idTipoAtributo,
+                        'valor' => $valorAtributo
+                    ];
+                }
+            }
+
+            // ⭐⭐ CORRECCIÓN CRÍTICA: Manejo de subida de imagen ⭐⭐
+            $foto = '';
+            
+            if (!empty($_FILES['imagen_variante']['name'])) {
+                // Obtener información del producto base para construir la ruta
+                $sqlArticulo = "SELECT c.N_Categoria, g.N_Genero, s.SubCategoria 
+                               FROM articulo a
+                               LEFT JOIN categoria c ON a.ID_Categoria = c.ID_Categoria
+                               LEFT JOIN genero g ON a.ID_Genero = g.ID_Genero
+                               LEFT JOIN subcategoria s ON a.ID_SubCategoria = s.ID_SubCategoria
+                               WHERE a.ID_Articulo = ?";
+                $stmtArticulo = $this->db->prepare($sqlArticulo);
+                $stmtArticulo->execute([$idArticulo]);
+                $infoArticulo = $stmtArticulo->fetch(PDO::FETCH_ASSOC);
+                
+                // Crear directorio si no existe
+                $carpetaBase = 'ImgProducto';
+                $categoria = $infoArticulo['N_Categoria'] ?? 'General';
+                $genero = $infoArticulo['N_Genero'] ?? 'Unisex';
+                $subcategoria = $infoArticulo['SubCategoria'] ?? 'General';
+                
+                // Limpiar nombres para usar en rutas
+                $categoria = preg_replace('/[^a-zA-Z0-9]/', '_', $categoria);
+                $genero = preg_replace('/[^a-zA-Z0-9]/', '_', $genero);
+                $subcategoria = preg_replace('/[^a-zA-Z0-9]/', '_', $subcategoria);
+                
+                $directorio = $carpetaBase . '/' . $categoria . '/' . $genero . '/' . $subcategoria;
+                
+                // Crear directorios recursivamente
+                if (!is_dir($directorio)) {
+                    mkdir($directorio, 0777, true);
+                }
+                
+                // Generar nombre único para evitar conflictos
+                $nombreArchivo = $_FILES['imagen_variante']['name'];
+                $extension = pathinfo($nombreArchivo, PATHINFO_EXTENSION);
+                $nombreUnico = time() . '_' . uniqid() . '.' . $extension;
+                $rutaDestino = $directorio . '/' . $nombreUnico;
+                
+                // Validar tamaño (15MB máximo)
+                if ($_FILES['imagen_variante']['size'] > 15 * 1024 * 1024) {
+                    $_SESSION['msg'] = "❌ Error: La imagen es demasiado grande. Máximo 15MB.";
+                    $_SESSION['msg_type'] = "danger";
+                    header("Location: " . BASE_URL . "?c=Admin&a=detalleProducto&id=$idArticulo");
+                    exit;
+                }
+                
+                // Validar tipo de archivo
+                $tiposPermitidos = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp'];
+                if (!in_array($_FILES['imagen_variante']['type'], $tiposPermitidos)) {
+                    $_SESSION['msg'] = "❌ Error: Formato de imagen no permitido. Use JPG, PNG, GIF o WebP.";
+                    $_SESSION['msg_type'] = "danger";
+                    header("Location: " . BASE_URL . "?c=Admin&a=detalleProducto&id=$idArticulo");
+                    exit;
+                }
+                
+                // Mover archivo
+                if (move_uploaded_file($_FILES['imagen_variante']['tmp_name'], $rutaDestino)) {
+                    $foto = $rutaDestino;
+                } else {
+                    $_SESSION['msg'] = "❌ Error al subir la imagen.";
+                    $_SESSION['msg_type'] = "danger";
+                    header("Location: " . BASE_URL . "?c=Admin&a=detalleProducto&id=$idArticulo");
+                    exit;
+                }
+            } else {
+                $_SESSION['msg'] = "❌ Error: Debe subir una imagen para la variante.";
+                $_SESSION['msg_type'] = "danger";
+                header("Location: " . BASE_URL . "?c=Admin&a=detalleProducto&id=$idArticulo");
+                exit;
+            }
+            
+            if (empty($foto)) {
+                $_SESSION['msg'] = "❌ Error: No se pudo procesar la imagen.";
+                $_SESSION['msg_type'] = "danger";
+                header("Location: " . BASE_URL . "?c=Admin&a=detalleProducto&id=$idArticulo");
+                exit;
+            }
+
+            // Verificar variante duplicada
+            $varianteDuplicada = $this->verificarVarianteDuplicada($idArticulo, $atributosData);
+            
+            if ($varianteDuplicada) {
+                $_SESSION['msg'] = "❌ Ya existe una variante con esta combinación de atributos.";
+                $_SESSION['msg_type'] = "warning";
+                header("Location: " . BASE_URL . "?c=Admin&a=detalleProducto&id=$idArticulo");
+                exit;
+            }
+
+            // ✅ INSERT ACTUALIZADO CON ATRIBUTOS DINÁMICOS
+            $sql = "INSERT INTO producto (ID_Articulo, Foto, Porcentaje, Cantidad, Nombre_Producto, Activo";
+            $values = "VALUES (?, ?, ?, ?, ?, ?";
+            $insertParams = [$idArticulo, $foto, $porcentaje, $cantidad, $nombreProducto, $activo];
+            
+            // Agregar atributos dinámicos
+            for ($i = 0; $i < count($atributosData); $i++) {
+                $columnaId = "ID_Atributo" . ($i + 1);
+                $columnaValor = "ValorAtributo" . ($i + 1);
+                
+                $sql .= ", $columnaId, $columnaValor";
+                $values .= ", ?, ?";
+                $insertParams[] = $atributosData[$i]['id_tipo'];
+                $insertParams[] = $atributosData[$i]['valor'];
+            }
+            
+            $sql .= ") " . $values . ")";
+            
+            $stmt = $this->db->prepare($sql);
+            $stmt->execute($insertParams);
+
+            $_SESSION['msg'] = "✅ Variante agregada correctamente.";
+            $_SESSION['msg_type'] = "success";
+
+            header("Location: " . BASE_URL . "?c=Admin&a=detalleProducto&id=$idArticulo");
+            exit;
+            
+        } catch (Exception $e) {
+            $_SESSION['msg'] = "❌ Error: " . $e->getMessage();
+            $_SESSION['msg_type'] = "danger";
+            header("Location: " . BASE_URL . "?c=Admin&a=detalleProducto&id=" . ($idArticulo ?? ''));
+            exit;
+        }
+    }
+
+    // 🔄 ACTIVAR/DESACTIVAR VARIANTE - MEJORADO CON INTERRUPTOR
     public function toggleVariante() {
         $idProducto = (int)($_GET['id'] ?? 0);
         $idArticulo = (int)($_GET['articulo'] ?? 0);
@@ -563,7 +791,7 @@ class AdminController {
         exit;
     }
 
-    // 🔍 BUSCAR PRODUCTOS BASE CON FILTROS
+    // 🔍 BUSCAR PRODUCTOS BASE CON FILTROS - CORREGIDO (FILTROS SIN TEXTO)
     public function buscarProductos() {
         $termino = trim($_GET['q'] ?? '');
         $categoria = $_GET['categoria'] ?? '';
@@ -626,7 +854,7 @@ class AdminController {
         include "views/admin/layout_admin.php";
     }
 
-    // ✏️ EDITAR VARIANTE
+    // ✏️ EDITAR VARIANTE - CORREGIDO
     public function editarVariante() {
         if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
             header("Location: " . BASE_URL . "?c=Admin&a=productos");
@@ -656,7 +884,6 @@ class AdminController {
                 $cantidad = 0;
             }
             
-            $foto = $_POST['Foto'] ?? '';
             $nombreProducto = trim($_POST['Nombre_Producto'] ?? '');
 
             if (!$idProducto || !$idArticulo) {
@@ -693,6 +920,88 @@ class AdminController {
                         'valor' => $valorAtributo
                     ];
                 }
+            }
+
+            // ⭐⭐ CORRECCIÓN CRÍTICA: Manejo de imagen en edición ⭐⭐
+            // Primero obtener la ruta actual de la imagen
+            $sqlActual = "SELECT Foto FROM producto WHERE ID_Producto = ?";
+            $stmtActual = $this->db->prepare($sqlActual);
+            $stmtActual->execute([$idProducto]);
+            $fotoActual = $stmtActual->fetchColumn();
+            
+            $foto = $fotoActual; // Por defecto mantener la imagen actual
+            
+            // Verificar si se subió una nueva imagen
+            if (!empty($_FILES['imagen_variante_edit']['name'])) {
+                // Obtener información del producto base para construir la ruta
+                $sqlArticulo = "SELECT c.N_Categoria, g.N_Genero, s.SubCategoria 
+                               FROM articulo a
+                               LEFT JOIN categoria c ON a.ID_Categoria = c.ID_Categoria
+                               LEFT JOIN genero g ON a.ID_Genero = g.ID_Genero
+                               LEFT JOIN subcategoria s ON a.ID_SubCategoria = s.ID_SubCategoria
+                               WHERE a.ID_Articulo = ?";
+                $stmtArticulo = $this->db->prepare($sqlArticulo);
+                $stmtArticulo->execute([$idArticulo]);
+                $infoArticulo = $stmtArticulo->fetch(PDO::FETCH_ASSOC);
+                
+                // Crear directorio si no existe
+                $carpetaBase = 'ImgProducto';
+                $categoria = $infoArticulo['N_Categoria'] ?? 'General';
+                $genero = $infoArticulo['N_Genero'] ?? 'Unisex';
+                $subcategoria = $infoArticulo['SubCategoria'] ?? 'General';
+                
+                // Limpiar nombres para usar en rutas
+                $categoria = preg_replace('/[^a-zA-Z0-9]/', '_', $categoria);
+                $genero = preg_replace('/[^a-zA-Z0-9]/', '_', $genero);
+                $subcategoria = preg_replace('/[^a-zA-Z0-9]/', '_', $subcategoria);
+                
+                $directorio = $carpetaBase . '/' . $categoria . '/' . $genero . '/' . $subcategoria;
+                
+                // Crear directorios recursivamente
+                if (!is_dir($directorio)) {
+                    mkdir($directorio, 0777, true);
+                }
+                
+                // Generar nombre único para evitar conflictos
+                $nombreArchivo = $_FILES['imagen_variante_edit']['name'];
+                $extension = pathinfo($nombreArchivo, PATHINFO_EXTENSION);
+                $nombreUnico = time() . '_' . uniqid() . '.' . $extension;
+                $rutaDestino = $directorio . '/' . $nombreUnico;
+                
+                // Validar tamaño (15MB máximo)
+                if ($_FILES['imagen_variante_edit']['size'] > 15 * 1024 * 1024) {
+                    $_SESSION['msg'] = "❌ Error: La imagen es demasiado grande. Máximo 15MB.";
+                    $_SESSION['msg_type'] = "danger";
+                    header("Location: " . BASE_URL . "?c=Admin&a=detalleProducto&id=" . $idArticulo);
+                    exit;
+                }
+                
+                // Validar tipo de archivo
+                $tiposPermitidos = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp'];
+                if (!in_array($_FILES['imagen_variante_edit']['type'], $tiposPermitidos)) {
+                    $_SESSION['msg'] = "❌ Error: Formato de imagen no permitido. Use JPG, PNG, GIF o WebP.";
+                    $_SESSION['msg_type'] = "danger";
+                    header("Location: " . BASE_URL . "?c=Admin&a=detalleProducto&id=" . $idArticulo);
+                    exit;
+                }
+                
+                // Mover archivo
+                if (move_uploaded_file($_FILES['imagen_variante_edit']['tmp_name'], $rutaDestino)) {
+                    $foto = $rutaDestino;
+                    
+                    // ⭐⭐ IMPORTANTE: Eliminar imagen anterior si existe ⭐⭐
+                    if ($fotoActual && $fotoActual !== $rutaDestino && file_exists($fotoActual)) {
+                        @unlink($fotoActual);
+                    }
+                } else {
+                    $_SESSION['msg'] = "❌ Error al subir la nueva imagen.";
+                    $_SESSION['msg_type'] = "danger";
+                    header("Location: " . BASE_URL . "?c=Admin&a=detalleProducto&id=" . $idArticulo);
+                    exit;
+                }
+            } else {
+                // Si no se sube imagen nueva, usar la imagen actual
+                $foto = $fotoActual;
             }
 
             // Verificar variante duplicada (excluyendo la actual)
@@ -752,10 +1061,27 @@ class AdminController {
         $idArticulo = (int)($_GET['articulo'] ?? 0);
 
         if ($idProducto > 0) {
-            $stmt = $this->db->prepare("DELETE FROM producto WHERE ID_Producto = ?");
-            $stmt->execute([$idProducto]);
-            $_SESSION['msg'] = "✅ Variante eliminada correctamente";
-            $_SESSION['msg_type'] = "success";
+            try {
+                // Obtener ruta de la imagen antes de eliminar
+                $stmt = $this->db->prepare("SELECT Foto FROM producto WHERE ID_Producto = ?");
+                $stmt->execute([$idProducto]);
+                $foto = $stmt->fetchColumn();
+                
+                // Eliminar la imagen del servidor si existe
+                if ($foto && file_exists($foto)) {
+                    @unlink($foto);
+                }
+                
+                // Eliminar la variante de la base de datos
+                $stmt = $this->db->prepare("DELETE FROM producto WHERE ID_Producto = ?");
+                $stmt->execute([$idProducto]);
+                
+                $_SESSION['msg'] = "✅ Variante eliminada correctamente";
+                $_SESSION['msg_type'] = "success";
+            } catch (Exception $e) {
+                $_SESSION['msg'] = "❌ Error al eliminar la variante: " . $e->getMessage();
+                $_SESSION['msg_type'] = "danger";
+            }
         } else {
             $_SESSION['msg'] = "❌ Error: ID de variante no válido";
             $_SESSION['msg_type'] = "danger";
@@ -777,6 +1103,13 @@ class AdminController {
         ");
         $stmt->execute([$id]);
         $articulo = $stmt->fetch(PDO::FETCH_ASSOC);
+
+        if (!$articulo) {
+            $_SESSION['msg'] = "❌ Producto no encontrado";
+            $_SESSION['msg_type'] = "danger";
+            header("Location: " . BASE_URL . "?c=Admin&a=productos");
+            exit;
+        }
 
         // Obtener información de atributos requeridos - CON VALIDACIÓN ESPECÍFICA
         $atributosData = [];
@@ -874,7 +1207,7 @@ class AdminController {
             }
         }
 
-        // Resto del código permanece igual...
+        // Obtener variantes del producto
         $stmtV = $this->db->prepare("
             SELECT p.*
             FROM producto p
@@ -891,8 +1224,41 @@ class AdminController {
     public function deleteProducto() {
         $id = (int)($_GET['id'] ?? 0);
         if ($id) {
-            $this->db->prepare("DELETE FROM producto WHERE ID_Articulo=?")->execute([$id]);
-            $this->db->prepare("DELETE FROM articulo WHERE ID_Articulo=?")->execute([$id]);
+            try {
+                // Obtener todas las imágenes de las variantes
+                $stmtVariantes = $this->db->prepare("SELECT Foto FROM producto WHERE ID_Articulo = ?");
+                $stmtVariantes->execute([$id]);
+                $fotosVariantes = $stmtVariantes->fetchAll(PDO::FETCH_COLUMN);
+                
+                // Eliminar imágenes de las variantes
+                foreach ($fotosVariantes as $foto) {
+                    if ($foto && file_exists($foto)) {
+                        @unlink($foto);
+                    }
+                }
+                
+                // Obtener imagen del artículo base
+                $stmtArticulo = $this->db->prepare("SELECT Foto FROM articulo WHERE ID_Articulo = ?");
+                $stmtArticulo->execute([$id]);
+                $fotoArticulo = $stmtArticulo->fetchColumn();
+                
+                // Eliminar imagen del artículo base
+                if ($fotoArticulo && file_exists($fotoArticulo)) {
+                    @unlink($fotoArticulo);
+                }
+                
+                // Eliminar variantes
+                $this->db->prepare("DELETE FROM producto WHERE ID_Articulo=?")->execute([$id]);
+                
+                // Eliminar artículo base
+                $this->db->prepare("DELETE FROM articulo WHERE ID_Articulo=?")->execute([$id]);
+                
+                $_SESSION['msg'] = "✅ Producto y variantes eliminados correctamente";
+                $_SESSION['msg_type'] = "success";
+            } catch (Exception $e) {
+                $_SESSION['msg'] = "❌ Error al eliminar el producto: " . $e->getMessage();
+                $_SESSION['msg_type'] = "danger";
+            }
         }
         header("Location: " . BASE_URL . "?c=Admin&a=productos");
         exit;
@@ -986,13 +1352,6 @@ class AdminController {
             }
             
             $producto['AtributosDisponibles'] = $atributosUnicos;
-            
-            // DEBUG: Para verificar los datos (puedes eliminar esto después)
-            if (empty($atributosUnicos)) {
-                error_log("⚠️ Producto ID {$producto['ID_Articulo']} - No se encontraron atributos");
-            } else {
-                error_log("✅ Producto ID {$producto['ID_Articulo']} - Atributos encontrados: " . count($atributosUnicos));
-            }
         }
         unset($producto); // Liberar referencia
 
@@ -1001,6 +1360,10 @@ class AdminController {
         $generos = $this->db->query("SELECT * FROM genero ORDER BY N_Genero")->fetchAll(PDO::FETCH_ASSOC);
         $subcategorias = $this->db->query("SELECT * FROM subcategoria ORDER BY SubCategoria")->fetchAll(PDO::FETCH_ASSOC);
 
+        // Inicializar variables para búsqueda
+        $terminoBusqueda = '';
+        $filtrosAplicados = [];
+        
         include "views/admin/layout_admin.php";
     }
 
@@ -1069,69 +1432,69 @@ class AdminController {
 
         // Para cada producto encontrado, obtener información de atributos disponibles
         foreach ($productos as &$producto) {
-    // Obtener todos los atributos únicos para este producto
-    $sqlAtributos = "SELECT 
-                        ta1.Nombre as nombre_atributo1,
-                        p.ValorAtributo1 as valor_atributo1,
-                        ta2.Nombre as nombre_atributo2,
-                        p.ValorAtributo2 as valor_atributo2,
-                        ta3.Nombre as nombre_atributo3,
-                        p.ValorAtributo3 as valor_atributo3
-                    FROM producto p
-                    LEFT JOIN tipo_atributo ta1 ON ta1.ID_TipoAtributo = p.ID_Atributo1
-                    LEFT JOIN tipo_atributo ta2 ON ta2.ID_TipoAtributo = p.ID_Atributo2
-                    LEFT JOIN tipo_atributo ta3 ON ta3.ID_TipoAtributo = p.ID_Atributo3
-                    WHERE p.ID_Articulo = ?
-                    AND p.Activo = 1";
-    
-    $stmtAtributos = $this->db->prepare($sqlAtributos);
-    $stmtAtributos->execute([$producto['ID_Articulo']]);
-    $atributosData = $stmtAtributos->fetchAll(PDO::FETCH_ASSOC);
-    
-    // Procesar atributos disponibles - FORMA CORREGIDA
-    $atributosDisponibles = [];
-    
-        foreach ($atributosData as $fila) {
-            // Atributo 1
-            if (!empty($fila['nombre_atributo1']) && !empty($fila['valor_atributo1'])) {
-                $atributosDisponibles[] = [
-                    'nombre' => $fila['nombre_atributo1'],
-                    'valor' => $fila['valor_atributo1']
-                ];
+            // Obtener todos los atributos únicos para este producto
+            $sqlAtributos = "SELECT 
+                                ta1.Nombre as nombre_atributo1,
+                                p.ValorAtributo1 as valor_atributo1,
+                                ta2.Nombre as nombre_atributo2,
+                                p.ValorAtributo2 as valor_atributo2,
+                                ta3.Nombre as nombre_atributo3,
+                                p.ValorAtributo3 as valor_atributo3
+                            FROM producto p
+                            LEFT JOIN tipo_atributo ta1 ON ta1.ID_TipoAtributo = p.ID_Atributo1
+                            LEFT JOIN tipo_atributo ta2 ON ta2.ID_TipoAtributo = p.ID_Atributo2
+                            LEFT JOIN tipo_atributo ta3 ON ta3.ID_TipoAtributo = p.ID_Atributo3
+                            WHERE p.ID_Articulo = ?
+                            AND p.Activo = 1";
+            
+            $stmtAtributos = $this->db->prepare($sqlAtributos);
+            $stmtAtributos->execute([$producto['ID_Articulo']]);
+            $atributosData = $stmtAtributos->fetchAll(PDO::FETCH_ASSOC);
+            
+            // Procesar atributos disponibles - FORMA CORREGIDA
+            $atributosDisponibles = [];
+            
+            foreach ($atributosData as $fila) {
+                // Atributo 1
+                if (!empty($fila['nombre_atributo1']) && !empty($fila['valor_atributo1'])) {
+                    $atributosDisponibles[] = [
+                        'nombre' => $fila['nombre_atributo1'],
+                        'valor' => $fila['valor_atributo1']
+                    ];
+                }
+                
+                // Atributo 2
+                if (!empty($fila['nombre_atributo2']) && !empty($fila['valor_atributo2'])) {
+                    $atributosDisponibles[] = [
+                        'nombre' => $fila['nombre_atributo2'],
+                        'valor' => $fila['valor_atributo2']
+                    ];
+                }
+                
+                // Atributo 3
+                if (!empty($fila['nombre_atributo3']) && !empty($fila['valor_atributo3'])) {
+                    $atributosDisponibles[] = [
+                        'nombre' => $fila['nombre_atributo3'],
+                        'valor' => $fila['valor_atributo3']
+                    ];
+                }
             }
             
-            // Atributo 2
-            if (!empty($fila['nombre_atributo2']) && !empty($fila['valor_atributo2'])) {
-                $atributosDisponibles[] = [
-                    'nombre' => $fila['nombre_atributo2'],
-                    'valor' => $fila['valor_atributo2']
-                ];
+            // Eliminar duplicados manteniendo la estructura
+            $atributosUnicos = [];
+            $seen = [];
+            
+            foreach ($atributosDisponibles as $atributo) {
+                $key = $atributo['nombre'] . '|' . $atributo['valor'];
+                if (!isset($seen[$key])) {
+                    $seen[$key] = true;
+                    $atributosUnicos[] = $atributo;
+                }
             }
             
-            // Atributo 3
-            if (!empty($fila['nombre_atributo3']) && !empty($fila['valor_atributo3'])) {
-                $atributosDisponibles[] = [
-                    'nombre' => $fila['nombre_atributo3'],
-                    'valor' => $fila['valor_atributo3']
-                ];
-            }
+            $producto['AtributosDisponibles'] = $atributosUnicos;
         }
-        
-        // Eliminar duplicados manteniendo la estructura
-        $atributosUnicos = [];
-        $seen = [];
-        
-        foreach ($atributosDisponibles as $atributo) {
-            $key = $atributo['nombre'] . '|' . $atributo['valor'];
-            if (!isset($seen[$key])) {
-                $seen[$key] = true;
-                $atributosUnicos[] = $atributo;
-            }
-        }
-        
-        $producto['AtributosDisponibles'] = $atributosUnicos;
-    }
-    unset($producto); // Liberar referencia
+        unset($producto); // Liberar referencia
 
         // Obtener datos para filtros
         $categorias = $this->db->query("SELECT * FROM categoria ORDER BY N_Categoria")->fetchAll(PDO::FETCH_ASSOC);
@@ -1309,5 +1672,42 @@ class AdminController {
         $this->db->exec($sql);
     }
 
+    // 🔄 CAMBIAR ESTADO DE PRODUCTO CON INTERRUPTOR (AJAX)
+    public function toggleEstadoProducto() {
+        $idArticulo = (int)($_GET['id'] ?? 0);
+        $estado = (int)($_GET['estado'] ?? 0);
+        
+        header('Content-Type: application/json');
+        
+        if ($idArticulo > 0) {
+            try {
+                $update = $this->db->prepare("UPDATE articulo SET Activo = ? WHERE ID_Articulo = ?");
+                $update->execute([$estado, $idArticulo]);
+                
+                echo json_encode([
+                    'success' => true,
+                    'message' => $estado ? '✅ Producto activado correctamente' : '✅ Producto desactivado correctamente'
+                ]);
+            } catch (Exception $e) {
+                echo json_encode([
+                    'success' => false,
+                    'message' => '❌ Error al cambiar el estado: ' . $e->getMessage()
+                ]);
+            }
+        } else {
+            echo json_encode([
+                'success' => false,
+                'message' => '❌ ID de producto no válido'
+            ]);
+        }
+        exit;
+    }
 
+    // 🧹 LIMPIAR MENSAJES DE SESIÓN
+    public function clearMessages() {
+        unset($_SESSION['msg']);
+        unset($_SESSION['msg_type']);
+        echo 'OK';
+        exit;
+    }
 }

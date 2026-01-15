@@ -2,78 +2,25 @@
 require_once "models/Compra.php";
 require_once "models/MetodoPago.php";
 require_once "models/Direccion.php";
+require_once "models/Descuento.php";
 
 class CheckoutController {
-
     private $db;
     private $compra;
+    private $descuentoModel;
+    private $mailer;
 
     public function __construct($db) {
         if (session_status() === PHP_SESSION_NONE) session_start();
         $this->db = $db;
         $this->compra = new Compra($db);
+        $this->descuentoModel = new Descuento($db);
+        $this->mailer = new Mailer();
     }
 
-    // =============== MOSTRAR CHECKOUT ================
     public function index() {
         if (!isset($_SESSION['ID_Usuario'])) {
             $_SESSION['redirect_url'] = BASE_URL . '?c=Checkout&a=index';
-            header("Location: " . BASE_URL . "?c=Usuario&a=login");
-            exit;
-        }
-
-        $id_usuario = $_SESSION['ID_Usuario'];
-        $carrito = $_SESSION['carrito'] ?? [];
-
-        if (empty($carrito)) {
-            $_SESSION['mensaje_error'] = "❌ Tu carrito está vacío. Agrega productos antes de proceder al pago.";
-            header("Location: " . BASE_URL . "?c=Carrito&a=carrito");
-            exit;
-        }
-
-        // Obtener métodos de pago directamente desde la base de datos
-        try {
-            $sql = "SELECT ID_Metodo_Pago, T_Pago FROM metodo_pago ORDER BY ID_Metodo_Pago";
-            $stmt = $this->db->prepare($sql);
-            $stmt->execute();
-            $metodos = $stmt->fetchAll(PDO::FETCH_ASSOC);
-        } catch (Exception $e) {
-            // Si hay error, usar valores por defecto
-            $metodos = [
-                ['ID_Metodo_Pago' => 1, 'T_Pago' => 'Tarjeta'],
-                ['ID_Metodo_Pago' => 2, 'T_Pago' => 'Efectivo'],
-                ['ID_Metodo_Pago' => 3, 'T_Pago' => 'PSE']
-            ];
-            error_log("Error obteniendo métodos de pago, usando valores por defecto: " . $e->getMessage());
-        }
-
-        // Obtener direcciones del usuario
-        $dir = new Direccion($this->db);
-        $direcciones = $dir->obtenerDireccionesUsuario($id_usuario);
-
-        // Calcular totales para la vista
-        $subtotal = 0;
-        $total_items = 0;
-        $iva_porcentaje = 19;
-
-        foreach ($carrito as $item) {
-            $precio = floatval($item['Precio'] ?? 0);
-            $cantidad = intval($item['Cantidad'] ?? 0);
-            $subtotal += ($precio * $cantidad);
-            $total_items += $cantidad;
-        }
-
-        $iva_monto = $subtotal * ($iva_porcentaje / 100);
-        $total_con_iva = $subtotal + $iva_monto;
-
-        // Incluir vista
-        include "views/checkout/checkout.php";
-    }
-
-    // =============== PROCESAR COMPRA ================
-    public function procesar() {
-        if (!isset($_SESSION['ID_Usuario'])) {
-            $_SESSION['mensaje_error'] = "❌ Debes iniciar sesión para realizar una compra.";
             header("Location: " . BASE_URL . "?c=Usuario&a=login");
             exit;
         }
@@ -87,56 +34,148 @@ class CheckoutController {
             exit;
         }
 
-        // =============== VALIDACIÓN DE DIRECCIÓN ================
-        $direccion_id = null;
+        // Obtener métodos de pago
+        try {
+            $sql = "SELECT ID_Metodo_Pago, T_Pago FROM metodo_pago ORDER BY ID_Metodo_Pago";
+            $stmt = $this->db->prepare($sql);
+            $stmt->execute();
+            $metodos = $stmt->fetchAll(PDO::FETCH_ASSOC);
+        } catch (Exception $e) {
+            $metodos = [
+                ['ID_Metodo_Pago' => 1, 'T_Pago' => 'Tarjeta'],
+                ['ID_Metodo_Pago' => 2, 'T_Pago' => 'Efectivo'],
+                ['ID_Metodo_Pago' => 3, 'T_Pago' => 'PSE']
+            ];
+        }
+
+        // Obtener direcciones
+        $dir = new Direccion($this->db);
+        $direcciones = $dir->obtenerDireccionesUsuario($id_usuario);
+
+        // Calcular totales con descuentos individuales
+        $subtotal_sin_descuentos = 0;
+        $subtotal_con_descuentos = 0;
+        $total_descuentos_individuales = 0;
+        $total_items = 0;
+        $iva_porcentaje = 19;
+
+        foreach ($carrito as $item) {
+            $precio_original = floatval($item['Precio_Original'] ?? $item['Precio']);
+            $precio_final = floatval($item['Precio'] ?? $precio_original);
+            $cantidad = intval($item['Cantidad'] ?? 0);
+            
+            $subtotal_sin_descuentos += ($precio_original * $cantidad);
+            $subtotal_con_descuentos += ($precio_final * $cantidad);
+            $total_descuentos_individuales += (($precio_original - $precio_final) * $cantidad);
+            $total_items += $cantidad;
+        }
+
+        // Descuento global del carrito (si existe)
+        $descuento_carrito = $_SESSION['descuento_carrito'] ?? null;
+        $monto_descuento_carrito = 0;
         
-        if (!empty($_POST['crear_direccion'])) {
-            // Crear nueva dirección
+        if ($descuento_carrito) {
+            if ($descuento_carrito['Tipo'] === 'Porcentaje') {
+                $monto_descuento_carrito = $subtotal_con_descuentos * ($descuento_carrito['Valor'] / 100);
+            } else {
+                $monto_descuento_carrito = min($descuento_carrito['Valor'], $subtotal_con_descuentos);
+            }
+        }
+
+        $subtotal_con_todos_descuentos = $subtotal_con_descuentos - $monto_descuento_carrito;
+        $iva_monto = $subtotal_con_todos_descuentos * ($iva_porcentaje / 100);
+        $total_con_iva = $subtotal_con_todos_descuentos + $iva_monto;
+
+        // ✅ CORRECCIÓN: Usar el método CORRECTO de tu modelo
+        $descuentos_disponibles = $this->descuentoModel->obtenerDescuentosVigentesUsuario($id_usuario);
+
+        // Preparar datos para la vista
+        $datos_vista = [
+            'metodos' => $metodos,
+            'direcciones' => $direcciones,
+            'carrito' => $carrito,
+            'total_items' => $total_items,
+            'subtotal_sin_descuentos' => $subtotal_sin_descuentos,
+            'subtotal_con_descuentos' => $subtotal_con_descuentos,
+            'total_descuentos_individuales' => $total_descuentos_individuales,
+            'descuento_carrito' => $descuento_carrito,
+            'monto_descuento_carrito' => $monto_descuento_carrito,
+            'subtotal_con_todos_descuentos' => $subtotal_con_todos_descuentos,
+            'iva_porcentaje' => $iva_porcentaje,
+            'iva_monto' => $iva_monto,
+            'total_con_iva' => $total_con_iva,
+            'descuentos_disponibles' => $descuentos_disponibles
+        ];
+
+        include "views/checkout/checkout.php";
+    }
+
+    public function procesar() {
+        if (!isset($_SESSION['ID_Usuario'])) {
+            $_SESSION['mensaje_error'] = "❌ Debes iniciar sesión.";
+            header("Location: " . BASE_URL . "?c=Usuario&a=login");
+            exit;
+        }
+
+        $id_usuario = $_SESSION['ID_Usuario'];
+        $carrito = $_SESSION['carrito'] ?? [];
+
+        if (empty($carrito)) {
+            $_SESSION['mensaje_error'] = "❌ Tu carrito está vacío.";
+            header("Location: " . BASE_URL . "?c=Carrito&a=carrito");
+            exit;
+        }
+
+        error_log("=== INICIANDO PROCESO DE COMPRA ===");
+        error_log("Usuario: " . $id_usuario);
+        error_log("Productos en carrito: " . count($carrito));
+
+        // Validación de dirección
+        $direccion_id = null;
+        $error_direccion = '';
+        
+        if (isset($_POST['direccion']) && is_numeric($_POST['direccion'])) {
+            $direccion_id = intval($_POST['direccion']);
+            
+            $sql = "SELECT ID_Direccion FROM direccion WHERE ID_Direccion = ? AND ID_Usuario = ?";
+            $stmt = $this->db->prepare($sql);
+            $stmt->execute([$direccion_id, $id_usuario]);
+            
+            if (!$stmt->fetch()) {
+                $error_direccion = "❌ Dirección no válida.";
+            }
+        } else if ((isset($_POST['direccion']) && $_POST['direccion'] === 'nueva') || 
+                   (isset($_POST['nueva_direccion']) && !empty($_POST['nueva_direccion']))) {
+            
             $direccion = trim($_POST['nueva_direccion'] ?? '');
             $ciudad = trim($_POST['nueva_ciudad'] ?? '');
             $departamento = trim($_POST['nueva_departamento'] ?? '');
             $postal = trim($_POST['nueva_postal'] ?? '');
 
             if (empty($direccion) || empty($ciudad) || empty($departamento)) {
-                $_SESSION['mensaje_error'] = "❌ Completa todos los campos obligatorios de la dirección.";
-                header("Location: " . BASE_URL . "?c=Checkout&a=index");
-                exit;
-            }
-
-            try {
-                $sql = "INSERT INTO direccion (ID_Usuario, Direccion, Ciudad, Departamento, CodigoPostal, Predeterminada) 
-                        VALUES (?, ?, ?, ?, ?, 1)";
-                $stmt = $this->db->prepare($sql);
-                $stmt->execute([$id_usuario, $direccion, $ciudad, $departamento, $postal]);
-                $direccion_id = $this->db->lastInsertId();
-            } catch (Exception $e) {
-                $_SESSION['mensaje_error'] = "❌ Error al guardar la dirección: " . $e->getMessage();
-                header("Location: " . BASE_URL . "?c=Checkout&a=index");
-                exit;
+                $error_direccion = "❌ Completa todos los campos de la nueva dirección.";
+            } else {
+                try {
+                    $sql = "INSERT INTO direccion (ID_Usuario, Direccion, Ciudad, Departamento, CodigoPostal, Predeterminada) 
+                            VALUES (?, ?, ?, ?, ?, 1)";
+                    $stmt = $this->db->prepare($sql);
+                    $stmt->execute([$id_usuario, $direccion, $ciudad, $departamento, $postal]);
+                    $direccion_id = $this->db->lastInsertId();
+                } catch (Exception $e) {
+                    $error_direccion = "❌ Error al guardar la dirección: " . $e->getMessage();
+                }
             }
         } else {
-            // Usar dirección existente
-            $direccion_id = $_POST['direccion'] ?? null;
-            
-            if (!$direccion_id) {
-                $_SESSION['mensaje_error'] = "❌ Debes seleccionar una dirección de envío.";
-                header("Location: " . BASE_URL . "?c=Checkout&a=index");
-                exit;
-            }
-            
-            // Verificar que la dirección pertenezca al usuario
-            $sql = "SELECT ID_Direccion FROM direccion WHERE ID_Direccion = ? AND ID_Usuario = ?";
-            $stmt = $this->db->prepare($sql);
-            $stmt->execute([$direccion_id, $id_usuario]);
-            
-            if (!$stmt->fetch()) {
-                $_SESSION['mensaje_error'] = "❌ La dirección seleccionada no es válida.";
-                header("Location: " . BASE_URL . "?c=Checkout&a=index");
-                exit;
-            }
+            $error_direccion = "❌ Debes seleccionar o crear una dirección.";
         }
 
-        // =============== VALIDACIÓN DE MÉTODO DE PAGO ================
+        if (!empty($error_direccion)) {
+            $_SESSION['mensaje_error'] = $error_direccion;
+            header("Location: " . BASE_URL . "?c=Checkout&a=index");
+            exit;
+        }
+
+        // Validación de método de pago
         $metodo_pago_id = intval($_POST['metodo_pago'] ?? 0);
 
         if (!$metodo_pago_id) {
@@ -145,33 +184,21 @@ class CheckoutController {
             exit;
         }
 
-        // Verificar que el método de pago existe
-        try {
-            // CORREGIDO: Usar ID_Metodo_Pago
-            $sql = "SELECT ID_Metodo_Pago FROM metodo_pago WHERE ID_Metodo_Pago = ?";
-            $stmt = $this->db->prepare($sql);
-            $stmt->execute([$metodo_pago_id]);
-            
-            if (!$stmt->fetch()) {
-                $_SESSION['mensaje_error'] = "❌ Método de pago no válido.";
-                header("Location: " . BASE_URL . "?c=Checkout&a=index");
-                exit;
-            }
-        } catch (Exception $e) {
-            $_SESSION['mensaje_error'] = "❌ Error al validar el método de pago: " . $e->getMessage();
-            header("Location: " . BASE_URL . "?c=Checkout&a=index");
-            exit;
-        }
-
-        // =============== VALIDACIÓN DE STOCK ================
+        // Validación de stock
         foreach ($carrito as $item) {
             if (empty($item['ID_Producto'])) {
-                $_SESSION['mensaje_error'] = "❌ Error: Producto no válido en el carrito.";
+                $_SESSION['mensaje_error'] = "❌ Producto no válido.";
                 header("Location: " . BASE_URL . "?c=Carrito&a=carrito");
                 exit;
             }
 
-            if (!$this->compra->stockDisponible($item['ID_Producto'], $item['Cantidad'])) {
+            // Verificar stock
+            $sql_stock = "SELECT Cantidad FROM producto WHERE ID_Producto = ?";
+            $stmt = $this->db->prepare($sql_stock);
+            $stmt->execute([$item['ID_Producto']]);
+            $stock = $stmt->fetch(PDO::FETCH_ASSOC);
+            
+            if (!$stock || $stock['Cantidad'] < $item['Cantidad']) {
                 $nombre_producto = htmlspecialchars($item['N_Articulo']);
                 $_SESSION['mensaje_error'] = "❌ Stock insuficiente para: {$nombre_producto}";
                 header("Location: " . BASE_URL . "?c=Carrito&a=carrito");
@@ -179,256 +206,343 @@ class CheckoutController {
             }
         }
 
-        // =============== CÁLCULO DE TOTALES ================
-        $subtotal = 0;
+        // Cálculo de totales
+        $subtotal_con_descuentos = 0;
         $itemsToSave = [];
+        $descuentos_a_registrar = [];
+        $descuento_carrito = $_SESSION['descuento_carrito'] ?? null;
+        $monto_descuento_carrito = 0;
 
         foreach ($carrito as $item) {
             $precioUnit = floatval($item['Precio']);
             $cant = intval($item['Cantidad']);
+            $precioOriginal = floatval($item['Precio_Original'] ?? $item['Precio']);
             $subtotalItem = $precioUnit * $cant;
+            
+            $subtotal_con_descuentos += $subtotalItem;
 
-            $subtotal += $subtotalItem;
-
-            // Asegurar que ID_Producto tenga un valor válido
             $id_producto = intval($item["ID_Producto"] ?? 0);
-            if (!$id_producto) {
-                // Si no hay ID_Producto, intentar obtenerlo del artículo base
-                if (!empty($item["ID_Articulo"])) {
-                    // Buscar el primer producto activo para este artículo
-                    try {
-                        $sql = "SELECT ID_Producto FROM producto WHERE ID_Articulo = ? AND Activo = 1 LIMIT 1";
-                        $stmt = $this->db->prepare($sql);
-                        $stmt->execute([$item["ID_Articulo"]]);
-                        $producto_data = $stmt->fetch(PDO::FETCH_ASSOC);
-                        $id_producto = $producto_data ? intval($producto_data['ID_Producto']) : 0;
-                    } catch (Exception $e) {
-                        error_log("Error obteniendo ID_Producto: " . $e->getMessage());
-                        $id_producto = 0;
-                    }
-                }
-                
-                if (!$id_producto) {
-                    $_SESSION['mensaje_error'] = "❌ Error: Producto no válido en el carrito.";
-                    header("Location: " . BASE_URL . "?c=Carrito&a=carrito");
-                    exit;
+            if (!$id_producto && !empty($item["ID_Articulo"])) {
+                try {
+                    $sql = "SELECT ID_Producto FROM producto WHERE ID_Articulo = ? AND Activo = 1 LIMIT 1";
+                    $stmt = $this->db->prepare($sql);
+                    $stmt->execute([$item["ID_Articulo"]]);
+                    $producto_data = $stmt->fetch(PDO::FETCH_ASSOC);
+                    $id_producto = $producto_data ? intval($producto_data['ID_Producto']) : 0;
+                } catch (Exception $e) {
+                    $id_producto = 0;
                 }
             }
 
+            if (!$id_producto) {
+                $_SESSION['mensaje_error'] = "❌ Producto no válido.";
+                header("Location: " . BASE_URL . "?c=Carrito&a=carrito");
+                exit;
+            }
+
             $itemsToSave[] = [
-                "ID_Producto" => $id_producto, // Usar el ID corregido
+                "ID_Producto" => $id_producto,
                 "ID_Articulo" => $item["ID_Articulo"] ?? null,
                 "Cantidad" => $cant,
                 "Precio_Unitario" => $precioUnit,
+                "Precio_Original" => $precioOriginal,
                 "Subtotal" => $subtotalItem,
-                "Descuento_Aplicado" => floatval($item["Descuento"]["Valor"] ?? 0),
+                "Descuento_Aplicado" => ($precioOriginal - $precioUnit) * $cant,
                 "Codigo_Descuento" => $item["Descuento"]["Codigo"] ?? '',
+                "ID_Descuento" => $item["Descuento"]["ID_Descuento"] ?? null,
                 "Nombre_Producto" => $item["N_Articulo"] ?? 'Producto',
                 "Atributos" => $item["Atributos"] ?? []
             ];
+
+            // Guardar descuentos individuales para registrar después
+            if (!empty($item["Descuento"]["ID_Descuento"]) && $item["Descuento"]["Aplicado"]) {
+                $descuentos_a_registrar[] = [
+                    "ID_Descuento" => $item["Descuento"]["ID_Descuento"],
+                    "Codigo" => $item["Descuento"]["Codigo"],
+                    "Valor" => $item["Descuento"]["Valor"],
+                    "Tipo" => $item["Descuento"]["Tipo"]
+                ];
+            }
         }
 
-        // =============== CÁLCULO DE IVA ================
-        $iva_porcentaje = 19; // 19% de IVA
-        $iva_monto = $subtotal * ($iva_porcentaje / 100);
-        $total_con_iva = $subtotal + $iva_monto;
+        // Aplicar descuento de carrito si existe
+        if ($descuento_carrito) {
+            if ($descuento_carrito['Tipo'] === 'Porcentaje') {
+                $monto_descuento_carrito = $subtotal_con_descuentos * ($descuento_carrito['Valor'] / 100);
+            } else {
+                $monto_descuento_carrito = min($descuento_carrito['Valor'], $subtotal_con_descuentos);
+            }
+            
+            $descuentos_a_registrar[] = [
+                "ID_Descuento" => $descuento_carrito['ID_Descuento'] ?? null,
+                "Codigo" => $descuento_carrito['Codigo'] ?? '',
+                "Valor" => $descuento_carrito['Valor'] ?? 0,
+                "Tipo" => $descuento_carrito['Tipo'] ?? ''
+            ];
+        }
 
-        // =============== CREAR FACTURA ================
+        $subtotal_final = $subtotal_con_descuentos - $monto_descuento_carrito;
+
+        // Cálculo de IVA
+        $iva_porcentaje = 19;
+        $iva_monto = $subtotal_final * ($iva_porcentaje / 100);
+        $total_con_iva = $subtotal_final + $iva_monto;
+
+        error_log("Subtotal con descuentos: " . $subtotal_con_descuentos);
+        error_log("Descuento carrito: " . $monto_descuento_carrito);
+        error_log("Subtotal final: " . $subtotal_final);
+        error_log("Total con IVA: " . $total_con_iva);
+
+        // Crear factura
         $codigo_acceso = strtoupper(substr(md5(uniqid() . time()), 0, 8));
 
         try {
-            // Iniciar transacción
+            error_log("=== INICIANDO TRANSACCIÓN DE COMPRA ===");
             $this->db->beginTransaction();
             
             // Crear factura
-            $id_factura = $this->compra->crearFacturaConIVA(
+            $sql_factura = "INSERT INTO factura (ID_Usuario, ID_Direccion, ID_Metodo_Pago, Subtotal, IVA, Monto_Total, Estado, Codigo_Acceso, Fecha_Factura) 
+                           VALUES (?, ?, ?, ?, ?, ?, 'Confirmado', ?, NOW())";
+            $stmt_factura = $this->db->prepare($sql_factura);
+            $stmt_factura->execute([
                 $id_usuario,
                 $direccion_id,
-                $metodo_pago_id, // Enviar ID numérico
-                $subtotal,
+                $metodo_pago_id,
+                $subtotal_final,
                 $iva_monto,
                 $total_con_iva,
                 $codigo_acceso
-            );
+            ]);
+            
+            $id_factura = $this->db->lastInsertId();
 
             if (!$id_factura) {
                 throw new Exception("No se pudo crear la factura");
             }
+            
+            error_log("Factura creada - ID: " . $id_factura);
 
-            // =============== GUARDAR ITEMS DE LA FACTURA ================
+            // Guardar items de la factura
             foreach ($itemsToSave as $item) {
-                $success = $this->compra->agregarItem(
+                $sql_item = "INSERT INTO factura_producto (ID_Factura, ID_Producto, Cantidad, Precio_Unitario, Subtotal, Descuento_Aplicado, ID_Descuento) 
+                            VALUES (?, ?, ?, ?, ?, ?, ?)";
+                $stmt_item = $this->db->prepare($sql_item);
+                $success = $stmt_item->execute([
                     $id_factura,
                     $item['ID_Producto'], 
                     $item['Cantidad'],
                     $item['Precio_Unitario'],
                     $item['Subtotal'],
-                    $item['Descuento_Aplicado']
-                );
+                    $item['Descuento_Aplicado'],
+                    $item['ID_Descuento']
+                ]);
 
                 if (!$success) {
-                    $error_msg = "Error al guardar item en factura para producto ID: " . $item['ID_Producto'];
-                    error_log($error_msg);
-                    throw new Exception($error_msg);
+                    throw new Exception("Error al guardar item en factura");
                 }
+                
+                error_log("Item guardado: " . $item['Nombre_Producto'] . " x" . $item['Cantidad'] . " (ID Descuento: " . ($item['ID_Descuento'] ?? 'Ninguno') . ")");
 
-                // Descontar stock del producto
-                $successStock = $this->compra->descontarStock($item['ID_Producto'], $item['Cantidad']);
+                // Descontar stock
+                $sql_stock = "UPDATE producto SET Cantidad = Cantidad - ? WHERE ID_Producto = ? AND Cantidad >= ?";
+                $stmt_stock = $this->db->prepare($sql_stock);
+                $successStock = $stmt_stock->execute([$item['Cantidad'], $item['ID_Producto'], $item['Cantidad']]);
+                
                 if (!$successStock) {
-                    $error_msg = "Error al descontar stock para producto ID: " . $item['ID_Producto'];
-                    error_log($error_msg);
-                    throw new Exception($error_msg);
+                    throw new Exception("Error al descontar stock");
                 }
             }
             
-            // Confirmar transacción
+            // ✅ REGISTRAR USO DE DESCUENTOS (individuales y de carrito)
+            if (!empty($descuentos_a_registrar)) {
+                error_log("=== REGISTRANDO DESCUENTOS ===");
+                
+                foreach ($descuentos_a_registrar as $descuento) {
+                    if (!empty($descuento['ID_Descuento'])) {
+                        error_log("Registrando descuento ID: " . $descuento['ID_Descuento'] . " - Código: " . $descuento['Codigo']);
+                        
+                        // ✅ Usar el método registrarUsoCompleto de tu modelo
+                        $resultado = $this->descuentoModel->registrarUsoCompleto($descuento['ID_Descuento'], $id_usuario);
+                        
+                        if ($resultado) {
+                            error_log("✅ Descuento registrado exitosamente: " . $descuento['Codigo']);
+                        } else {
+                            error_log("❌ Error al registrar descuento: " . $descuento['Codigo']);
+                        }
+                    }
+                }
+            } else {
+                error_log("=== NO HAY DESCUENTOS PARA REGISTRAR ===");
+            }
+
+            // Verificar descuentos ganados
+            error_log("Verificando descuentos ganados...");
+            $descuentos_ganados = $this->descuentoModel->obtenerDescuentosGanados($id_usuario, $total_con_iva);
+            
+            if (!empty($descuentos_ganados)) {
+                error_log("Descuentos ganados: " . count($descuentos_ganados));
+                
+                // Registrar descuentos ganados
+                foreach ($descuentos_ganados as $descuento) {
+                    $this->descuentoModel->registrarDescuentoGanado($descuento['ID_Descuento'], $id_usuario);
+                }
+                
+                $_SESSION['descuentos_ganados_compra'] = $descuentos_ganados;
+            } else {
+                error_log("No hay descuentos ganados");
+            }
+            
+            // Enviar correo de confirmación
+            $this->enviarCorreoConfirmacion($id_factura, $id_usuario, $descuentos_ganados);
+            
+            error_log("=== CONFIRMANDO TRANSACCIÓN ===");
             $this->db->commit();
+            error_log("✅ TRANSACCIÓN COMPLETADA CON ÉXITO");
             
         } catch (Exception $e) {
-            // Revertir transacción en caso de error
+            error_log("=== ERROR EN TRANSACCIÓN ===");
+            error_log("Error: " . $e->getMessage());
+            error_log("Archivo: " . $e->getFile());
+            error_log("Línea: " . $e->getLine());
+            
             if ($this->db->inTransaction()) {
+                error_log("Haciendo rollback...");
                 $this->db->rollBack();
             }
             
-            error_log("Error en proceso de compra: " . $e->getMessage());
             $_SESSION['mensaje_error'] = "❌ Error al procesar la compra: " . $e->getMessage();
             header("Location: " . BASE_URL . "?c=Checkout&a=index");
             exit;
         }
 
-        // =============== LIMPIAR CARRITO ================
+        // Limpiar carrito y descuento
         unset($_SESSION['carrito']);
+        unset($_SESSION['descuento_carrito']);
 
-        // =============== OBTENER DATOS DE FACTURA ================
-        $factura = $this->compra->obtenerFacturaDetalle($id_factura);
-        $items = $this->compra->obtenerFacturaItems($id_factura);
-
-        if (!$factura) {
-            $_SESSION['mensaje_info'] = "⚠️ Compra realizada, pero no se pudieron obtener todos los detalles.";
-        }
-
-        // =============== GUARDAR EN SESIÓN PARA PÁGINA DE ÉXITO ================
+        // Guardar en sesión para página de éxito
         $_SESSION['ultima_factura'] = $id_factura;
 
-        // =============== REDIRIGIR A PÁGINA DE ÉXITO ================
+        // Redirigir a página de éxito
         header("Location: " . BASE_URL . "?c=Checkout&a=exito&id=" . $id_factura);
         exit;
     }
 
-    // =============== ENVIAR FACTURA POR CORREO ================
-    private function enviarFacturaPorCorreo($id_factura, $factura, $items) {
-        try {
-            // Verificar si Mailer existe
-            $mailerPath = "services/Mailer.php";
-            if (!file_exists($mailerPath)) {
-                error_log("Archivo Mailer.php no encontrado en: " . $mailerPath);
-                return false;
-            }
-            
-            require_once $mailerPath;
-            
-            if (!class_exists('Mailer')) {
-                error_log("Clase Mailer no encontrada");
-                return false;
-            }
-
-            $mailer = new Mailer();
-
-            // Preparar datos para el PDF
-            $itemsParaPdf = [];
-            foreach ($items as $item) {
-                // Construir descripción del producto con atributos
-                $descripcion = $item['N_Articulo'] ?? 'Producto';
-                if (!empty($item['N_Color'])) {
-                    $descripcion .= " - " . $item['N_Color'];
-                }
-                if (!empty($item['N_Talla'])) {
-                    $descripcion .= " - Talla " . $item['N_Talla'];
-                }
-
-                $itemsParaPdf[] = [
-                    'Producto' => $descripcion,
-                    'Cantidad' => (int)($item['Cantidad'] ?? 1),
-                    'Precio_Unitario' => floatval($item['Precio_Unitario'] ?? 0),
-                    'Subtotal' => floatval($item['Subtotal'] ?? 0)
-                ];
-            }
-
-            // Mapear ID de método de pago a nombre
-            $metodos_map_inverso = [
-                1 => 'Tarjeta de Crédito/Débito',
-                2 => 'Efectivo',
-                3 => 'PSE',
-                4 => 'Transferencia Bancaria'
-            ];
-            
-            $metodo_pago_nombre = $metodos_map_inverso[$factura['ID_Metodo_Pago']] ?? 'No especificado';
-
-            $facturaParaPdf = [
-                'ID_Factura' => $id_factura,
-                'Nombre_Cliente' => trim(($factura['Nombre'] ?? '') . ' ' . ($factura['Apellido'] ?? '')),
-                'Email_Cliente' => $factura['Correo'] ?? '',
-                'Telefono_Cliente' => 'No especificado',
-                'Fecha_Factura' => $factura['Fecha_Factura'] ?? date('Y-m-d H:i:s'),
-                'Metodo_Pago' => $metodo_pago_nombre,
-                'Subtotal' => floatval($factura['Subtotal'] ?? 0),
-                'IVA' => floatval($factura['IVA'] ?? 0),
-                'Total' => floatval($factura['Monto_Total'] ?? 0),
-                'Direccion_Completa' => ($factura['Direccion'] ?? '') . ', ' . 
-                                    ($factura['Ciudad'] ?? '') . ', ' . 
-                                    ($factura['Departamento'] ?? ''),
-                'CodigoPostal' => $factura['CodigoPostal'] ?? '',
-                'Nombre' => $factura['Nombre'] ?? '',
-                'Apellido' => $factura['Apellido'] ?? '',
-                'Correo' => $factura['Correo'] ?? '',
-                'Monto_Total' => $factura['Monto_Total'] ?? 0,
-                'Estado' => $factura['Estado'] ?? 'Confirmado'
-            ];
-
-            // Generar PDF
-            $pdfTemp = $mailer->generarPdfFactura([
-                "factura" => $facturaParaPdf,
-                "items" => $itemsParaPdf
-            ]);
-
-            if (!$pdfTemp || !file_exists($pdfTemp)) {
-                error_log("Error generando PDF de factura");
-                return false;
-            }
-
-            // Enviar correo
-            $correo = $factura['Correo'];
-            $nombre = trim($factura['Nombre'] . " " . $factura['Apellido']);
-
-            if (empty($correo)) {
-                error_log("No hay correo para enviar factura");
-                if (file_exists($pdfTemp)) {
-                    unlink($pdfTemp);
-                }
-                return false;
-            }
-
-            $send = $mailer->enviarFacturaConAdjunto(
-                $correo,
-                $nombre,
-                $pdfTemp,
-                $id_factura
-            );
-
-            // Eliminar archivo temporal
-            if (file_exists($pdfTemp)) {
-                unlink($pdfTemp);
-            }
-
-            return $send["success"] ?? false;
-
-        } catch (Exception $e) {
-            error_log("Error enviando factura por correo: " . $e->getMessage());
-            return false;
+    private function enviarCorreoConfirmacion($id_factura, $id_usuario, $descuentos_ganados = []) {
+    try {
+        // ✅ CONSULTA CORRECTA - con JOIN a tipo_documento
+        $sql_cliente = "SELECT 
+                        u.Nombre, 
+                        u.Apellido, 
+                        u.Correo,
+                        u.N_Documento,
+                        u.Celular,
+                        td.Documento AS Tipo_Documento  -- ¡JOIN con tipo_documento!
+                       FROM usuario u 
+                       LEFT JOIN tipo_documento td ON u.ID_TD = td.ID_TD
+                       WHERE u.ID_Usuario = ?";
+        
+        $stmt_cliente = $this->db->prepare($sql_cliente);
+        $stmt_cliente->execute([$id_usuario]);
+        $cliente_data = $stmt_cliente->fetch(PDO::FETCH_ASSOC);
+        
+        if (!$cliente_data) {
+            error_log("Cliente no encontrado: ID $id_usuario");
+            return;
         }
+        
+        // ✅ CONSULTA DE FACTURA COMPLETA
+        $sql_factura = "SELECT 
+                        f.ID_Factura, 
+                        f.Fecha_Factura, 
+                        f.Monto_Total,
+                        f.Subtotal,
+                        f.IVA,
+                        f.Codigo_Acceso,
+                        mp.T_Pago AS Metodo_Pago,
+                        d.Direccion, 
+                        d.Ciudad, 
+                        d.Departamento,
+                        d.CodigoPostal,
+                        CONCAT(d.Direccion, ', ', d.Ciudad, ', ', d.Departamento) AS Direccion_Completa,
+                        -- DATOS DEL USUARIO CON JOIN A TIPO_DOCUMENTO
+                        u.Nombre,
+                        u.Apellido,
+                        u.Correo,
+                        u.N_Documento,
+                        u.Celular,
+                        td.Documento AS Tipo_Documento
+                    FROM factura f
+                    LEFT JOIN metodo_pago mp ON f.ID_Metodo_Pago = mp.ID_Metodo_Pago
+                    LEFT JOIN direccion d ON f.ID_Direccion = d.ID_Direccion
+                    LEFT JOIN usuario u ON f.ID_Usuario = u.ID_Usuario
+                    LEFT JOIN tipo_documento td ON u.ID_TD = td.ID_TD
+                    WHERE f.ID_Factura = ?";
+        
+        $stmt_factura = $this->db->prepare($sql_factura);
+        $stmt_factura->execute([$id_factura]);
+        $factura_data = $stmt_factura->fetch(PDO::FETCH_ASSOC);
+        
+        if (!$factura_data) {
+            error_log("Factura no encontrada: ID $id_factura");
+            return;
+        }
+        
+        // Obtener items de la factura
+        $sql_items = "SELECT fp.*, p.Nombre_Producto, p.ValorAtributo1, p.ValorAtributo2, p.ValorAtributo3
+                     FROM factura_producto fp
+                     LEFT JOIN producto p ON fp.ID_Producto = p.ID_Producto
+                     WHERE fp.ID_Factura = ?";
+        $stmt_items = $this->db->prepare($sql_items);
+        $stmt_items->execute([$id_factura]);
+        $items_data = $stmt_items->fetchAll(PDO::FETCH_ASSOC);
+        
+        // Preparar datos para el correo
+        $cliente = [
+            'nombre' => $cliente_data['Nombre'] . ' ' . $cliente_data['Apellido'],
+            'email' => $cliente_data['Correo']
+        ];
+        
+        // Preparar items para la factura PDF
+        $items_for_pdf = [];
+        foreach ($items_data as $item) {
+            $especificaciones = [];
+            if (!empty($item['ValorAtributo1']) && $item['ValorAtributo1'] !== '—') {
+                $especificaciones[] = $item['ValorAtributo1'];
+            }
+            if (!empty($item['ValorAtributo2']) && $item['ValorAtributo2'] !== '—') {
+                $especificaciones[] = $item['ValorAtributo2'];
+            }
+            if (!empty($item['ValorAtributo3']) && $item['ValorAtributo3'] !== '—') {
+                $especificaciones[] = $item['ValorAtributo3'];
+            }
+            
+            $items_for_pdf[] = [
+                'Nombre_Producto' => $item['Nombre_Producto'],
+                'Especificaciones' => implode(' | ', $especificaciones),
+                'Cantidad' => $item['Cantidad'],
+                'Precio_Unitario' => $item['Precio_Unitario'],
+                'Subtotal' => $item['Subtotal'],
+                'Descuento_Aplicado' => $item['Descuento_Aplicado']
+            ];
+        }
+        
+        // Enviar correo
+        $resultado = $this->mailer->enviarConfirmacionCompra(
+            $cliente,
+            $factura_data,
+            $items_for_pdf,
+            $descuentos_ganados
+        );
+        
+        if (!$resultado['success']) {
+            error_log("Error al enviar correo: " . $resultado['message']);
+        }
+        
+    } catch (Exception $e) {
+        error_log("Error en envío de correo: " . $e->getMessage());
     }
+}
 
-    // =============== PÁGINA DE ÉXITO ================
     public function exito() {
         $id_factura = intval($_GET["id"] ?? 0);
 
@@ -447,7 +561,6 @@ class CheckoutController {
         $items = $this->compra->obtenerFacturaItems($id_factura);
 
         if (!$factura) {
-            // Si no se encuentra la factura, mostrar mensaje pero permitir continuar
             $factura = [
                 'ID_Factura' => $id_factura,
                 'Fecha_Factura' => date('Y-m-d H:i:s'),
@@ -457,27 +570,28 @@ class CheckoutController {
                 'IVA' => 0
             ];
             $items = [];
-            $_SESSION['mensaje_info'] = "⚠️ No se pudieron cargar todos los detalles de la factura, pero tu compra fue procesada exitosamente.";
+            $_SESSION['mensaje_info'] = "⚠️ No se pudieron cargar todos los detalles.";
         }
 
-        // Verificar que la factura pertenezca al usuario actual
+        // Verificar permisos
         if (isset($factura['ID_Usuario']) && $factura['ID_Usuario'] != $_SESSION['ID_Usuario'] && !isset($_SESSION['es_admin'])) {
             $_SESSION['mensaje_error'] = "❌ No tienes permiso para ver esta factura.";
             header("Location: " . BASE_URL);
             exit;
         }
 
-        // Pasar variables a la vista
+        // Obtener descuentos ganados desde sesión
+        $descuentos_ganados = $_SESSION['descuentos_ganados_compra'] ?? [];
+
         $pedido = $factura;
         
-        // Incluir vista de éxito
         include "views/checkout/exito.php";
         
-        // Limpiar factura de sesión después de mostrar
+        // Limpiar sesión después de mostrar
         unset($_SESSION['ultima_factura']);
+        unset($_SESSION['descuentos_ganados_compra']);
     }
 
-    // =============== DESCARGAR FACTURA ================
     public function descargarFactura() {
         if (!isset($_SESSION['ID_Usuario'])) {
             header("Location: " . BASE_URL . "?c=Usuario&a=login");
@@ -492,7 +606,6 @@ class CheckoutController {
             exit;
         }
 
-        // Obtener datos de la factura
         $factura = $this->compra->obtenerFacturaDetalle($id_factura);
         
         if (!$factura) {
@@ -501,19 +614,16 @@ class CheckoutController {
             exit;
         }
 
-        // Verificar permisos
         if ($factura['ID_Usuario'] != $_SESSION['ID_Usuario'] && !isset($_SESSION['es_admin'])) {
             $_SESSION['mensaje_error'] = "❌ No tienes permiso para descargar esta factura.";
             header("Location: " . BASE_URL);
             exit;
         }
 
-        // Redirigir al generador de PDF
         header("Location: " . BASE_URL . "?c=FacturaPDF&a=generar&id=" . $id_factura);
         exit;
     }
 
-    // =============== VER HISTORIAL DE COMPRAS ================
     public function historial() {
         if (!isset($_SESSION['ID_Usuario'])) {
             header("Location: " . BASE_URL . "?c=Usuario&a=login");
@@ -522,15 +632,12 @@ class CheckoutController {
 
         $id_usuario = $_SESSION['ID_Usuario'];
         
-        // Obtener historial de compras
         $compras = $this->compra->obtenerHistorialCompras($id_usuario);
         $estadisticas = $this->compra->obtenerEstadisticasCompras($id_usuario);
 
-        // Incluir vista de historial
         include "views/checkout/historial.php";
     }
 
-    // =============== VER DETALLE DE COMPRA ================
     public function detalleCompra() {
         if (!isset($_SESSION['ID_Usuario'])) {
             header("Location: " . BASE_URL . "?c=Usuario&a=login");
@@ -545,7 +652,6 @@ class CheckoutController {
             exit;
         }
 
-        // Obtener datos de la factura
         $factura = $this->compra->obtenerFacturaDetalle($id_factura);
         $items = $this->compra->obtenerFacturaItems($id_factura);
 
@@ -555,14 +661,12 @@ class CheckoutController {
             exit;
         }
 
-        // Verificar permisos
         if ($factura['ID_Usuario'] != $_SESSION['ID_Usuario'] && !isset($_SESSION['es_admin'])) {
             $_SESSION['mensaje_error'] = "❌ No tienes permiso para ver esta factura.";
             header("Location: " . BASE_URL);
             exit;
         }
 
-        // Incluir vista de detalle
         include "views/checkout/detalle.php";
     }
 }
