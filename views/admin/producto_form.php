@@ -297,7 +297,7 @@ const FORM_CONFIG = {
     generoInicial: <?= isset($articulo['ID_Genero']) ? $articulo['ID_Genero'] : 'null' ?>,
     subcategoriaInicial: <?= isset($articulo['ID_SubCategoria']) ? $articulo['ID_SubCategoria'] : 'null' ?>,
     
-    // ⭐⭐ Asegúrate que esto sea 'false' para productos existentes ⭐⭐
+    //Asegúrate que esto sea 'false' para productos existentes
     esProductoNuevo: <?= empty($articulo['ID_Articulo']) ? 'true' : 'false' ?>,
     
     rutaImagenActual: '<?= isset($articulo['Foto']) ? htmlspecialchars($articulo['Foto']) : '' ?>'

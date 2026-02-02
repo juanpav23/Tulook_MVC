@@ -375,3 +375,15 @@ document.addEventListener('DOMContentLoaded', function() {
         window.colorFormManager = new ColorManager();
     }
 });
+
+function validarCambioEstado(event, colorId, colorNombre, estaEnUso, estaActivo) {
+    if (estaActivo && estaEnUso) {
+        // Intentar desactivar un color en uso
+        event.preventDefault();
+        showAlert('warning', `No se puede desactivar el color "${colorNombre}" porque está siendo usado por productos.`, 5000);
+        return false;
+    }
+    
+    const accion = estaActivo ? 'desactivar' : 'activar';
+    return confirm(`¿Estás seguro de ${accion} el color "${colorNombre}"?`);
+}

@@ -231,9 +231,10 @@ class AdminController {
             if ($tipoAtributo) {
                 // Si es el atributo de Color (ID_TipoAtributo = 2)
                 if ($tipoAtributo['ID_TipoAtributo'] == 2) {
-                    // Cargar colores desde la tabla color
+                    // Cargar colores desde la tabla color - SOLO ACTIVOS
                     $sql = "SELECT ID_Color as ID_AtributoValor, N_Color as Valor, CodigoHex 
                             FROM color 
+                            WHERE Activo = 1
                             ORDER BY N_Color ASC";
                     $stmt = $this->db->prepare($sql);
                     $stmt->execute();
@@ -242,6 +243,7 @@ class AdminController {
                     // Agregar información del código hexadecimal
                     foreach ($valores as &$valor) {
                         $valor['CodigoHex'] = $valor['CodigoHex'] ?? '#FFFFFF';
+                        $valor['Activo'] = 1; // Siempre activo si está en la consulta
                     }
                 } else {
                     // Para otros atributos
@@ -252,6 +254,11 @@ class AdminController {
                     $stmt = $this->db->prepare($sql);
                     $stmt->execute([$idTipoAtributo]);
                     $valores = $stmt->fetchAll(PDO::FETCH_ASSOC);
+                    
+                    // Agregar flag de activo
+                    foreach ($valores as &$valor) {
+                        $valor['Activo'] = 1;
+                    }
                 }
                 
                 $atributosData[] = [
@@ -1096,9 +1103,13 @@ class AdminController {
         $id = (int)($_GET['id'] ?? 0);
 
         $stmt = $this->db->prepare("
-            SELECT a.*, p.Valor AS PrecioBase
+            SELECT a.*, p.Valor AS PrecioBase,
+                c.N_Categoria, g.N_Genero, s.SubCategoria
             FROM articulo a
             LEFT JOIN precio p ON a.ID_Precio = p.ID_Precio
+            LEFT JOIN categoria c ON c.ID_Categoria = a.ID_Categoria
+            LEFT JOIN genero g ON g.ID_Genero = a.ID_Genero
+            LEFT JOIN subcategoria s ON s.ID_SubCategoria = a.ID_SubCategoria
             WHERE a.ID_Articulo = ?
         ");
         $stmt->execute([$id]);
@@ -1131,7 +1142,7 @@ class AdminController {
                 
                 // Si es producto especial y ya tiene solo color, mantenerlo así
                 if ($esProductoEspecial && $subcategoriaInfo['AtributosRequeridos'] === '2') {
-                    // Solo cargar atributo de Color (ID 2)
+                    // Solo cargar atributo de Color (ID 2) - SOLO ACTIVOS
                     $sqlTipo = "SELECT ta.ID_TipoAtributo, ta.Nombre, ta.Descripcion 
                             FROM tipo_atributo ta 
                             WHERE ta.ID_TipoAtributo = 2";
@@ -1140,9 +1151,10 @@ class AdminController {
                     $tipoAtributo = $stmtTipo->fetch(PDO::FETCH_ASSOC);
                     
                     if ($tipoAtributo) {
-                        // Cargar colores desde la tabla color
-                        $sqlValores = "SELECT ID_Color as ID_AtributoValor, N_Color as Valor, CodigoHex 
+                        // Cargar colores desde la tabla color - SOLO ACTIVOS
+                        $sqlValores = "SELECT ID_Color as ID_AtributoValor, N_Color as Valor, CodigoHex, Activo
                                     FROM color 
+                                    WHERE Activo = 1
                                     ORDER BY N_Color ASC";
                         $stmtValores = $this->db->prepare($sqlValores);
                         $stmtValores->execute();
@@ -1174,10 +1186,11 @@ class AdminController {
                         $tipoAtributo = $stmtTipo->fetch(PDO::FETCH_ASSOC);
                         
                         if ($tipoAtributo) {
-                            // 🎨 Si es el atributo de Color (ID_TipoAtributo = 2)
+                            // 🎨 Si es el atributo de Color (ID_TipoAtributo = 2) - SOLO ACTIVOS
                             if ($tipoAtributo['ID_TipoAtributo'] == 2) {
-                                $sqlValores = "SELECT ID_Color as ID_AtributoValor, N_Color as Valor, CodigoHex 
+                                $sqlValores = "SELECT ID_Color as ID_AtributoValor, N_Color as Valor, CodigoHex, Activo
                                             FROM color 
+                                            WHERE Activo = 1
                                             ORDER BY N_Color ASC";
                                 $stmtValores = $this->db->prepare($sqlValores);
                                 $stmtValores->execute();
@@ -1187,8 +1200,8 @@ class AdminController {
                                     $valor['CodigoHex'] = $valor['CodigoHex'] ?? '#FFFFFF';
                                 }
                             } else {
-                                // Para otros atributos
-                                $sqlValores = "SELECT av.ID_AtributoValor, av.Valor, av.Orden 
+                                // Para otros atributos - SOLO ACTIVOS
+                                $sqlValores = "SELECT av.ID_AtributoValor, av.Valor, av.Orden, av.Activo
                                             FROM atributo_valor av 
                                             WHERE av.ID_TipoAtributo = ? AND av.Activo = 1 
                                             ORDER BY av.Orden ASC";
@@ -1266,17 +1279,18 @@ class AdminController {
 
     // 🎨 GESTIÓN DE VARIANTES
     public function variantes() {
-        // Consulta principal para productos base
+        // Consulta principal para productos base - CORREGIDA
         $sql = "SELECT 
                     a.ID_Articulo,
                     a.N_Articulo,
-                    a.Foto AS FotoPrincipal,
+                    a.Foto AS Foto,
                     a.ID_Categoria,
                     a.ID_SubCategoria,
                     a.ID_Genero,
                     cat.N_Categoria,
                     gen.N_Genero,
                     s.SubCategoria,
+                    pr.Valor AS Precio,
                     COUNT(p.ID_Producto) AS TotalVariantes,
                     COALESCE(SUM(p.Cantidad), 0) AS StockTotal
                 FROM articulo a
@@ -1284,7 +1298,10 @@ class AdminController {
                 LEFT JOIN categoria cat ON cat.ID_Categoria = a.ID_Categoria
                 LEFT JOIN genero gen ON gen.ID_Genero = a.ID_Genero
                 LEFT JOIN subcategoria s ON s.ID_SubCategoria = a.ID_SubCategoria
-                GROUP BY a.ID_Articulo, a.N_Articulo, a.Foto, a.ID_Categoria, a.ID_SubCategoria, a.ID_Genero, cat.N_Categoria, gen.N_Genero, s.SubCategoria
+                LEFT JOIN precio pr ON pr.ID_Precio = a.ID_Precio
+                WHERE a.Activo = 1
+                GROUP BY a.ID_Articulo, a.N_Articulo, a.Foto, a.ID_Categoria, a.ID_SubCategoria, 
+                        a.ID_Genero, cat.N_Categoria, gen.N_Genero, s.SubCategoria, pr.Valor
                 ORDER BY a.N_Articulo ASC";
 
         $productos = $this->db->query($sql)->fetchAll(PDO::FETCH_ASSOC);

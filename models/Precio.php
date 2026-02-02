@@ -7,31 +7,31 @@ class Precio {
         $this->conn = $db;
     }
 
-    // OBTENER TODOS LOS PRECIOS CON INFORMACIÓN DE USO
+    // OBTENER TODOS LOS PRECIOS CON INFORMACIÓN DE USO (SOLO ARTÍCULOS BASE)
     public function obtenerTodos() {
         $query = "SELECT p.*, 
                          (SELECT COUNT(*) FROM articulo a WHERE a.ID_Precio = p.ID_precio) as uso_articulos,
-                         (SELECT COUNT(*) FROM producto pr WHERE pr.Porcentaje = p.ID_precio) as uso_variantes
+                         (SELECT COUNT(*) FROM producto pr WHERE pr.Porcentaje = p.ID_precio) as uso_variantes_directas
                   FROM " . $this->table_name . " p 
                   ORDER BY Valor ASC";
         $stmt = $this->conn->prepare($query);
         $stmt->execute();
         $resultados = $stmt->fetchAll(PDO::FETCH_ASSOC);
         
-        // Calcular total de uso para cada precio
+        // Calcular total de uso para cada precio (SOLO ARTÍCULOS BASE)
         foreach ($resultados as &$precio) {
-            $precio['total_uso'] = (int)$precio['uso_articulos'] + (int)$precio['uso_variantes'];
+            $precio['total_uso'] = (int)$precio['uso_articulos']; // Solo artículos base
             $precio['en_uso'] = $precio['total_uso'] > 0;
         }
         
         return $resultados;
     }
 
-    // OBTENER PRECIO POR ID CON INFORMACIÓN DE USO
+    // OBTENER PRECIO POR ID CON INFORMACIÓN DE USO (SOLO ARTÍCULOS BASE)
     public function obtenerPorId($id) {
         $query = "SELECT p.*, 
                          (SELECT COUNT(*) FROM articulo a WHERE a.ID_Precio = p.ID_precio) as uso_articulos,
-                         (SELECT COUNT(*) FROM producto pr WHERE pr.Porcentaje = p.ID_precio) as uso_variantes
+                         (SELECT COUNT(*) FROM producto pr WHERE pr.Porcentaje = p.ID_precio) as uso_variantes_directas
                   FROM " . $this->table_name . " p 
                   WHERE ID_precio = ?";
         $stmt = $this->conn->prepare($query);
@@ -39,25 +39,24 @@ class Precio {
         $precio = $stmt->fetch(PDO::FETCH_ASSOC);
         
         if ($precio) {
-            $precio['total_uso'] = (int)$precio['uso_articulos'] + (int)$precio['uso_variantes'];
+            $precio['total_uso'] = (int)$precio['uso_articulos']; // Solo artículos base
             $precio['en_uso'] = $precio['total_uso'] > 0;
         }
         
         return $precio;
     }
 
-    // VERIFICAR SI UN PRECIO ESTÁ EN USO (método directo)
+    // VERIFICAR SI UN PRECIO ESTÁ EN USO (SOLO ARTÍCULOS BASE)
     public function estaEnUso($idPrecio) {
-        $query = "SELECT (SELECT COUNT(*) FROM articulo WHERE ID_Precio = ?) + 
-                         (SELECT COUNT(*) FROM producto WHERE Porcentaje = ?) as total";
+        $query = "SELECT COUNT(*) FROM articulo WHERE ID_Precio = ?";
         $stmt = $this->conn->prepare($query);
-        $stmt->execute([$idPrecio, $idPrecio]);
+        $stmt->execute([$idPrecio]);
         $total = (int)$stmt->fetchColumn();
         
         return $total > 0;
     }
 
-    // OBTENER PRODUCTOS QUE USAN UN PRECIO (artículos base y variantes)
+    // OBTENER PRODUCTOS QUE USAN UN PRECIO (artículos base y variantes directas)
     public function obtenerProductosPorPrecio($idPrecio) {
         $resultados = [];
         
@@ -65,7 +64,8 @@ class Precio {
         $queryArticulos = "SELECT a.ID_Articulo, a.N_Articulo, a.Activo, 
                                   c.N_Categoria as Categoria,
                                   s.SubCategoria,
-                                  g.N_Genero as Genero
+                                  g.N_Genero as Genero,
+                                  (SELECT COUNT(*) FROM producto p WHERE p.ID_Articulo = a.ID_Articulo) as total_variantes
                            FROM articulo a
                            LEFT JOIN categoria c ON a.ID_Categoria = c.ID_Categoria
                            LEFT JOIN subcategoria s ON a.ID_SubCategoria = s.ID_SubCategoria
@@ -75,7 +75,7 @@ class Precio {
         $stmt->execute([$idPrecio]);
         $resultados['articulos'] = $stmt->fetchAll(PDO::FETCH_ASSOC);
         
-        // Obtener variantes (productos) que usan este precio
+        // Obtener variantes directas (productos) que usan este precio específicamente
         $queryVariantes = "SELECT p.ID_Producto, 
                                   p.Nombre_Producto, 
                                   p.ValorAtributo1, 
@@ -130,13 +130,13 @@ class Precio {
         $this->conn->beginTransaction();
         
         try {
-            // Migrar artículos base
+            // Migrar artículos base (PRINCIPAL)
             $queryArticulos = "UPDATE articulo SET ID_Precio = ? WHERE ID_Precio = ?";
             $stmt = $this->conn->prepare($queryArticulos);
             $stmt->execute([$idPrecioDestino, $idPrecioOrigen]);
             $articulosMigrados = $stmt->rowCount();
             
-            // Migrar variantes (productos)
+            // Migrar variantes directas (productos) que usan este precio específicamente
             $queryProductos = "UPDATE producto SET Porcentaje = ? WHERE Porcentaje = ?";
             $stmt = $this->conn->prepare($queryProductos);
             $stmt->execute([$idPrecioDestino, $idPrecioOrigen]);
@@ -158,11 +158,11 @@ class Precio {
         }
     }
 
-    // ELIMINAR PRECIO (solo si no está en uso)
+    // ELIMINAR PRECIO (solo si no está en uso por artículos base)
     public function eliminar($id) {
-        // Verificar si el precio está siendo usado
+        // Verificar si el precio está siendo usado por artículos base
         if ($this->estaEnUso($id)) {
-            throw new Exception("No se puede eliminar el precio porque está siendo usado por productos");
+            throw new Exception("No se puede eliminar el precio porque está siendo usado por artículos base");
         }
 
         $query = "DELETE FROM " . $this->table_name . " WHERE ID_precio = ?";
@@ -170,12 +170,12 @@ class Precio {
         return $stmt->execute([$id]);
     }
 
-    // CAMBIAR ESTADO (con validación de uso)
+    // CAMBIAR ESTADO (con validación de uso por artículos base)
     public function cambiarEstado($id, $estado) {
-        // Si se quiere desactivar, verificar si está en uso
+        // Si se quiere desactivar, verificar si está en uso por artículos base
         if ($estado == 0) {
             if ($this->estaEnUso($id)) {
-                throw new Exception("No se puede desactivar un precio que está siendo usado por productos");
+                throw new Exception("No se puede desactivar un precio que está siendo usado por artículos base");
             }
         }
 
@@ -204,9 +204,9 @@ class Precio {
 
     // ACTUALIZAR PRECIO
     public function actualizar($id, $valor, $activo) {
-        // Si se quiere desactivar, verificar si está en uso
+        // Si se quiere desactivar, verificar si está en uso por artículos base
         if ($activo == 0 && $this->estaEnUso($id)) {
-            throw new Exception("No se puede desactivar un precio que está siendo usado por productos");
+            throw new Exception("No se puede desactivar un precio que está siendo usado por artículos base");
         }
 
         // Verificar si ya existe otro precio con el mismo valor
@@ -241,7 +241,7 @@ class Precio {
     public function buscar($termino = '', $estado = '') {
         $query = "SELECT p.*, 
                          (SELECT COUNT(*) FROM articulo a WHERE a.ID_Precio = p.ID_precio) as uso_articulos,
-                         (SELECT COUNT(*) FROM producto pr WHERE pr.Porcentaje = p.ID_precio) as uso_variantes
+                         (SELECT COUNT(*) FROM producto pr WHERE pr.Porcentaje = p.ID_precio) as uso_variantes_directas
                   FROM " . $this->table_name . " p 
                   WHERE 1=1";
         
@@ -269,20 +269,20 @@ class Precio {
         $stmt->execute($params);
         $resultados = $stmt->fetchAll(PDO::FETCH_ASSOC);
         
-        // Calcular total de uso para cada precio
+        // Calcular total de uso para cada precio (SOLO ARTÍCULOS BASE)
         foreach ($resultados as &$precio) {
-            $precio['total_uso'] = (int)$precio['uso_articulos'] + (int)$precio['uso_variantes'];
+            $precio['total_uso'] = (int)$precio['uso_articulos'];
             $precio['en_uso'] = $precio['total_uso'] > 0;
         }
         
         return $resultados;
     }
 
-    // FILTRAR PRECIOS (como en el ejemplo de colores)
+    // FILTRAR PRECIOS
     public function filtrarPrecios($termino = '', $estado = 'todos', $enUso = 'todos') {
         $resultados = $this->buscar($termino, $estado !== 'todos' ? ($estado === 'activos' ? 1 : 0) : '');
         
-        // Filtrar por uso si es necesario
+        // Filtrar por uso si es necesario (SOLO ARTÍCULOS BASE)
         if ($enUso !== 'todos') {
             $resultados = array_filter($resultados, function($precio) use ($enUso) {
                 return ($enUso === 'si') ? $precio['en_uso'] : !$precio['en_uso'];
@@ -312,10 +312,8 @@ class Precio {
             // Precios inactivos
             $estadisticas['inactivos'] = $estadisticas['total'] - $estadisticas['activos'];
             
-            // Precios en uso
-            $query = "SELECT COUNT(DISTINCT ID_precio) FROM articulo WHERE ID_Precio IS NOT NULL
-                      UNION
-                      SELECT COUNT(DISTINCT Porcentaje) FROM producto WHERE Porcentaje IS NOT NULL";
+            // Precios en uso (SOLO ARTÍCULOS BASE)
+            $query = "SELECT COUNT(DISTINCT ID_precio) FROM articulo WHERE ID_Precio IS NOT NULL";
             $stmt = $this->conn->prepare($query);
             $stmt->execute();
             $estadisticas['en_uso'] = (int)$stmt->fetchColumn();
@@ -348,7 +346,7 @@ class Precio {
         return $estadisticas;
     }
 
-    // ORDENAR PRECIOS POR VALOR (ignorando mayúsculas/minúsculas)
+    // ORDENAR PRECIOS POR VALOR
     public function obtenerTodosOrdenados() {
         $query = "SELECT * FROM " . $this->table_name . " ORDER BY Valor ASC";
         $stmt = $this->conn->prepare($query);

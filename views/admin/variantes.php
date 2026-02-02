@@ -263,10 +263,10 @@
                         </div>
                         
                         <div class="card-body">
-                            <!-- Imagen principal -->
+                            <!-- Imagen principal - CORREGIDA -->
                             <div class="text-center mb-3">
                                 <?php
-                                $rutaImagen = trim($producto['FotoPrincipal'] ?? '');
+                                $rutaImagen = trim($producto['Foto'] ?? '');
                                 if ($rutaImagen !== '') {
                                     if (!preg_match('/^https?:/i', $rutaImagen) && !str_starts_with($rutaImagen, 'ImgProducto/')) {
                                         $rutaImagen = 'ImgProducto/' . ltrim($rutaImagen, '/');
@@ -278,18 +278,41 @@
                                 ?>
                                 <img src="<?= htmlspecialchars($rutaImagen); ?>" 
                                     class="img-fluid rounded-3 shadow product-image-variante" 
-                                    style="max-height: 150px; object-fit: cover;"
+                                    style="max-height: 150px; object-fit: contain;"
                                     alt="<?= htmlspecialchars($producto['N_Articulo']); ?>"
-                                    title="<?= htmlspecialchars($producto['N_Articulo']); ?>">
+                                    title="<?= htmlspecialchars($producto['N_Articulo']); ?>"
+                                    onerror="this.onerror=null; this.src='<?= BASE_URL ?>assets/img/sin_imagen.png'">
                             </div>
 
-                            <!-- Información esencial -->
+                            <!-- INFORMACIÓN COMPLETA DEL PRODUCTO - CORREGIDA -->
                             <div class="variantes-info">
+                                <!-- Información básica -->
+                                <div class="mb-3">
+                                    <p class="mb-2">
+                                        <strong class="text-primary-dark">Categoría:</strong> 
+                                        <span class="badge bg-primary text-white"><?= htmlspecialchars($producto['N_Categoria'] ?? 'Sin categoría') ?></span>
+                                    </p>
+                                    <p class="mb-2">
+                                        <strong class="text-primary-dark">Género:</strong> 
+                                        <span class="badge bg-info text-white"><?= htmlspecialchars($producto['N_Genero'] ?? 'Sin género') ?></span>
+                                    </p>
+                                    <p class="mb-2">
+                                        <strong class="text-primary-dark">Subcategoría:</strong> 
+                                        <span class="badge bg-info text-white"><?= htmlspecialchars($producto['SubCategoria'] ?? 'Sin subcategoría') ?></span>
+                                    </p>
+                                    <p class="mb-3">
+                                        <strong class="text-primary-dark">Precio base:</strong> 
+                                        <span class="fw-bold text-primary-dark">$<?= number_format($producto['Precio'] ?? 0, 0, ',', '.') ?></span>
+                                    </p>
+                                </div>
+
                                 <!-- Estadísticas rápidas -->
                                 <div class="row text-center small mb-3">
                                     <div class="col-6">
                                         <div class="border-end">
-                                            <div class="fw-bold text-primary-dark fs-5"><?= $producto['TotalVariantes']; ?></div>
+                                            <div class="fw-bold text-primary-dark fs-5">
+                                                <?= $producto['TotalVariantes'] ?? 0 ?>
+                                            </div>
                                             <small class="text-muted">Variantes</small>
                                         </div>
                                     </div>
@@ -299,101 +322,6 @@
                                                 <?= number_format($producto['StockTotal'] ?? 0) ?>
                                             </div>
                                             <small class="text-muted">Stock</small>
-                                        </div>
-                                    </div>
-                                </div>
-
-                                <!-- ATRIBUTOS DISPONIBLES  -->
-                                <div class="mb-3">
-                                    <div class="d-flex justify-content-between align-items-center mb-2">
-                                        <small class="text-muted fw-semibold">
-                                            <i class="fas fa-tags me-1"></i>Atributos disponibles:
-                                        </small>
-                                        <span class="badge bg-primary"><?= count($producto['AtributosDisponibles']) ?></span>
-                                    </div>
-                                    
-                                    <div class="atributos-container-variante">
-                                        <?php if (!empty($producto['AtributosDisponibles'])): ?>
-                                            <?php 
-                                            // Agrupar atributos por nombre
-                                            $atributosAgrupados = [];
-                                            foreach ($producto['AtributosDisponibles'] as $atributo) {
-                                                $nombre = $atributo['nombre'];
-                                                $valor = $atributo['valor'];
-                                                if (!isset($atributosAgrupados[$nombre])) {
-                                                    $atributosAgrupados[$nombre] = [];
-                                                }
-                                                if (!in_array($valor, $atributosAgrupados[$nombre])) {
-                                                    $atributosAgrupados[$nombre][] = $valor;
-                                                }
-                                            }
-                                            
-                                            // Colores basados en #1B202D con variaciones
-                                            $coloresAtributos = [
-                                                'Color' => 'primary',
-                                                'Medida' => 'primary-light',
-                                                'Talla' => 'primary', 
-                                                'Material' => 'primary-light',
-                                                'Estilo' => 'primary',
-                                                'Género' => 'primary-light',
-                                                'Marca' => 'primary'
-                                            ];
-                                            ?>
-                                            
-                                            <?php foreach ($atributosAgrupados as $nombreAtributo => $valores): ?>
-                                                <?php 
-                                                $color = $coloresAtributos[$nombreAtributo] ?? 'primary-light';
-                                                $textColor = $color === 'primary' ? 'text-light' : 'text-primary-dark';
-                                                ?>
-                                                
-                                                <div class="atributo-grupo-variante mb-2 p-2 border rounded bg-light">
-                                                    <div class="d-flex justify-content-between align-items-center mb-1">
-                                                        <span class="fw-semibold text-primary-dark small">
-                                                            <i class="fas fa-tag me-1 text-<?= $color === 'primary' ? 'primary' : 'primary-light' ?>"></i>
-                                                            <?= htmlspecialchars($nombreAtributo) ?>
-                                                        </span>
-                                                        <span class="badge bg-<?= $color ?> <?= $textColor ?> small">
-                                                            <?= count($valores) ?> opciones
-                                                        </span>
-                                                    </div>
-                                                    <div class="d-flex flex-wrap gap-1">
-                                                        <?php foreach ($valores as $valor): ?>
-                                                            <span class="badge bg-<?= $color ?> <?= $textColor ?> border-0 small">
-                                                                <?= htmlspecialchars($valor) ?>
-                                                            </span>
-                                                        <?php endforeach; ?>
-                                                    </div>
-                                                </div>
-                                            <?php endforeach; ?>
-                                        <?php else: ?>
-                                            <div class="text-center py-3">
-                                                <i class="fas fa-inbox fa-2x text-muted opacity-50 mb-2"></i>
-                                                <p class="text-muted small mb-0">No hay atributos definidos</p>
-                                            </div>
-                                        <?php endif; ?>
-                                    </div>
-                                </div>
-
-                                <!-- Información de categorías -->
-                                <div class="categorias-info">
-                                    <div class="row text-center small">
-                                        <div class="col-12 mb-2">
-                                            <span class="badge bg-primary text-light w-100">
-                                                <i class="fas fa-folder me-1"></i>
-                                                <?= htmlspecialchars($producto['N_Categoria'] ?? 'Sin categoría') ?>
-                                            </span>
-                                        </div>
-                                        <div class="col-6">
-                                            <span class="badge bg-primary-light text-primary-dark w-100">
-                                                <i class="fas fa-tag me-1"></i>
-                                                <?= htmlspecialchars($producto['SubCategoria'] ?? 'Sin subcat.') ?>
-                                            </span>
-                                        </div>
-                                        <div class="col-6">
-                                            <span class="badge bg-primary text-light w-100">
-                                                <i class="fas fa-venus-mars me-1"></i>
-                                                <?= htmlspecialchars($producto['N_Genero'] ?? 'Sin género') ?>
-                                            </span>
                                         </div>
                                     </div>
                                 </div>

@@ -161,7 +161,7 @@ $modoBusqueda = $modoBusqueda ?? false;
             <?php else: ?>
                 <div class="table-responsive">
                     <table class="table table-striped table-hover" id="colors-table">
-                        <thead class="table-primary-dark">
+                        <thead class="table-primary-light">
                             <tr>
                                 <th>Nombre</th>
                                 <th>Código HEX</th>
@@ -225,36 +225,56 @@ $modoBusqueda = $modoBusqueda ?? false;
                                     <td>
                                         <div class="btn-group btn-group-sm action-buttons">
                                             <a href="<?= BASE_URL ?>?c=Color&a=editar&id=<?= $color['ID_Color'] ?>" 
-                                            class="btn btn-outline-primary" 
-                                            title="Editar">
+                                            class="btn btn-outline-primary btn-editar" 
+                                            title="Editar"
+                                            data-id="<?= $color['ID_Color'] ?>"
+                                            data-nombre="<?= htmlspecialchars($color['N_Color']) ?>">
                                                 <i class="fas fa-edit"></i>
                                             </a>
                                             
                                             <?php if ($estaActivo): ?>
-                                                <a href="<?= BASE_URL ?>?c=Color&a=cambiarEstado&id=<?= $color['ID_Color'] ?>&estado=0" 
-                                                class="btn btn-danger" 
-                                                title="Desactivar"
-                                                onclick="return confirm('¿Desactivar el color \'<?= addslashes($color['N_Color']) ?>\'?')">
-                                                    <i class="fas fa-toggle-on"></i>
-                                                </a>
+                                                <?php if ($estaEnUso): ?>
+                                                    <!-- Color en uso - Botón desactivado -->
+                                                    <button class="btn btn-secondary btn-desactivar-disabled" 
+                                                            title="No se puede desactivar (en uso por productos)"
+                                                            disabled>
+                                                        <i class="fas fa-toggle-on"></i>
+                                                    </button>
+                                                <?php else: ?>
+                                                    <!-- Color no usado - Se puede desactivar -->
+                                                    <a href="<?= BASE_URL ?>?c=Color&a=cambiarEstado&id=<?= $color['ID_Color'] ?>&estado=0" 
+                                                    class="btn btn-danger btn-desactivar" 
+                                                    title="Desactivar"
+                                                    data-id="<?= $color['ID_Color'] ?>"
+                                                    data-nombre="<?= htmlspecialchars($color['N_Color']) ?>"
+                                                    data-estado="0"
+                                                    data-en-uso="<?= $estaEnUso ? '1' : '0' ?>">
+                                                        <i class="fas fa-toggle-on"></i>
+                                                    </a>
+                                                <?php endif; ?>
                                             <?php else: ?>
+                                                <!-- Color inactivo - Siempre se puede activar -->
                                                 <a href="<?= BASE_URL ?>?c=Color&a=cambiarEstado&id=<?= $color['ID_Color'] ?>&estado=1" 
-                                                class="btn btn-success" 
+                                                class="btn btn-success btn-activar" 
                                                 title="Activar"
-                                                onclick="return confirm('¿Activar el color \'<?= addslashes($color['N_Color']) ?>\'?')">
+                                                data-id="<?= $color['ID_Color'] ?>"
+                                                data-nombre="<?= htmlspecialchars($color['N_Color']) ?>"
+                                                data-estado="1">
                                                     <i class="fas fa-toggle-off"></i>
                                                 </a>
                                             <?php endif; ?>
                                             
                                             <?php if (!$estaEnUso): ?>
                                                 <a href="<?= BASE_URL ?>?c=Color&a=eliminar&id=<?= $color['ID_Color'] ?>" 
-                                                class="btn btn-outline-danger" 
+                                                class="btn btn-outline-danger btn-eliminar" 
                                                 title="Eliminar"
-                                                onclick="return confirmEliminarColor(event, '<?= addslashes($color['N_Color']) ?>')">
+                                                data-id="<?= $color['ID_Color'] ?>"
+                                                data-nombre="<?= htmlspecialchars($color['N_Color']) ?>"
+                                                data-en-uso="<?= $estaEnUso ? '1' : '0' ?>">
                                                     <i class="fas fa-trash"></i>
                                                 </a>
                                             <?php else: ?>
-                                                <button class="btn btn-outline-secondary" 
+                                                <button class="btn btn-outline-secondary btn-eliminar-disabled" 
                                                         title="No se puede eliminar (en uso)"
                                                         disabled>
                                                     <i class="fas fa-ban"></i>
@@ -306,3 +326,4 @@ $modoBusqueda = $modoBusqueda ?? false;
 </div>
 
 <script src="<?= BASE_URL ?>assets/js/colores.js"></script>
+<script src="<?= BASE_URL ?>assets/js/color-messages.js"></script>

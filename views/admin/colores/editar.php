@@ -110,7 +110,10 @@
                                                 <?php if (($color['productos_asociados'] ?? 0) > 0): ?>
                                                     <div class="alert alert-warning mt-2 mb-0 py-2">
                                                         <i class="fas fa-exclamation-triangle me-2"></i>
-                                                        <small class="text-primary-dark">Este color está siendo usado por productos. No puede ser eliminado.</small>
+                                                        <small class="text-primary-dark">
+                                                            <strong>Advertencia:</strong> Este color está siendo usado por <?= $color['productos_asociados'] ?> productos. 
+                                                            No puede ser desactivado ni eliminado mientras esté en uso.
+                                                        </small>
                                                     </div>
                                                 <?php endif; ?>
                                             </div>

@@ -345,3 +345,134 @@
         margin-bottom: 0;
     }
 }
+
+/* Estado en nueva columna */
+.estado-badge {
+    font-size: 0.75rem;
+    padding: 0.35rem 0.75rem;
+    font-weight: 500;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+    min-width: 85px;
+    justify-content: center;
+}
+
+/* Botones de acción */
+.toggle-estado-btn,
+.btn-outline-primary.rounded-circle,
+.btn-outline-info.rounded-circle,
+.delete-producto-btn {
+    width: 38px;
+    height: 38px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.3s ease;
+}
+
+.toggle-estado-btn:hover {
+    transform: scale(1.1);
+    background-color: var(--primary-dark);
+    color: white;
+    border-color: var(--primary-dark);
+}
+
+.btn-outline-primary.rounded-circle:hover {
+    transform: scale(1.1);
+    background-color: var(--primary-dark);
+    color: white;
+    border-color: var(--primary-dark);
+}
+
+.btn-outline-info.rounded-circle:hover {
+    transform: scale(1.1);
+    background-color: var(--info);
+    color: white;
+    border-color: var(--info);
+}
+
+.delete-producto-btn:hover {
+    transform: scale(1.1);
+    background-color: var(--danger);
+    color: white;
+    border-color: var(--danger);
+}
+
+/* Ajustes para la nueva columna de estado */
+#productosTable th:nth-child(7),
+#productosTable td:nth-child(7) {
+    text-align: center;
+}
+
+/* Modal de desactivar con color del botón */
+#confirmModal .modal-header[style*="primary-dark"] {
+    background: linear-gradient(135deg, var(--primary-dark), var(--primary-dark)) !important;
+}
+
+#confirmModal .modal-header[style*="primary-dark"] .modal-title {
+    color: white !important;
+}
+
+#confirmModalActionBtn[style*="primary-dark"] {
+    background: linear-gradient(135deg, var(--primary-dark), var(--primary-dark)) !important;
+    border: 1px solid var(--primary-dark) !important;
+    color: white !important;
+}
+
+#confirmModalActionBtn[style*="primary-dark"]:hover {
+    background: linear-gradient(135deg, var(--primary-dark), var(--secondary-blue)) !important;
+    transform: translateY(-2px);
+}
+
+/* Filtros activos */
+.active-filter {
+    border-color: var(--primary-dark) !important;
+    box-shadow: 0 0 0 0.2rem rgba(var(--primary-dark-rgb), 0.25) !important;
+}
+
+/* ==============================================
+   TOAST NOTIFICATIONS - AZULES
+   ============================================== */
+.notification-toast {
+    background-color: rgba(58, 74, 107, 0.95) !important;
+    border: 1px solid var(--accent-blue) !important;
+    border-left: 4px solid var(--accent-blue) !important;
+    border-radius: var(--border-radius) !important;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2) !important;
+}
+
+.notification-toast .toast-body {
+    color: white !important;
+    background-color: transparent !important;
+    padding: 1rem !important;
+}
+
+.notification-toast .btn-close {
+    filter: invert(1) grayscale(100%) brightness(200%) !important;
+}
+
+/* Asegurar que todos los toasts sean azules */
+.toast.bg-primary {
+    background-color: rgba(58, 74, 107, 0.95) !important;
+    border-color: var(--accent-blue) !important;
+}
+
+/* Sobrescribir colores de Bootstrap para toasts */
+.bg-primary {
+    --bs-bg-opacity: 1;
+    background-color: rgba(var(--primary-dark-rgb), 0.95) !important;
+}
+
+/* Si necesitas colores específicos para diferentes tipos (opcional) */
+.notification-toast.success {
+    border-left-color: #4CAF50 !important;
+}
+
+.notification-toast.error {
+    border-left-color: #F44336 !important;
+}
+
+.notification-toast.warning {
+    border-left-color: #FF9800 !important;
+}

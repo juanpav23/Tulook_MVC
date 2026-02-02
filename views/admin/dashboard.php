@@ -115,7 +115,6 @@ $ultimasVariantes = $this->db->query("
                 </div>
                 <div class="col-md-4 text-md-end">
                     <div class="current-time">
-                        <small>ID: <?php echo htmlspecialchars($_SESSION['ID_Usuario'] ?? '-'); ?></small><br>
                         <small><?php echo date('d/m/Y H:i:s'); ?></small>
                     </div>
                 </div>

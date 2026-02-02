@@ -130,19 +130,18 @@
                                         <?php if ($precio['en_uso']): ?>
                                             <small class="text-primary-dark">
                                                 <strong><i class="fas fa-box me-1"></i>En uso por:</strong><br>
-                                                <?= $precio['uso_articulos'] ?? 0 ?> artículos base
-                                                <?= ($precio['uso_variantes'] ?? 0) > 0 ? ' + ' . $precio['uso_variantes'] . ' variantes' : '' ?>
+                                                <?= $precio['uso_articulos'] ?? 0 ?> artículo(s) base
                                             </small>
                                             <button type="button" 
                                                     class="btn btn-sm btn-outline-primary mt-1 btn-ver-productos"
                                                     data-id="<?= $precio['ID_precio'] ?>"
                                                     data-valor="<?= number_format($precio['Valor'], 0, ',', '.') ?>">
-                                                <i class="fas fa-eye me-1"></i> Ver productos
+                                                <i class="fas fa-eye me-1"></i> Ver artículos
                                             </button>
                                         <?php else: ?>
                                             <small class="text-primary-dark">
                                                 <strong><i class="fas fa-box-open me-1"></i>Estado:</strong><br>
-                                                Este precio no está siendo usado por ningún producto
+                                                Este precio no está siendo usado por ningún artículo
                                             </small>
                                         <?php endif; ?>
                                     </div>
@@ -156,16 +155,16 @@
                         <div class="alert alert-primary-light mt-2 border-start border-3 border-primary">
                             <h6 class="text-primary-dark"><i class="fas fa-exclamation-triangle me-2"></i>Importante</h6>
                             <small class="text-primary-dark">
-                                • Este precio está siendo usado por productos<br>
+                                • Este precio está siendo usado por artículos base<br>
                                 • No se puede eliminar mientras esté en uso<br>
                                 • No se puede desactivar mientras esté en uso<br>
-                                • Para eliminar, primero migra los productos a otro precio
+                                • Para eliminar, primero migra los artículos a otro precio
                             </small>
                             <button type="button" 
                                     class="btn btn-sm btn-outline-primary mt-2 btn-migrar-precio"
                                     data-id="<?= $precio['ID_precio'] ?>"
                                     data-valor="<?= number_format($precio['Valor'], 0, ',', '.') ?>">
-                                <i class="fas fa-exchange-alt me-1"></i> Migrar productos
+                                <i class="fas fa-exchange-alt me-1"></i> Migrar artículos
                             </button>
                         </div>
                     <?php endif; ?>

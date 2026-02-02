@@ -251,3 +251,65 @@
         padding: 0.5rem !important;
     }
 }
+
+.btn-outline-primary {
+    color: #2A3448 !important; /* COLOR PRINCIPAL */
+    border-color: #2A3448 !important; /* COLOR PRINCIPAL */
+    background-color: transparent !important;
+}
+
+.btn-outline-primary:hover {
+    background-color: #2A3448 !important; /* COLOR PRINCIPAL */
+    border-color: #2A3448 !important; /* COLOR PRINCIPAL */
+    color: white !important;
+}
+
+/* Eliminar cursor not-allowed/wait de modales */
+.modal-content,
+.modal-header,
+.modal-body,
+.modal-footer,
+.modal-title {
+    cursor: default !important;
+}
+
+/* Botones dentro de modales con cursor pointer */
+.modal button,
+.modal .btn,
+.modal .btn-close,
+.modal .confirm-action-btn {
+    cursor: pointer !important;
+}
+
+/* Backdrop del modal */
+.modal-backdrop {
+    cursor: default !important;
+}
+
+/* Modal cuando está abriéndose/cerrándose */
+.modal.fade .modal-dialog,
+.modal.show .modal-dialog {
+    cursor: default !important;
+}
+
+/* Específico para nuestros modales de atributos */
+#atributoConfirmModal *:not(button):not(.btn):not(.btn-close) {
+    cursor: default !important;
+}
+
+#atributoConfirmModal button,
+#atributoConfirmModal .btn,
+#atributoConfirmModal .btn-close {
+    cursor: pointer !important;
+}
+
+/* Modal de productos también */
+#productosAtributoModal *:not(button):not(.btn):not(.btn-close) {
+    cursor: default !important;
+}
+
+#productosAtributoModal button,
+#productosAtributoModal .btn,
+#productosAtributoModal .btn-close {
+    cursor: pointer !important;
+}

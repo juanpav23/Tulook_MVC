@@ -83,12 +83,15 @@ class Producto {
     public function getAtributosByTipo($idTipoAtributo) {
         try {
             if ($idTipoAtributo == 2) {
+                // MODIFICACIÓN: SOLO COLORES ACTIVOS
                 $sql = "SELECT 
                             c.ID_Color as ID_AtributoValor, 
                             c.N_Color as Valor,
                             c.CodigoHex,
-                            'Color' as Nombre
+                            'Color' as Nombre,
+                            c.Activo
                         FROM color c 
+                        WHERE c.Activo = 1
                         ORDER BY c.N_Color ASC";
                 
                 $stmt = $this->conn->prepare($sql);
@@ -98,7 +101,8 @@ class Producto {
                             av.ID_AtributoValor, 
                             av.Valor,
                             NULL as CodigoHex,
-                            ta.Nombre
+                            ta.Nombre,
+                            av.Activo
                         FROM atributo_valor av 
                         INNER JOIN tipo_atributo ta ON av.ID_TipoAtributo = ta.ID_TipoAtributo
                         WHERE av.ID_TipoAtributo = ? AND av.Activo = 1 
@@ -112,6 +116,7 @@ class Producto {
             return $resultados;
             
         } catch (PDOException $e) {
+            error_log("Error obteniendo atributos: " . $e->getMessage());
             return [];
         }
     }
