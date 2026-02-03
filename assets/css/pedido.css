@@ -1,0 +1,147 @@
+/* pedido.css - Estilos para gestión de pedidos */
+:root {
+    --primary-dark: #1B202D;
+    --primary: #2A3448;
+    --primary-light: #3A4A6B;
+    --secondary: #4A5B7D;
+    --light: #5B6E8F;
+    --gray-light: #f8f9fa;
+    --gray-medium: #e9ecef;
+    --gray-dark: #6c757d;
+    --danger: #342a56;
+    --success: #1e2944;
+    --warning: #15171d;
+    --border-radius: 12px;
+    --card-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+    --hover-shadow: 0 6px 20px rgba(0, 0, 0, 0.12);
+    --focus-shadow: 0 0 0 0.25rem rgba(58, 74, 107, 0.25);
+    --transition: all 0.3s ease;
+}
+
+/* Botones específicos para pedidos - USANDO PALETA DE USUARIOS */
+.btn-warning {
+    background: linear-gradient(135deg, var(--warning), #2d3138) !important;
+    border-color: var(--warning) !important;
+    color: white !important;
+    padding: 0.5rem 1.5rem;
+    font-weight: 500;
+    border-radius: 8px;
+    transition: var(--transition);
+}
+
+.btn-warning:hover {
+    background: linear-gradient(135deg, #2d3138, var(--warning)) !important;
+    border-color: #2d3138 !important;
+    transform: translateY(-1px);
+    box-shadow: var(--hover-shadow);
+}
+
+.btn-info {
+    background: linear-gradient(135deg, var(--primary-light), var(--secondary)) !important;
+    border-color: var(--primary-light) !important;
+    color: white !important;
+    padding: 0.5rem 1.5rem;
+    font-weight: 500;
+    border-radius: 8px;
+    transition: var(--transition);
+}
+
+.btn-info:hover {
+    background: linear-gradient(135deg, var(--secondary), var(--primary-light)) !important;
+    border-color: var(--secondary) !important;
+    transform: translateY(-1px);
+    box-shadow: var(--hover-shadow);
+}
+
+/* Badges de estado específicos para pedidos - USANDO PALETA DE USUARIOS */
+.badge-estado-confirmado {
+    background: linear-gradient(135deg, var(--primary-light), var(--secondary)) !important;
+    color: white !important;
+}
+
+.badge-estado-preparando {
+    background: linear-gradient(135deg, var(--warning), #2d3138) !important;
+    color: white !important;
+}
+
+.badge-estado-enviado {
+    background: linear-gradient(135deg, var(--primary), var(--primary-light)) !important;
+    color: white !important;
+}
+
+.badge-estado-retrasado {
+    background: linear-gradient(135deg, var(--danger), #433766) !important;
+    color: white !important;
+}
+
+.badge-estado-devuelto {
+    background: linear-gradient(135deg, var(--light), var(--secondary)) !important;
+    color: white !important;
+}
+
+.badge-estado-entregado {
+    background: linear-gradient(135deg, var(--success), #273050) !important;
+    color: white !important;
+}
+
+.badge-estado-anulado {
+    background: linear-gradient(135deg, var(--gray-dark), #5a6268) !important;
+    color: white !important;
+    text-decoration: line-through;
+}
+
+/* Estadísticas usando colores de la paleta */
+.stats-card-pedido.estadistica-confirmados {
+    border-left-color: var(--primary-light) !important;
+}
+
+.stats-card-pedido.estadistica-preparando {
+    border-left-color: var(--warning) !important;
+}
+
+.stats-card-pedido.estadistica-enviados {
+    border-left-color: var(--primary) !important;
+}
+
+.stats-card-pedido.estadistica-retrasados {
+    border-left-color: var(--danger) !important;
+}
+
+.stats-card-pedido.estadistica-devuelto {
+    border-left-color: var(--light) !important;
+}
+
+.stats-card-pedido.estadistica-entregados {
+    border-left-color: var(--success) !important;
+}
+
+/* Alertas de pedidos atrasados con colores de la paleta */
+.alert-warning-pedidos {
+    background: linear-gradient(135deg, rgba(21, 23, 29, 0.1), rgba(45, 49, 56, 0.05)) !important;
+    border-left: 4px solid var(--warning) !important;
+    color: var(--primary-dark) !important;
+    border-radius: var(--border-radius) !important;
+}
+
+.alert-warning-pedidos .btn-warning {
+    background: var(--warning) !important;
+    border-color: var(--warning) !important;
+    color: white !important;
+    padding: 0.25rem 0.75rem;
+    font-size: 0.875rem;
+}
+
+/* Ajuste para filas de pedidos retrasados */
+.table-danger {
+    border-left: 3px solid var(--danger) !important;
+    background-color: rgba(52, 42, 86, 0.05) !important;
+}
+
+/* Ajuste para botón limpiar filtros */
+.btn-limpiar-filtros {
+    min-width: 42px;
+    height: 38px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}

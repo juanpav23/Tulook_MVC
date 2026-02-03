@@ -239,6 +239,21 @@ class AtributoController {
         require "views/admin/layout_admin.php";
     }
 
+    // 📱 MÉTODO AJAX PARA OBTENER PRODUCTOS (para el modal flotante)
+    public function getProductosByAtributo() {
+        if (!isset($_GET['id'])) {
+            echo json_encode([]);
+            exit;
+        }
+
+        $id = (int)$_GET['id'];
+        $productos = $this->atributoModel->obtenerProductosPorAtributo($id);
+        
+        header('Content-Type: application/json');
+        echo json_encode($productos);
+        exit;
+    }
+
     // 🗑️ ELIMINAR ATRIBUTO
     public function eliminar() {
         try {

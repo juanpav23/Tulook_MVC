@@ -17,7 +17,7 @@
         <?php unset($_SESSION['mensaje'], $_SESSION['mensaje_tipo']); ?>
     <?php endif; ?>
 
-    <!-- Barra de Búsqueda y Filtros CON NUEVO FILTRO DE USO -->
+    <!-- Barra de Búsqueda y Filtros -->
     <div class="card mb-4 stats-card">
         <div class="card-header bg-light">
             <div class="d-flex justify-content-between align-items-center">
@@ -67,13 +67,13 @@
                     </select>
                 </div>
                 
-                <!-- NUEVO FILTRO: EN USO -->
+                <!-- FILTRO: EN USO -->
                 <div class="col-md-2">
                     <label for="en_uso" class="form-label text-primary-dark">En Uso</label>
                     <select class="form-select border-primary" id="en_uso" name="en_uso">
                         <option value="">Todos</option>
                         <option value="si" <?= ($_GET['en_uso'] ?? '') === 'si' ? 'selected' : '' ?>>En uso</option>
-                        <option value="no" <?= ($_GET['en_uso'] ?? '') === 'no' ? 'selected' : '' ?>>No en uso</option>
+                        <option value="no" <?= ($_Get['en_uso'] ?? '') === 'no' ? 'selected' : '' ?>>No en uso</option>
                     </select>
                 </div>
                 
@@ -82,7 +82,7 @@
                         <button type="submit" class="btn btn-primary me-2">
                             <i class="fas fa-filter me-1"></i> Filtrar
                         </button>
-                        <?php if (isset($_GET['buscar']) || isset($_GET['tipo']) || isset($_GET['estado']) || isset($_GET['en_uso'])): ?>
+                        <?php if (isset($_GET['buscar']) || isset($_GET['tipo']) || isset($_GET['estado']) || isset($_Get['en_uso'])): ?>
                             <a href="<?= BASE_URL ?>?c=Atributo&a=index" class="btn btn-outline-primary-light text-primary-dark">
                                 <i class="fas fa-times me-1"></i> Limpiar filtros
                             </a>
@@ -110,36 +110,36 @@
         <div class="col-md-3">
             <div class="card stats-card">
                 <div class="card-body">
-                    <h5 class="card-title text-primary-dark">Total Atributos</h5>
-                    <h3 class="card-text text-primary-dark"><?= $estadisticas['total'] ?? 0 ?></h3>
-                    <small class="text-primary-light"><i class="fas fa-database me-1"></i> En sistema</small>
+                    <h5 class="card-title" style="color: #2A3448;">Total Atributos</h5> <!-- CAMBIADO -->
+                    <h3 class="card-text" style="color: #2A3448;"><?= $estadisticas['total'] ?? 0 ?></h3> <!-- CAMBIADO -->
+                    <small class="text-muted"><i class="fas fa-database me-1"></i> En sistema</small>
                 </div>
             </div>
         </div>
         <div class="col-md-3">
             <div class="card stats-card">
                 <div class="card-body">
-                    <h5 class="card-title text-primary">Activos</h5>
-                    <h3 class="card-text text-primary"><?= $estadisticas['activos'] ?? 0 ?></h3>
-                    <small class="text-primary-light"><i class="fas fa-check-circle me-1"></i> Disponibles</small>
+                    <h5 class="card-title" style="color: #2A3448;">Activos</h5> <!-- CAMBIADO -->
+                    <h3 class="card-text" style="color: #2A3448;"><?= $estadisticas['activos'] ?? 0 ?></h3> <!-- CAMBIADO -->
+                    <small class="text-muted"><i class="fas fa-check-circle me-1"></i> Disponibles</small>
                 </div>
             </div>
         </div>
         <div class="col-md-3">
             <div class="card stats-card">
                 <div class="card-body">
-                    <h5 class="card-title text-success">En Uso</h5>
-                    <h3 class="card-text text-success"><?= $totalEnUso ?></h3>
-                    <small class="text-primary-light"><i class="fas fa-box me-1"></i> Usados por productos</small>
+                    <h5 class="card-title" style="color: #2A3448;">En Uso</h5> <!-- CAMBIADO de verde a #2A3448 -->
+                    <h3 class="card-text" style="color: #2A3448;"><?= $totalEnUso ?></h3> <!-- CAMBIADO -->
+                    <small class="text-muted"><i class="fas fa-box me-1"></i> Usados por productos</small>
                 </div>
             </div>
         </div>
         <div class="col-md-3">
             <div class="card stats-card">
                 <div class="card-body">
-                    <h5 class="card-title text-primary-light">No en Uso</h5>
-                    <h3 class="card-text text-primary-light"><?= $totalNoEnUso ?></h3>
-                    <small class="text-primary-light"><i class="fas fa-box-open me-1"></i> Disponibles</small>
+                    <h5 class="card-title" style="color: #6c757d;">No en Uso</h5> <!-- CAMBIADO a gris -->
+                    <h3 class="card-text" style="color: #6c757d;"><?= $totalNoEnUso ?></h3> <!-- CAMBIADO -->
+                    <small class="text-muted"><i class="fas fa-box-open me-1"></i> Disponibles</small>
                 </div>
             </div>
         </div>
@@ -175,7 +175,7 @@
             <?php else: ?>
                 <div class="table-responsive">
                     <table class="table table-striped table-hover">
-                        <thead class="table-primary-dark">
+                        <thead class="table-primary-light">
                             <tr>
                                 <th>Tipo</th>
                                 <th>Valor</th>
@@ -228,25 +228,41 @@
                                     </td>
                                     <td>
                                         <?php if ($attr['en_uso']): ?>
-                                            <span class="badge bg-success text-white">
+                                            <span class="badge" style="background-color: #2A3448; color: white;"> <!-- CAMBIADO -->
                                                 <i class="fas fa-box me-1"></i> En uso
                                             </span>
                                         <?php else: ?>
-                                            <span class="badge bg-light text-primary-dark border border-primary">
+                                            <span class="badge bg-light text-dark border border-secondary">
                                                 <i class="fas fa-box-open me-1"></i> No en uso
                                             </span>
                                         <?php endif; ?>
                                     </td>
                                     <td>
                                         <div class="btn-group btn-group-sm">
+                                            <!-- Botón Ver Detalles - SIEMPRE del mismo color -->
                                             <a href="<?= BASE_URL ?>?c=Atributo&a=detalle&id=<?= $attr['ID_AtributoValor'] ?>" 
-                                            class="btn btn-outline-primary" title="Ver detalles">
+                                            class="btn btn-outline-primary" 
+                                            title="Ver detalles">
                                                 <i class="fas fa-eye"></i>
                                             </a>
                                             
+                                            <!-- Botón Ver Productos en Modal - SOLO si está en uso -->
+                                            <?php if ($attr['en_uso']): ?>
+                                                <button type="button" 
+                                                        class="btn btn-outline-primary" 
+                                                        title="Ver productos que usan '<?= htmlspecialchars($attr['Valor']) ?>'"
+                                                        onclick="verProductosAtributo(<?= $attr['ID_AtributoValor'] ?>, '<?= htmlspecialchars($attr['Valor']) ?>')">
+                                                    <i class="fas fa-box"></i>
+                                                </button>
+                                            <?php else: ?>
+                                                <button class="btn btn-outline-secondary" disabled title="No hay productos usando este atributo">
+                                                    <i class="fas fa-box"></i>
+                                                </button>
+                                            <?php endif; ?>
+                                            
                                             <?php if ($puedeEditar): ?>
                                                 <a href="<?= BASE_URL ?>?c=Atributo&a=editar&id=<?= $attr['ID_AtributoValor'] ?>" 
-                                                class="btn btn-outline-primary-light text-primary-dark" title="Editar">
+                                                class="btn btn-outline-primary" title="Editar">
                                                     <i class="fas fa-edit"></i>
                                                 </a>
                                             <?php else: ?>
@@ -257,14 +273,12 @@
                                             
                                             <?php if ($attr['Activo'] && $puedeCambiarEstado): ?>
                                                 <a href="<?= BASE_URL ?>?c=Atributo&a=cambiarEstado&id=<?= $attr['ID_AtributoValor'] ?>&estado=0" 
-                                                class="btn btn-outline-primary-light text-primary-dark" title="Desactivar"
-                                                onclick="return confirm('¿Estás seguro de desactivar este atributo?')">
+                                                class="btn btn-outline-primary" title="Desactivar">
                                                     <i class="fas fa-pause"></i>
                                                 </a>
                                             <?php elseif (!$attr['Activo'] && $puedeCambiarEstado): ?>
                                                 <a href="<?= BASE_URL ?>?c=Atributo&a=cambiarEstado&id=<?= $attr['ID_AtributoValor'] ?>&estado=1" 
-                                                class="btn btn-outline-primary" title="Activar"
-                                                onclick="return confirm('¿Estás seguro de activar este atributo?')">
+                                                class="btn btn-outline-primary" title="Activar">
                                                     <i class="fas fa-play"></i>
                                                 </a>
                                             <?php elseif (!$puedeCambiarEstado): ?>
@@ -275,8 +289,7 @@
                                             
                                             <?php if ($puedeEliminar): ?>
                                                 <a href="<?= BASE_URL ?>?c=Atributo&a=eliminar&id=<?= $attr['ID_AtributoValor'] ?>" 
-                                                class="btn btn-outline-danger" title="Eliminar"
-                                                onclick="return confirmEliminarAtributo(event, '<?= htmlspecialchars($attr['Valor']) ?>', <?= $attr['ID_AtributoValor'] ?>)">
+                                                class="btn btn-outline-danger" title="Eliminar">
                                                     <i class="fas fa-trash"></i>
                                                 </a>
                                             <?php elseif ($esUnica): ?>
@@ -318,7 +331,7 @@
                             if (!empty($_GET['estado'])) $filtrosAplicados[] = "estado: '{$_GET['estado']}'";
                             if (!empty($_GET['en_uso'])) {
                                 $usoTexto = ($_GET['en_uso'] == 'si') ? 'en uso' : 'no en uso';
-                                $filtrosAplicados[] = "{$usoTexto}";
+                                $filtrados[] = "{$usoTexto}";
                             }
                             echo implode(', ', $filtrosAplicados);
                             ?>
@@ -330,4 +343,5 @@
     </div>
 </div>
 
+<!-- Incluir el script completo -->
 <script src="<?= BASE_URL ?>assets/js/atributo.js"></script>

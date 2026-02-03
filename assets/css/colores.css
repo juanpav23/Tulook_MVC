@@ -10,7 +10,6 @@
     --light-bg: #f8f9fa;
     --text-dark: #2c3e50;
     --text-light: #6c757d;
-    --success-color: #28a745;
     --danger-color: #dc3545;
     --warning-color: #ffc107;
     --info-color: #17a2b8;
@@ -67,6 +66,19 @@
 .btn-outline-primary:hover {
     background-color: var(--primary-dark) !important;
     border-color: var(--primary-dark) !important;
+    color: white !important;
+}
+
+/* Botón success (reemplazo de verde) */
+.btn-success {
+    background-color: var(--primary-blue) !important;
+    border-color: var(--primary-blue) !important;
+    color: white !important;
+}
+
+.btn-success:hover {
+    background-color: var(--accent-blue) !important;
+    border-color: var(--accent-blue) !important;
     color: white !important;
 }
 
@@ -136,16 +148,18 @@
     text-transform: uppercase;
 }
 
+/* Estado Activo - usar color principal */
 .status-active {
-    background-color: rgba(40, 167, 69, 0.15);
-    color: var(--success-color);
-    border: 1px solid rgba(40, 167, 69, 0.3);
+    background-color: rgba(42, 52, 72, 0.15) !important;
+    color: var(--primary-blue) !important;
+    border: 1px solid rgba(42, 52, 72, 0.3) !important;
 }
 
+/* Estado Inactivo - usar color secundario */
 .status-inactive {
-    background-color: rgba(255, 193, 7, 0.15);
-    color: var(--warning-color);
-    border: 1px solid rgba(255, 193, 7, 0.3);
+    background-color: rgba(74, 91, 125, 0.15) !important;
+    color: var(--secondary-blue) !important;
+    border: 1px solid rgba(74, 91, 125, 0.3) !important;
 }
 
 /* Indicador de uso */
@@ -157,13 +171,15 @@
     margin-right: 5px;
 }
 
+/* En uso - usar color principal */
 .usage-in-use {
-    background-color: var(--success-color);
+    background-color: var(--primary-blue) !important;
     animation: pulse 2s infinite;
 }
 
+/* No en uso - usar color gris */
 .usage-not-in-use {
-    background-color: var(--dark-gray);
+    background-color: var(--dark-gray) !important;
 }
 
 @keyframes pulse {
@@ -194,6 +210,90 @@
     box-shadow: 0 4px 8px rgba(0,0,0,0.1);
 }
 
+/* Textos que antes eran verdes */
+.text-success {
+    color: var(--primary-blue) !important;
+}
+
+.text-en-uso {
+    color: var(--primary-blue) !important;
+}
+
+/* Badges que antes eran verdes */
+.badge.bg-success {
+    background-color: var(--primary-blue) !important;
+    color: white !important;
+}
+
+/* Alerts success personalizados */
+.alert-success {
+    background-color: rgba(42, 52, 72, 0.1) !important;
+    border-color: rgba(42, 52, 72, 0.2) !important;
+    color: var(--primary-blue) !important;
+}
+
+/* Para la tarjeta de estadísticas "En Uso" */
+.stats-card .bg-success.text-light {
+    background-color: var(--primary-blue) !important;
+}
+
+/* Para el texto "En uso" en la tabla */
+.text-success {
+    color: var(--primary-blue) !important;
+}
+
+/* Botón de ver productos */
+.btn-view-products.btn-primary {
+    background-color: var(--primary-blue) !important;
+    border-color: var(--primary-blue) !important;
+}
+
+.btn-view-products.btn-primary:hover {
+    background-color: var(--accent-blue) !important;
+    border-color: var(--accent-blue) !important;
+}
+
+/* Estilo para botones deshabilitados con explicación */
+.btn:disabled {
+    opacity: 0.65;
+    cursor: not-allowed;
+}
+
+/* Tooltip personalizado para botones deshabilitados */
+.btn[title]:hover:disabled::after {
+    content: attr(title);
+    position: absolute;
+    bottom: 100%;
+    left: 50%;
+    transform: translateX(-50%);
+    background-color: #333;
+    color: white;
+    padding: 5px 10px;
+    border-radius: 4px;
+    font-size: 12px;
+    white-space: nowrap;
+    z-index: 1000;
+    margin-bottom: 5px;
+}
+
+/* Indicador visual para color en uso */
+.color-en-uso {
+    position: relative;
+}
+
+.color-en-uso::after {
+    content: "En uso";
+    position: absolute;
+    top: 5px;
+    right: 5px;
+    background-color: var(--primary-blue) !important;
+    color: white;
+    font-size: 10px;
+    padding: 2px 5px;
+    border-radius: 3px;
+    opacity: 0.9;
+}
+
 /* Responsive */
 @media (max-width: 768px) {
     .stats-card .row > div {
@@ -214,4 +314,333 @@
         width: 100%;
         margin: 2px 0;
     }
+}
+
+/* Clases adicionales para textos */
+.text-activo {
+    color: var(--primary-blue) !important;
+}
+
+/* Badge para estado activo en tarjetas */
+.badge.bg-primary {
+    background-color: var(--primary-blue) !important;
+}
+
+/* Contenedor de mensajes */
+.color-messages-container {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    z-index: 1060;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+}
+
+/* Toast de colores */
+.color-toast {
+    background: linear-gradient(135deg, var(--primary-blue), var(--accent-blue));
+    color: white;
+    border-radius: 10px;
+    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+    padding: 0;
+    overflow: hidden;
+    min-width: 300px;
+    max-width: 350px;
+    margin-bottom: 10px;
+    animation: slideInRight 0.3s ease-out;
+}
+
+.color-toast .toast-header {
+    background: transparent;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+    padding: 15px;
+}
+
+.color-toast .toast-body {
+    padding: 15px;
+}
+
+.color-toast .btn-close-white {
+    filter: brightness(0) invert(1);
+    opacity: 0.8;
+}
+
+.color-toast .btn-close-white:hover {
+    opacity: 1;
+}
+
+/* Icono del toast */
+.toast-icon {
+    background: rgba(255, 255, 255, 0.2);
+    padding: 8px;
+    border-radius: 50%;
+    margin-right: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 36px;
+    height: 36px;
+}
+
+/* Barra de progreso */
+.toast-progress {
+    height: 3px;
+    background: rgba(255, 255, 255, 0.3);
+    width: 100%;
+    animation: progressBar 5s linear forwards;
+}
+
+/* Mensajes inline mejorados */
+.color-message {
+    border-radius: 8px !important;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1) !important;
+    border: none !important;
+    border-left: 4px solid !important;
+    margin-bottom: 1rem;
+    padding: 0 !important;
+    overflow: hidden;
+}
+
+.color-message.alert-success {
+    border-left-color: var(--primary-blue) !important;
+    background: rgba(42, 52, 72, 0.1) !important;
+}
+
+.color-message.alert-warning {
+    border-left-color: var(--warning-color) !important;
+}
+
+.color-message.alert-danger {
+    border-left-color: var(--danger-color) !important;
+}
+
+.color-message.alert-info {
+    border-left-color: var(--accent-blue) !important;
+    background: rgba(58, 74, 107, 0.1) !important;
+}
+
+/* Contenido del mensaje */
+.message-content {
+    display: flex;
+    align-items: center;
+    padding: 15px;
+}
+
+.message-icon {
+    background: rgba(0, 0, 0, 0.1);
+    padding: 10px;
+    border-radius: 50%;
+    margin-right: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 40px;
+    height: 40px;
+}
+
+.message-icon i {
+    font-size: 1.2em;
+}
+
+.message-text {
+    flex-grow: 1;
+}
+
+.message-progress {
+    height: 3px;
+    background: rgba(0, 0, 0, 0.1);
+    width: 100%;
+    animation: progressBar 5s linear forwards;
+}
+
+/* Modal de confirmación personalizado */
+#colorConfirmModal .modal-content {
+    border-radius: 12px;
+    overflow: hidden;
+    border: none;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+}
+
+#colorConfirmModal .modal-header {
+    border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+    padding: 20px 25px;
+}
+
+#colorConfirmModal .modal-icon {
+    background: rgba(255, 255, 255, 0.2);
+    padding: 10px;
+    border-radius: 50%;
+    margin-right: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 44px;
+    height: 44px;
+}
+
+#colorConfirmModal .modal-icon i {
+    font-size: 1.4em;
+}
+
+#colorConfirmModal .modal-body {
+    padding: 25px;
+    background: #f8f9fa;
+}
+
+#colorConfirmModal .modal-footer {
+    background: #f8f9fa;
+    border-top: 1px solid #dee2e6;
+    padding: 20px 25px;
+}
+
+#colorConfirmModal .confirm-action-btn {
+    border: none;
+    color: white;
+    padding: 8px 25px;
+    font-weight: 600;
+    border-radius: 6px;
+    transition: all 0.3s ease;
+}
+
+#colorConfirmModal .confirm-action-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+}
+
+/* Animaciones */
+@keyframes slideInRight {
+    from {
+        transform: translateX(100%);
+        opacity: 0;
+    }
+    to {
+        transform: translateX(0);
+        opacity: 1;
+    }
+}
+
+@keyframes slideOutRight {
+    from {
+        transform: translateX(0);
+        opacity: 1;
+    }
+    to {
+        transform: translateX(100%);
+        opacity: 0;
+    }
+}
+
+@keyframes progressBar {
+    from {
+        width: 100%;
+    }
+    to {
+        width: 0%;
+    }
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(-10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    .color-messages-container {
+        left: 20px;
+        right: 20px;
+        align-items: stretch;
+    }
+    
+    .color-toast {
+        min-width: auto;
+        max-width: 100%;
+        margin-bottom: 10px;
+    }
+    
+    #colorConfirmModal .modal-dialog {
+        margin: 10px;
+    }
+}
+
+.color-modal-content {
+    border-radius: 12px !important;
+    overflow: hidden !important;
+    border: none !important;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2) !important;
+}
+
+.color-modal-content .modal-header {
+    border-bottom: 1px solid rgba(255, 255, 255, 0.2) !important;
+    padding: 20px 25px !important;
+}
+
+.color-modal-content .modal-icon {
+    background: rgba(255, 255, 255, 0.2) !important;
+    padding: 10px !important;
+    border-radius: 50% !important;
+    margin-right: 12px !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    width: 44px !important;
+    height: 44px !important;
+}
+
+.color-modal-content .modal-title-content {
+    flex-grow: 1;
+}
+
+.color-modal-content .modal-title-content small {
+    opacity: 0.9;
+    font-size: 0.9em;
+}
+
+.color-modal-content .modal-body {
+    padding: 25px !important;
+    background: #f8f9fa !important;
+}
+
+.color-modal-content .modal-message {
+    font-size: 1.1em;
+    color: #2c3e50;
+    margin-bottom: 0;
+}
+
+.color-modal-content .modal-footer {
+    background: #f8f9fa !important;
+    border-top: 1px solid #dee2e6 !important;
+    padding: 20px 25px !important;
+}
+
+.color-modal-content .confirm-action-btn {
+    border: none !important;
+    color: white !important;
+    padding: 8px 25px !important;
+    font-weight: 600 !important;
+    border-radius: 6px !important;
+    transition: all 0.3s ease !important;
+}
+
+.color-modal-content .confirm-action-btn:hover {
+    transform: translateY(-2px) !important;
+    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2) !important;
+}
+
+.color-modal-content .btn-outline-secondary {
+    border-color: #6c757d !important;
+    color: #6c757d !important;
+    padding: 8px 20px !important;
+}
+
+.color-modal-content .btn-outline-secondary:hover {
+    background-color: #6c757d !important;
+    color: white !important;
 }

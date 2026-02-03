@@ -1,0 +1,1474 @@
+/* usuario.css - Estilos para gestión de usuarios */
+:root {
+    --primary-dark: #1B202D;
+    --primary: #2A3448;
+    --primary-light: #3A4A6B;
+    --secondary: #4A5B7D;
+    --light: #5B6E8F;
+    --gray-light: #f8f9fa;
+    --gray-medium: #e9ecef;
+    --gray-dark: #6c757d;
+    --danger: #342a56;
+    --success: #1e2944;
+    --warning: #15171d;
+    --border-radius: 12px;
+    --card-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+    --hover-shadow: 0 6px 20px rgba(0, 0, 0, 0.12);
+    --focus-shadow: 0 0 0 0.25rem rgba(58, 74, 107, 0.25);
+    --transition: all 0.3s ease;
+}
+
+/* Colores base */
+.bg-primary-dark { background-color: var(--primary-dark) !important; }
+.bg-primary { background-color: var(--primary) !important; }
+.bg-primary-light { background-color: var(--primary-light) !important; }
+
+.text-primary-dark { color: var(--primary-dark) !important; }
+.text-primary { color: var(--primary) !important; }
+.text-primary-light { color: var(--primary-light) !important; }
+
+/* Botones */
+.btn-primary-dark {
+    background-color: var(--primary-dark) !important;
+    border-color: var(--primary-dark) !important;
+    color: white !important;
+    padding: 0.5rem 1.5rem;
+    font-weight: 500;
+    border-radius: 8px;
+    transition: var(--transition);
+}
+
+.btn-primary-dark:hover {
+    background-color: var(--primary) !important;
+    border-color: var(--primary) !important;
+    transform: translateY(-1px);
+    box-shadow: var(--hover-shadow);
+}
+
+.btn-outline-primary {
+    color: var(--primary-dark) !important;
+    border-color: var(--primary-dark) !important;
+    background-color: transparent !important;
+    padding: 0.5rem 1.5rem;
+    font-weight: 500;
+    border-radius: 8px;
+    transition: var(--transition);
+}
+
+.btn-outline-primary:hover {
+    background-color: var(--primary-dark) !important;
+    border-color: var(--primary-dark) !important;
+    color: white !important;
+    transform: translateY(-1px);
+    box-shadow: var(--hover-shadow);
+}
+
+/* Cards */
+.card {
+    border: none;
+    border-radius: var(--border-radius);
+    box-shadow: var(--card-shadow);
+    transition: var(--transition);
+}
+
+.card:hover {
+    box-shadow: var(--hover-shadow);
+}
+
+.card-header.bg-primary-dark {
+    background: linear-gradient(135deg, var(--primary-dark), var(--primary)) !important;
+    color: white !important;
+    border-bottom: none;
+    border-radius: var(--border-radius) var(--border-radius) 0 0 !important;
+    padding: 1rem 1.5rem;
+}
+
+/* Estadísticas */
+.stats-card {
+    border-left: 4px solid var(--primary-light) !important;
+    background: white !important;
+    border: 1px solid var(--gray-medium);
+    border-radius: var(--border-radius);
+    transition: var(--transition);
+    height: 100%;
+    text-align: center;
+}
+
+.stats-card:hover {
+    transform: translateY(-3px);
+    box-shadow: var(--hover-shadow);
+}
+
+.stats-card .card-body {
+    padding: 1.2rem;
+}
+
+.stats-card .card-title {
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: var(--primary-dark);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 0.5rem;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.stats-card .card-text {
+    font-size: 1.8rem;
+    font-weight: 700;
+    color: var(--primary-dark);
+    margin-bottom: 0.5rem;
+}
+
+.stats-card small {
+    font-size: 0.75rem;
+    color: var(--primary-light);
+    display: block;
+    margin-top: 0.25rem;
+}
+
+.stats-card small i {
+    margin-right: 0.25rem;
+}
+
+/* Estadísticas específicas */
+.stats-card.estadistica-admin {
+    border-left-color: var(--primary-dark) !important;
+}
+
+.stats-card.estadistica-editor {
+    border-left-color: var(--primary) !important;
+}
+
+.stats-card.estadistica-cliente {
+    border-left-color: var(--primary-light) !important;
+}
+
+.stats-card.active-clients {
+    border-left-color: var(--success) !important;
+}
+
+.stats-card.inactive-clients {
+    border-left-color: var(--warning) !important;
+}
+
+/* Tabla */
+.table-primary-dark {
+    background: linear-gradient(135deg, var(--primary-dark), var(--primary)) !important;
+    color: white !important;
+}
+
+.table-primary-dark th {
+    color: var(--primary-dark) !important; /* Cambiado de blanco a primary-dark */
+    border-color: var(--primary-light) !important;
+    font-weight: 600;
+    font-size: 0.9rem;
+    padding: 1rem 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    background-color: rgba(255, 255, 255, 0.9) !important; /* Fondo blanco semi-transparente */
+}
+
+.table-primary-dark th:first-child {
+    border-top-left-radius: var(--border-radius);
+}
+
+.table-primary-dark th:last-child {
+    border-top-right-radius: var(--border-radius);
+}
+
+/* Filas */
+.hover-shadow-detalle:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 15px rgba(27, 32, 45, 0.1);
+    transition: var(--transition);
+    background-color: rgba(27, 32, 45, 0.02) !important;
+}
+
+/* Badges - Colores diferentes para cada rol */
+.badge.bg-primary-dark { /* Administrador */
+    background-color: var(--primary-dark) !important;
+    color: white !important;
+    font-weight: 500;
+    padding: 0.35em 0.65em;
+}
+
+.badge.bg-primary { /* Editor */
+    background-color: var(--primary) !important;
+    color: white !important;
+    font-weight: 500;
+    padding: 0.35em 0.65em;
+}
+
+.badge.bg-primary-light { /* Cliente */
+    background-color: var(--primary-light) !important;
+    color: white !important;
+    font-weight: 500;
+    padding: 0.35em 0.65em;
+}
+
+/* === ESTADOS - COLORES ORIGINALES === */
+.badge.estado-activo {
+    background-color: var(--success) !important;
+    color: white !important;
+}
+
+.badge.estado-inactivo {
+    background-color: var(--danger) !important;
+    color: white !important;
+}
+
+/* Formularios */
+.form-control:focus, .form-select:focus {
+    border-color: var(--primary-light) !important;
+    box-shadow: var(--focus-shadow) !important;
+}
+
+.form-label strong {
+    color: var(--primary-dark);
+    font-weight: 600;
+}
+
+.form-text {
+    color: var(--secondary) !important;
+    font-size: 0.85rem;
+    margin-top: 0.25rem;
+}
+
+.input-group-text.bg-primary {
+    background-color: var(--primary) !important;
+    color: white !important;
+    border-color: var(--primary);
+}
+
+/* Alertas */
+.alert-primary-light {
+    background-color: rgba(58, 74, 107, 0.1) !important;
+    border-color: var(--primary-light) !important;
+    color: var(--primary-dark) !important;
+    border-radius: var(--border-radius);
+    border-left: 4px solid var(--primary-light);
+}
+
+.alert-primary-light h6 {
+    color: var(--primary-dark) !important;
+    font-weight: 600;
+    margin-bottom: 0.5rem;
+}
+
+.alert-primary-light small {
+    color: var(--secondary);
+    line-height: 1.6;
+}
+
+/* Sin resultados */
+.no-results {
+    background: linear-gradient(135deg, var(--gray-light), white);
+    border-radius: var(--border-radius);
+    padding: 3rem 1rem;
+    border: 2px dashed var(--gray-medium);
+}
+
+.no-results .fa-4x {
+    color: var(--primary-light);
+    opacity: 0.7;
+    margin-bottom: 1rem;
+}
+
+.no-results h5 {
+    color: var(--primary-dark);
+    margin-bottom: 0.5rem;
+}
+
+.no-results p {
+    color: var(--gray-dark);
+    margin-bottom: 1.5rem;
+}
+
+/* Mensajes flotantes */
+.alert-message {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    z-index: 9999;
+    min-width: 300px;
+    max-width: 500px;
+    border-radius: var(--border-radius);
+    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.15);
+    animation: slideIn 0.3s ease-out;
+    border: none;
+    overflow: hidden;
+    backdrop-filter: blur(10px);
+}
+
+.alert-message.alert-info,
+.alert-message.alert-success,
+.alert-message.alert-warning {
+    background: linear-gradient(135deg, var(--primary-dark), var(--primary));
+    color: white;
+}
+
+.alert-message.alert-danger {
+    background: linear-gradient(135deg, var(--primary-dark), #2A3448);
+    color: white;
+}
+
+.alert-danger {
+    background: linear-gradient(135deg, rgba(220, 53, 69, 0.9), rgba(185, 28, 43, 0.9)) !important;
+    color: white !important;
+    border: none !important;
+    border-left: 4px solid rgba(255, 255, 255, 0.3) !important;
+    border-radius: var(--border-radius) !important;
+}
+
+.alert-info {
+    background: linear-gradient(135deg, rgba(13, 110, 253, 0.9), rgba(11, 94, 215, 0.9)) !important;
+    color: white !important;
+    border: none !important;
+    border-left: 4px solid rgba(255, 255, 255, 0.3) !important;
+    border-radius: var(--border-radius) !important;
+}
+
+
+.alert-success {
+    background: linear-gradient(135deg, var(--primary-dark), var(--primary)) !important;
+    color: white !important;
+    border-left: 4px solid rgba(255, 255, 255, 0.3) !important;
+}
+
+.alert-content {
+    padding: 16px 20px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.alert-content i {
+    font-size: 1.2rem;
+    flex-shrink: 0;
+}
+
+.alert-content span {
+    flex: 1;
+    margin: 0 15px;
+    font-size: 0.95rem;
+    line-height: 1.4;
+}
+
+.btn-close-alert {
+    background: none;
+    border: none;
+    color: white;
+    cursor: pointer;
+    padding: 5px;
+    border-radius: 50%;
+    width: 30px;
+    height: 30px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s;
+    flex-shrink: 0;
+}
+
+.btn-close-alert:hover {
+    background-color: rgba(255, 255, 255, 0.2);
+}
+
+@keyframes slideIn {
+    from {
+        transform: translateX(100%);
+        opacity: 0;
+    }
+    to {
+        transform: translateX(0);
+        opacity: 1;
+    }
+}
+
+/* Validación de formularios */
+.invalid-feedback {
+    color: var(--danger);
+    font-size: 0.85rem;
+    margin-top: 0.25rem;
+}
+
+.is-invalid {
+    border-color: var(--danger) !important;
+}
+
+.is-invalid:focus {
+    box-shadow: 0 0 0 0.25rem rgba(220, 53, 69, 0.25) !important;
+}
+
+/* Modal de confirmación */
+.modal-content {
+    border-radius: var(--border-radius);
+    border: none;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+}
+
+.modal-header.bg-primary-dark {
+    background: linear-gradient(135deg, var(--primary-dark), var(--primary));
+    color: white;
+    border-radius: var(--border-radius) var(--border-radius) 0 0;
+    padding: 1.5rem;
+}
+
+.modal-header .modal-title {
+    font-weight: 600;
+    font-size: 1.25rem;
+}
+
+.modal-body {
+    padding: 1.5rem;
+}
+
+.modal-footer {
+    padding: 1rem 1.5rem;
+    border-top: 1px solid var(--gray-medium);
+    display: flex;
+    gap: 0.5rem;
+    justify-content: flex-end;
+}
+
+/* Botones del modal */
+.modal-footer .btn {
+    min-width: 120px;
+    padding: 0.5rem 1.25rem;
+    font-weight: 500;
+}
+
+.modal-footer .btn-primary-dark {
+    background-color: var(--primary-dark) !important;
+    border-color: var(--primary-dark) !important;
+}
+
+.modal-footer .btn-outline-primary {
+    color: var(--primary-dark) !important;
+    border-color: var(--primary-dark) !important;
+}
+
+.modal-footer .btn-outline-primary:hover {
+    background-color: var(--primary-dark) !important;
+    color: white !important;
+}
+
+/* Botón deshabilitado */
+.btn-outline-secondary[disabled] {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+/* Botones de acción en tabla */
+.btn-group-sm .btn {
+    padding: 0.25rem 0.5rem;
+    font-size: 0.875rem;
+}
+
+/* Tooltips para botones deshabilitados */
+.btn[disabled] {
+    cursor: not-allowed;
+    position: relative;
+}
+
+.btn[disabled]:hover::after {
+    content: attr(title);
+    position: absolute;
+    bottom: 100%;
+    left: 50%;
+    transform: translateX(-50%);
+    background: rgba(0, 0, 0, 0.8);
+    color: white;
+    padding: 4px 8px;
+    border-radius: 4px;
+    font-size: 0.75rem;
+    white-space: nowrap;
+    z-index: 1000;
+}
+
+/* Select de roles en tabla */
+.form-select.form-select-sm {
+    width: auto;
+    display: inline-block;
+    padding: 0.25rem 0.5rem;
+    font-size: 0.875rem;
+    line-height: 1.5;
+}
+
+/* Indicador de usuario actual */
+.text-muted.d-block {
+    font-size: 0.75rem;
+    margin-top: 2px;
+}
+
+/* Responsive */
+@media (max-width: 1200px) {
+    .stats-card .card-text {
+        font-size: 1.6rem;
+    }
+    
+    .stats-card .card-title {
+        font-size: 0.8rem;
+    }
+}
+
+@media (max-width: 992px) {
+    .stats-card .card-text {
+        font-size: 1.4rem;
+    }
+    
+    .stats-card .card-title {
+        font-size: 0.75rem;
+    }
+}
+
+@media (max-width: 768px) {
+    .container-fluid {
+        padding: 1rem;
+    }
+    
+    .card-header, .card-body {
+        padding: 1rem;
+    }
+    
+    .stats-card {
+        margin-bottom: 1rem;
+    }
+    
+    .stats-card .card-body {
+        padding: 1rem;
+    }
+    
+    .stats-card .card-text {
+        font-size: 1.8rem;
+    }
+    
+    .stats-card .card-title {
+        font-size: 0.9rem;
+    }
+    
+    .alert-message {
+        left: 20px;
+        right: 20px;
+        max-width: none;
+        top: 10px;
+    }
+    
+    .table-responsive {
+        font-size: 0.9rem;
+    }
+    
+    .btn-group {
+        flex-wrap: wrap;
+    }
+    
+    .btn-group .btn {
+        margin-bottom: 0.25rem;
+        margin-right: 0.25rem;
+    }
+    
+    /* Ajustar columnas de estadísticas en móviles */
+    .row.mb-4 .col-md-2 {
+        flex: 0 0 50%;
+        max-width: 50%;
+    }
+    
+    /* Modal responsive */
+    .modal-dialog {
+        margin: 1rem;
+        max-width: calc(100% - 2rem);
+    }
+    
+    .modal-footer .btn {
+        min-width: 100px;
+        padding: 0.4rem 1rem;
+    }
+}
+
+@media (max-width: 576px) {
+    .row.mb-4 .col-md-2 {
+        flex: 0 0 100%;
+        max-width: 100%;
+    }
+    
+    .stats-card .card-text {
+        font-size: 2rem;
+    }
+    
+    .table td, .table th {
+        padding: 0.5rem;
+    }
+    
+    .modal-footer {
+        flex-direction: column;
+    }
+    
+    .modal-footer .btn {
+        width: 100%;
+        margin-bottom: 0.5rem;
+    }
+}
+
+/* Mejorar visualización de mensajes de error */
+.alert-message-content {
+    flex: 1;
+    margin: 0 15px;
+    font-size: 0.95rem;
+    line-height: 1.4;
+}
+
+.alert-message-content br {
+    margin-bottom: 5px;
+    display: block;
+}
+
+/* Estilos específicos para errores de validación */
+.is-invalid {
+    border-color: var(--danger) !important;
+    background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 12' width='12' height='12' fill='none' stroke='%23dc3545'%3e%3ccircle cx='6' cy='6' r='4.5'/%3e%3cpath stroke-linejoin='round' d='M5.8 3.6h.4L6 6.5z'/%3e%3ccircle cx='6' cy='8.2' r='.6' fill='%23dc3545' stroke='none'/%3e%3c/svg%3e");
+    background-repeat: no-repeat;
+    background-position: right calc(0.375em + 0.1875rem) center;
+    background-size: calc(0.75em + 0.375rem) calc(0.75em + 0.375rem);
+    padding-right: 2.5rem;
+}
+
+.invalid-feedback {
+    display: block;
+    width: 100%;
+    margin-top: 0.25rem;
+    font-size: 0.875em;
+    color: var(--danger);
+}
+
+/* Para campos que tienen icono (como contraseña) */
+.input-group .is-invalid {
+    background-position: right calc(0.375em + 2.5rem) center;
+}
+
+/* Resaltar campos con errores específicos */
+.field-error-highlight {
+    animation: pulse-error 2s;
+}
+
+@keyframes pulse-error {
+    0% {
+        box-shadow: 0 0 0 0 rgba(220, 53, 69, 0.7);
+    }
+    70% {
+        box-shadow: 0 0 0 10px rgba(220, 53, 69, 0);
+    }
+    100% {
+        box-shadow: 0 0 0 0 rgba(220, 53, 69, 0);
+    }
+}
+
+/* Estilos para mensajes de error específicos */
+.alert-message.alert-danger .alert-content {
+    background: linear-gradient(135deg, #dc3545, #c82333);
+}
+
+.alert-message.alert-danger .alert-content i {
+    color: #ffd1d1;
+}
+
+/* Mejorar visualización de selects con errores */
+.form-select.is-invalid {
+    background-position: right 2.5rem center;
+}
+
+/* Para inputs de tipo number con errores */
+input[type="number"].is-invalid::-webkit-inner-spin-button,
+input[type="number"].is-invalid::-webkit-outer-spin-button {
+    opacity: 0.6;
+}
+
+/* Estilos para cambio de rol */
+.d-flex.align-items-center {
+    gap: 8px;
+}
+
+.cambiar-rol-select {
+    min-width: 120px;
+    display: inline-block;
+}
+
+.cambiar-rol-btn {
+    padding: 0.25rem 0.5rem;
+    border-radius: 6px;
+    transition: all 0.2s;
+}
+
+.cambiar-rol-btn:hover {
+    background-color: var(--primary-dark);
+    border-color: var(--primary-dark);
+    color: white;
+    transform: scale(1.05);
+}
+
+.cambiar-rol-btn:active {
+    transform: scale(0.95);
+}
+
+/* Estilo para badge de rol actual */
+.badge.bg-primary-light {
+    color: white !important;
+    padding: 0.4em 0.8em;
+    font-size: 0.85em;
+    min-width: 80px;
+    text-align: center;
+}
+
+/* Indicadores de estado */
+.badge.estado-activo, .badge.estado-inactivo {
+    padding: 0.4em 0.8em;
+    font-weight: 600;
+    border-radius: 50px;
+}
+
+/* Responsive para cambio de rol */
+@media (max-width: 768px) {
+    .d-flex.align-items-center {
+        flex-wrap: wrap;
+        gap: 4px;
+    }
+    
+    .cambiar-rol-select {
+        min-width: 100px;
+        font-size: 0.8rem;
+    }
+    
+    .cambiar-rol-btn {
+        padding: 0.2rem 0.4rem;
+        font-size: 0.8rem;
+    }
+    
+    .badge.bg-primary-light {
+        min-width: 60px;
+        font-size: 0.75em;
+    }
+}
+
+/* Efectos de hover en filas */
+.hover-shadow-detalle:hover .cambiar-rol-btn {
+    box-shadow: 0 2px 8px rgba(27, 32, 45, 0.2);
+}
+
+/* Estilos para el select de cambio de rol */
+.form-select.form-select-sm.cambiar-rol-select {
+    border: 1px solid var(--primary-light);
+    transition: all 0.3s;
+}
+
+.form-select.form-select-sm.cambiar-rol-select:focus {
+    border-color: var(--primary-dark);
+    box-shadow: 0 0 0 0.2rem rgba(27, 32, 45, 0.25);
+}
+
+/* Estilos para el modal de confirmación */
+.modal-body .alert-warning {
+    animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+    0% {
+        box-shadow: 0 0 0 0 rgba(255, 193, 7, 0.4);
+    }
+    70% {
+        box-shadow: 0 0 0 10px rgba(255, 193, 7, 0);
+    }
+    100% {
+        box-shadow: 0 0 0 0 rgba(255, 193, 7, 0);
+    }
+}
+
+/* Indicador de carga */
+.fa-spinner.fa-spin {
+    animation: fa-spin 1s infinite linear;
+}
+
+@keyframes fa-spin {
+    0% {
+        transform: rotate(0deg);
+    }
+    100% {
+        transform: rotate(360deg);
+    }
+}
+
+/* Estilos para cambio de rol con dropdown */
+.d-flex.align-items-center.gap-2 {
+    gap: 8px !important;
+}
+
+.dropdown .btn-sm {
+    padding: 0.25rem 0.5rem;
+    font-size: 0.875rem;
+    margin-left: 8px; /* Separación del badge */
+}
+
+.dropdown-menu {
+    min-width: 200px;
+    border-radius: 8px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    z-index: 1050; /* Asegurar que esté por encima */
+    position: absolute !important;
+}
+
+.dropdown-header {
+    font-size: 0.8rem;
+    color: var(--primary-dark);
+    font-weight: 600;
+    padding: 0.5rem 1rem;
+}
+
+.dropdown-item {
+    padding: 0.5rem 1rem;
+    transition: all 0.2s;
+}
+
+.dropdown-item:hover {
+    background-color: rgba(27, 32, 45, 0.1);
+}
+
+.cambiar-rol-option {
+    color: var(--primary-dark);
+    font-weight: 500;
+}
+
+.cambiar-rol-option .fa-arrow-right {
+    color: var(--primary);
+}
+
+/* Alerta de instrucciones */
+.alert-warning {
+    background: linear-gradient(135deg, rgba(255, 193, 7, 0.9), rgba(220, 165, 0, 0.9)) !important;
+    color: white !important;
+    border: none !important;
+    border-left: 4px solid rgba(255, 255, 255, 0.3) !important;
+    border-radius: var(--border-radius) !important;
+}
+
+.alert-warning h6 {
+    color: #856404;
+}
+
+.alert-warning small code {
+    background-color: rgba(0, 0, 0, 0.05);
+    padding: 2px 4px;
+    border-radius: 4px;
+    font-family: monospace;
+    font-size: 0.9em;
+}
+
+/* Contenedor para badge y botón de cambio de rol */
+.rol-container {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    min-height: 38px; /* Altura mínima para evitar superposición */
+    position: relative;
+    z-index: 1;
+}
+
+/* Asegurar que el dropdown tenga buen z-index */
+.dropdown {
+    position: relative;
+    z-index: 1000;
+}
+
+/* Estilo para el badge dentro del contenedor */
+.rol-container .badge {
+    flex-shrink: 0;
+}
+
+/* Modal backdrop fix */
+.modal-backdrop {
+    z-index: 1050 !important;
+}
+
+.modal {
+    z-index: 1060 !important;
+}
+
+/* Botón para abrir modal de cambio de rol */
+.btn.cambiar-rol-trigger {
+    padding: 0.25rem 0.5rem;
+    border-radius: 6px;
+    transition: all 0.3s;
+    border-width: 1px;
+}
+
+.btn.cambiar-rol-trigger:hover {
+    background-color: var(--primary-dark);
+    border-color: var(--primary-dark);
+    color: white;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 8px rgba(27, 32, 45, 0.15);
+}
+
+/* Avatar en modal */
+.user-avatar .avatar-circle {
+    width: 80px;
+    height: 80px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0 auto;
+    background: linear-gradient(135deg, var(--primary-dark), var(--primary));
+}
+
+/* Display de cambio de rol */
+.rol-change-display {
+    background: linear-gradient(135deg, rgba(27, 32, 45, 0.05), rgba(58, 74, 107, 0.05));
+    border-radius: var(--border-radius);
+    padding: 1.5rem;
+    border: 1px solid var(--gray-medium);
+}
+
+.rol-badge {
+    padding: 0.75rem 1.25rem;
+    border-radius: 8px;
+    color: white;
+    font-weight: 600;
+    min-width: 140px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.3s;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+.rol-badge.rol-actual {
+    background: linear-gradient(135deg, var(--primary-dark), var(--primary));
+}
+
+.rol-badge.rol-nuevo {
+    background: linear-gradient(135deg, var(--primary), var(--primary-light));
+}
+
+.arrow-container {
+    padding: 0 1rem;
+    color: var(--primary);
+}
+
+/* Botones de selección de rol */
+.rol-option-btn {
+    padding: 0.75rem 1.25rem;
+    border-radius: 8px;
+    font-weight: 500;
+    transition: all 0.3s;
+    border: 2px solid var(--primary-light);
+    min-width: 120px;
+}
+
+.rol-option-btn:hover {
+    background-color: var(--primary-dark);
+    border-color: var(--primary-dark);
+    color: white;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(27, 32, 45, 0.15);
+}
+
+.rol-option-btn.active {
+    background-color: var(--primary-dark) !important;
+    border-color: var(--primary-dark) !important;
+    color: white !important;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 8px rgba(27, 32, 45, 0.2);
+}
+
+/* Badges en tabla con iconos */
+.badge.bg-primary-dark,
+.badge.bg-primary,
+.badge.bg-primary-light {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    padding: 0.5rem 0.75rem;
+    border-radius: 50px;
+    font-weight: 500;
+    min-width: 100px;
+}
+
+/* Estados activo/inactivo */
+.badge.estado-activo {
+    background: linear-gradient(135deg, var(--primary), var(--primary-light)) !important; /* Color de Editor a Cliente para Activo */
+    color: white !important;
+    padding: 0.5rem 0.75rem;
+    border-radius: 50px;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.badge.estado-inactivo {
+    background: linear-gradient(135deg, var(--primary-dark), var(--primary)) !important; /* Color de Administrador para Inactivo */
+    color: white !important;
+    padding: 0.5rem 0.75rem;
+    border-radius: 50px;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+/* Responsive para modal de cambio de rol */
+@media (max-width: 768px) {
+    .rol-change-display .d-flex {
+        flex-direction: column;
+        gap: 1rem;
+    }
+    
+    .arrow-container {
+        padding: 0.5rem 0;
+        transform: rotate(90deg);
+    }
+    
+    .rol-badge {
+        min-width: 120px;
+        padding: 0.5rem 1rem;
+    }
+    
+    .rol-selection .d-flex {
+        flex-direction: column;
+        gap: 0.5rem;
+    }
+    
+    .rol-option-btn {
+        width: 100%;
+        min-width: auto;
+    }
+}
+
+/* Animación para cambio de rol */
+@keyframes fadeInUp {
+    from {
+        opacity: 0;
+        transform: translateY(10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.rol-change-display {
+    animation: fadeInUp 0.5s ease-out;
+}
+
+/* Efecto hover en filas de tabla */
+.hover-shadow-detalle:hover {
+    background-color: rgba(27, 32, 45, 0.02) !important;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(27, 32, 45, 0.08);
+    transition: all 0.3s ease;
+}
+
+/* Botón de confirmación deshabilitado */
+#confirmarCambioRolBtn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+#confirmarCambioRolBtn:not(:disabled):hover {
+    background-color: var(--primary);
+    border-color: var(--primary);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(27, 32, 45, 0.15);
+}
+
+/* ============================================
+   ESTILOS PARA CONFIRMACIÓN DE CAMBIO DE ROL
+   ============================================ */
+
+/* Estilos para modales de confirmación de cambio de rol */
+.avatar-circle-sm {
+    width: 50px;
+    height: 50px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: linear-gradient(135deg, var(--primary-dark), var(--primary));
+}
+
+.avatar-circle-sm i {
+    font-size: 1.2rem;
+    color: white;
+}
+
+/* Estilos para casillas de verificación en modales */
+.casillas-verificacion .form-check-input:checked {
+    background-color: var(--primary-dark);
+    border-color: var(--primary-dark);
+}
+
+.casillas-verificacion .form-check-input:focus {
+    box-shadow: 0 0 0 0.25rem rgba(27, 32, 45, 0.25);
+}
+
+/* Barra de progreso de confirmación */
+.verificacion-contador .progress {
+    border-radius: 10px;
+    overflow: hidden;
+}
+
+.verificacion-contador .progress-bar {
+    transition: width 0.3s ease;
+}
+
+/* Estilos para modal crítico */
+.modal-content.border-danger {
+    border-width: 3px !important;
+}
+
+/* Estilos para modal normal */
+.casilla-verificacion .form-check-input:checked {
+    background-color: var(--primary);
+    border-color: var(--primary);
+}
+
+/* Botones deshabilitados con mejor visibilidad */
+.btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+/* Responsive para modales de confirmación */
+@media (max-width: 768px) {
+    .modal-lg {
+        margin: 1rem;
+        max-width: calc(100% - 2rem);
+    }
+    
+    .casillas-verificacion .form-check-label {
+        font-size: 0.9rem !important;
+    }
+    
+    .d-flex.gap-4 {
+        gap: 1rem !important;
+        flex-direction: column;
+    }
+    
+    .arrow-container {
+        transform: rotate(90deg);
+        padding: 0.5rem 0;
+    }
+}
+
+/* Auto-expansión de textarea */
+textarea {
+    resize: none !important;
+    min-height: 120px !important;
+    transition: height 0.2s ease;
+}
+
+/* Contador de caracteres */
+#contadorCaracteres {
+    font-weight: bold;
+    font-size: 1.1rem;
+}
+
+/* Barra de progreso personalizada */
+.progress {
+    border-radius: 10px;
+    overflow: hidden;
+    background-color: #e9ecef;
+}
+
+.progress-bar {
+    transition: width 0.3s ease, background-color 0.3s ease;
+}
+
+/* Estados de la barra de progreso */
+.progress-bar.bg-danger {
+    background-color: #222c46 !important;
+}
+
+.progress-bar.bg-warning {
+    background-color: #41485c !important;
+}
+
+.progress-bar.bg-success {
+    background-color: #1B202D !important;
+}
+
+/* Alertas de recomendaciones */
+.alert-primary-light {
+    background-color: rgba(27, 32, 45, 0.05) !important;
+    border-left: 4px solid var(--primary-light);
+    border-radius: 8px;
+}
+
+.alert-primary-light small {
+    color: var(--primary-dark) !important;
+    line-height: 1.6;
+}
+
+/* Ejemplos en placeholder */
+textarea::placeholder {
+    color: #6c757d;
+    opacity: 0.8;
+    line-height: 1.5;
+    font-size: 0.9rem;
+}
+
+/* Modal más grande */
+.modal-lg .modal-content {
+    border-radius: 12px;
+    overflow: hidden;
+}
+
+/* Responsive para modal */
+@media (max-width: 768px) {
+    .modal-lg {
+        margin: 0.5rem;
+        max-width: calc(100% - 1rem);
+    }
+    
+    .modal-body {
+        padding: 1rem;
+    }
+    
+    .alert-primary-light .row .col-1 {
+        display: none;
+    }
+    
+    .alert-primary-light .row .col-11 {
+        width: 100%;
+        flex: 0 0 100%;
+        max-width: 100%;
+    }
+}
+
+/* Animación para el modal */
+.modal.fade .modal-dialog {
+    transform: translateY(-50px);
+    transition: transform 0.3s ease-out;
+}
+
+.modal.show .modal-dialog {
+    transform: translateY(0);
+}
+
+/* Efecto focus en textarea */
+textarea:focus {
+    border-color: var(--primary-dark) !important;
+    box-shadow: 0 0 0 0.25rem rgba(27, 32, 45, 0.25) !important;
+}
+
+/* Estilo para el icono de recomendación */
+.fa-lightbulb {
+    color: var(--primary-dark);
+    font-size: 1.2rem;
+    margin-top: 2px;
+}
+
+/* Mejorar visualización de texto largo */
+#motivoDesactivacion {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    line-height: 1.6;
+    font-size: 0.95rem;
+    white-space: pre-wrap;
+    word-wrap: break-word;
+}
+
+/* Validación visual en tiempo real */
+textarea.is-valid {
+    border-color: #1B202D!important;
+    background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 8 8'%3e%3cpath fill='%23198754' d='M2.3 6.73L.6 4.53c-.4-1.04.46-1.4 1.1-.8l1.1 1.4 3.4-3.8c.6-.63 1.6-.27 1.2.7l-4 4.6c-.43.5-.8.4-1.1.1z'/%3e%3c/svg%3e") !important;
+}
+
+textarea.is-invalid {
+    border-color: #1B202D !important;
+    background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 12' width='12' height='12' fill='none' stroke='%23dc3545'%3e%3ccircle cx='6' cy='6' r='4.5'/%3e%3cpath stroke-linejoin='round' d='M5.8 3.6h.4L6 6.5z'/%3e%3ccircle cx='6' cy='8.2' r='.6' fill='%23dc3545' stroke='none'/%3e%3c/svg%3e") !important;
+}
+
+/* Toast de validación */
+.usuario-toast-container {
+    z-index: 9999 !important;
+}
+
+.toast {
+    border-radius: 8px !important;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15) !important;
+}
+
+.alert-primary-dark {
+    background: linear-gradient(135deg, var(--primary-dark), var(--primary)) !important;
+    color: white !important;
+    border: none !important;
+    border-radius: var(--border-radius) !important;
+    box-shadow: 0 4px 12px rgba(27, 32, 45, 0.15) !important;
+}
+
+.alert-primary {
+    background: linear-gradient(135deg, var(--primary), var(--primary-light)) !important;
+    color: white !important;
+    border: none !important;
+    border-radius: var(--border-radius) !important;
+    box-shadow: 0 4px 12px rgba(27, 32, 45, 0.15) !important;
+}
+
+.alert.alert-primary-light {
+    background: linear-gradient(135deg, rgba(27, 32, 45, 0.1), rgba(58, 74, 107, 0.1)) !important;
+    border-left: 4px solid var(--primary) !important;
+    color: var(--primary-dark) !important;
+    border-radius: var(--border-radius) !important;
+}
+
+/* Iconos dentro de alertas */
+.alert .fa-exclamation-triangle {
+    color: rgba(255, 255, 255, 0.9);
+}
+
+/* Avatar circular para usuarios */
+.avatar-circle-small {
+    width: 50px;
+    height: 50px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: linear-gradient(135deg, var(--primary), var(--primary-light));
+    color: white;
+    font-size: 1.2rem;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
+
+.avatar-circle-small.bg-white {
+    background: white !important;
+    color: var(--primary-dark) !important;
+}
+
+.user-icon-container {
+    flex-shrink: 0;
+}
+
+/* Textos dentro de alertas */
+.alert h4, .alert h5, .alert h6 {
+    color: inherit !important;
+    font-weight: 600;
+}
+
+.alert small {
+    opacity: 0.9;
+}
+
+/* Modal de activación */
+.casillas-verificacion-activacion .form-check-input:checked {
+    background-color: var(--primary);
+    border-color: var(--primary);
+}
+
+.casillas-verificacion-activacion .form-check-input:focus {
+    box-shadow: 0 0 0 0.25rem rgba(27, 32, 45, 0.25);
+}
+
+.verificacion-contador-activacion .progress {
+    border-radius: 10px;
+    overflow: hidden;
+    background-color: rgba(27, 32, 45, 0.1);
+}
+
+.verificacion-contador-activacion .progress-bar {
+    transition: width 0.3s ease, background-color 0.3s ease;
+}
+
+/* Botón de activación en modal */
+#btnConfirmarActivacion:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+#btnConfirmarActivacion:not(:disabled):hover {
+    background-color: var(--primary-dark) !important;
+    border-color: var(--primary-dark) !important;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(27, 32, 45, 0.15);
+}
+
+/* Responsive para alertas de usuario */
+@media (max-width: 576px) {
+    .alert .d-flex {
+        flex-direction: column;
+        text-align: center;
+    }
+    
+    .user-icon-container {
+        margin-right: 0 !important;
+        margin-bottom: 1rem;
+    }
+    
+    .avatar-circle-small {
+        width: 60px;
+        height: 60px;
+        font-size: 1.5rem;
+        margin: 0 auto;
+    }
+    
+    .casillas-verificacion-activacion .form-check-label {
+        font-size: 0.9rem !important;
+    }
+}
+
+/* Efectos de hover en casillas */
+.form-check:hover {
+    background-color: rgba(27, 32, 45, 0.03);
+    transition: background-color 0.2s;
+}
+
+/* Texto más legible en alertas */
+.text-light {
+    color: rgba(255, 255, 255, 0.95) !important;
+}
+
+.opacity-75 {
+    opacity: 0.75;
+}
+
+/* Mejorar espaciado en modales */
+.modal-body {
+    padding: 1.5rem !important;
+}
+
+.modal-body .alert:last-child {
+    margin-bottom: 0;
+}
+
+/* Iconos en títulos de modales */
+.modal-icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.2);
+}
+
+/* Color consistente para botones de acción */
+.btn-primary {
+    background-color: var(--primary) !important;
+    border-color: var(--primary) !important;
+    color: white !important;
+}
+
+.btn-primary:hover {
+    background-color: var(--primary-dark) !important;
+    border-color: var(--primary-dark) !important;
+}
+
+.btn-outline-primary {
+    color: var(--primary) !important;
+    border-color: var(--primary) !important;
+}
+
+.btn-outline-primary:hover {
+    background-color: var(--primary) !important;
+    color: white !important;
+}

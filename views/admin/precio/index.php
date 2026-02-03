@@ -112,7 +112,7 @@
                 <div class="card-body">
                     <h5 class="card-title text-primary-dark">En Uso</h5>
                     <h3 class="card-text text-primary-dark"><?= $estadisticas['en_uso'] ?? 0 ?></h3>
-                    <small class="text-primary-light">Usados por productos</small>
+                    <small class="text-primary-light">Usados por artículos</small>
                 </div>
             </div>
         </div>
@@ -157,7 +157,7 @@
                 <!-- Mostrar tabla normal -->
                 <div class="table-responsive">
                     <table class="table table-striped table-hover">
-                        <thead class="table-primary-dark">
+                        <thead class="table-primary-ligth">
                             <tr>
                                 <th>Valor</th>
                                 <th>Estado</th>
@@ -189,12 +189,12 @@
                                                 En uso
                                                 <button class="btn btn-sm btn-link p-0 ms-1" 
                                                         onclick="verProductosPrecio(<?= $precio['ID_precio'] ?>, '<?= number_format($precio['Valor'], 2) ?>')"
-                                                        title="Ver productos">
+                                                        title="Ver artículos">
                                                     <i class="fas fa-eye"></i>
                                                 </button>
                                             </div>
                                             <small class="d-block text-primary-light mt-1">
-                                                <?= $totalUso ?> productos
+                                                <?= $totalUso ?> artículo(s) base
                                             </small>
                                         <?php else: ?>
                                             <div class="uso-tag uso-no">
@@ -211,50 +211,65 @@
                                     </td>
                                     <td>
                                         <div class="btn-group btn-group-sm">
-                                            <!-- Ver productos -->
+                                            <!-- Ver artículos -->
                                             <?php if ($enUso): ?>
                                                 <button class="btn btn-outline-primary" 
                                                         onclick="verProductosPrecio(<?= $precio['ID_precio'] ?>, '<?= number_format($precio['Valor'], 2) ?>')"
-                                                        title="Ver productos">
+                                                        title="Ver artículos">
                                                     <i class="fas fa-box"></i>
                                                 </button>
                                             <?php endif; ?>
                                             
-                                            <!-- Editar -->
-                                            <a href="<?= BASE_URL ?>?c=Precio&a=editar&id=<?= $precio['ID_precio'] ?>" 
-                                               class="btn btn-outline-primary" title="Editar">
-                                                <i class="fas fa-edit"></i>
-                                            </a>
+                                            <!-- Editar - SOLO si NO está en uso -->
+                                            <?php if (!$enUso): ?>
+                                                <a href="<?= BASE_URL ?>?c=Precio&a=editar&id=<?= $precio['ID_precio'] ?>" 
+                                                   class="btn btn-outline-primary" title="Editar">
+                                                    <i class="fas fa-edit"></i>
+                                                </a>
+                                            <?php else: ?>
+                                                <!-- Botón de editar deshabilitado -->
+                                                <button class="btn btn-outline-secondary" disabled title="No se puede editar (en uso)">
+                                                    <i class="fas fa-edit"></i>
+                                                </button>
+                                            <?php endif; ?>
                                             
-                                            <!-- Activar/Desactivar -->
-                                            <?php if ($precio['Activo'] && !$enUso): ?>
-                                                <a href="#" 
-                                                   class="btn btn-outline-primary" title="Desactivar"
-                                                   onclick="confirmarCambiarEstado(event, '<?= number_format($precio['Valor'], 2) ?>', <?= $precio['ID_precio'] ?>, 0)">
-                                                    <i class="fas fa-pause"></i>
-                                                </a>
-                                            <?php elseif (!$precio['Activo'] && !$enUso): ?>
-                                                <a href="#" 
-                                                   class="btn btn-outline-primary" title="Activar"
-                                                   onclick="confirmarCambiarEstado(event, '<?= number_format($precio['Valor'], 2) ?>', <?= $precio['ID_precio'] ?>, 1)">
-                                                    <i class="fas fa-play"></i>
-                                                </a>
-                                            <?php elseif ($enUso): ?>
+                                            <!-- Activar/Desactivar - SOLO si NO está en uso -->
+                                            <?php if (!$enUso): ?>
+                                                <?php if ($precio['Activo']): ?>
+                                                    <a href="#" 
+                                                       class="btn btn-outline-primary" title="Desactivar"
+                                                       onclick="confirmarCambiarEstado(event, '<?= number_format($precio['Valor'], 2) ?>', <?= $precio['ID_precio'] ?>, 0)">
+                                                        <i class="fas fa-pause"></i>
+                                                    </a>
+                                                <?php else: ?>
+                                                    <a href="#" 
+                                                       class="btn btn-outline-primary" title="Activar"
+                                                       onclick="confirmarCambiarEstado(event, '<?= number_format($precio['Valor'], 2) ?>', <?= $precio['ID_precio'] ?>, 1)">
+                                                        <i class="fas fa-play"></i>
+                                                    </a>
+                                                <?php endif; ?>
+                                            <?php else: ?>
+                                                <!-- Botón de estado deshabilitado -->
                                                 <button class="btn btn-outline-secondary" disabled title="No se puede cambiar estado (en uso)">
                                                     <i class="fas fa-ban"></i>
                                                 </button>
                                             <?php endif; ?>
                                             
-                                            <!-- Migrar productos -->
+                                            <!-- Migrar artículos - SOLO si está en uso -->
                                             <?php if ($enUso && $precio['Activo']): ?>
                                                 <button class="btn btn-outline-primary" 
                                                         onclick="migrarPrecio(<?= $precio['ID_precio'] ?>, '<?= number_format($precio['Valor'], 2) ?>')"
-                                                        title="Migrar productos">
+                                                        title="Migrar artículos">
+                                                    <i class="fas fa-exchange-alt"></i>
+                                                </button>
+                                            <?php elseif ($enUso && !$precio['Activo']): ?>
+                                                <!-- Botón de migrar deshabilitado -->
+                                                <button class="btn btn-outline-secondary" disabled title="No se puede migrar (precio inactivo)">
                                                     <i class="fas fa-exchange-alt"></i>
                                                 </button>
                                             <?php endif; ?>
                                             
-                                            <!-- Eliminar -->
+                                            <!-- Eliminar - Si NO está en uso, eliminar normal. Si está en uso, ofrecer migrar y eliminar -->
                                             <?php if (!$enUso): ?>
                                                 <a href="#" 
                                                    class="btn btn-outline-danger" title="Eliminar"
@@ -262,8 +277,11 @@
                                                     <i class="fas fa-trash"></i>
                                                 </a>
                                             <?php else: ?>
-                                                <button class="btn btn-outline-secondary" disabled title="No se puede eliminar (en uso)">
-                                                    <i class="fas fa-ban"></i>
+                                                <!-- Precio en uso - Ofrecer migrar y eliminar -->
+                                                <button class="btn btn-outline-danger" 
+                                                        title="Migrar artículos y eliminar precio"
+                                                        onclick="migrarYEliminarPrecio(<?= $precio['ID_precio'] ?>, '<?= number_format($precio['Valor'], 2) ?>')">
+                                                    <i class="fas fa-trash"></i>
                                                 </button>
                                             <?php endif; ?>
                                         </div>

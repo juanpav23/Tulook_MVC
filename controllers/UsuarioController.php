@@ -275,36 +275,37 @@ class UsuarioController extends BaseController {
                 $user = $this->usuario->login($correo, $contrasena);
 
                 if ($user) {
-                    // Guardar datos del usuario en sesión
-                    $_SESSION['ID_Usuario'] = $user['ID_Usuario'];
-                    $_SESSION['usuario'] = $user['Correo'];
-                    $_SESSION['rol'] = $user['ID_Rol'];
-                    $_SESSION['Nombre'] = $user['Nombre'];
-                    $_SESSION['Apellido'] = $user['Apellido'];
-                    $_SESSION['Nombre_Completo'] = $user['Nombre'] . ' ' . $user['Apellido'];
-                    $_SESSION['login_time'] = time();
+                // Guardar datos del usuario en sesión
+                $_SESSION['ID_Usuario'] = $user['ID_Usuario'];
+                $_SESSION['usuario'] = $user['Correo'];
+                $_SESSION['rol'] = $user['ID_Rol'];
+                $_SESSION['Nombre'] = $user['Nombre'];
+                $_SESSION['Apellido'] = $user['Apellido'];
+                $_SESSION['Nombre_Completo'] = $user['Nombre'] . ' ' . $user['Apellido'];
+                $_SESSION['login_time'] = time(); // IMPORTANTE: Guardar timestamp
 
-                    // Obtener nombre del rol
-                    $stmtRol = $this->db->prepare("SELECT Roles FROM rol WHERE ID_Rol = ?");
-                    $stmtRol->execute([(int)$user['ID_Rol']]);
-                    $rolName = $stmtRol->fetchColumn();
-                    $_SESSION['RolName'] = $rolName;
+                // Obtener nombre del rol
+                $stmtRol = $this->db->prepare("SELECT Roles FROM rol WHERE ID_Rol = ?");
+                $stmtRol->execute([(int)$user['ID_Rol']]);
+                $rolName = $stmtRol->fetchColumn();
+                $_SESSION['RolName'] = $rolName;
 
-                    // PREVENIR CACHE EN LA REDIRECCIÓN
-                    header("Cache-Control: no-cache, no-store, must-revalidate");
-                    header("Pragma: no-cache");
-                    header("Expires: 0");
-                    
-                    // Redirección con parámetro único para evitar cache
-                    $randomParam = 't=' . time() . '&r=' . rand(1000, 9999);
-                    
-                    if (strtolower($rolName) === 'administrador') {
-                        header("Location: " . BASE_URL . "?c=Admin&a=index&" . $randomParam);
-                    } else {
-                        header("Location: " . BASE_URL . "?" . $randomParam);
-                    }
-                    exit;
+                // PREVENIR CACHE EN LA REDIRECCIÓN
+                header("Cache-Control: no-cache, no-store, must-revalidate");
+                header("Pragma: no-cache");
+                header("Expires: 0");
+                
+                // Redirección con parámetro único para evitar cache
+                $randomParam = 't=' . time() . '&r=' . rand(1000, 9999);
+                
+                // MODIFICACIÓN AQUÍ: Ambos (admin y editor) van al dashboard
+                if (strtolower($rolName) === 'administrador' || strtolower($rolName) === 'editor') {
+                    header("Location: " . BASE_URL . "?c=Admin&a=index&" . $randomParam);
                 } else {
+                    header("Location: " . BASE_URL . "?" . $randomParam);
+                }
+                exit;
+            } else {
                     $this->mostrarError("Contraseña incorrecta. Verifique sus credenciales.");
                 }
 

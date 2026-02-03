@@ -1,5 +1,6 @@
 /**
  * precio.js - Funciones para gestión de precios
+ * Versión corregida - Solo considera artículos base
  */
 
 // Variables globales
@@ -20,53 +21,33 @@ class PrecioFormManager {
     
     init() {
         if (this.valorVisual && this.valorReal) {
-            // Inicializar valor si existe
             this.inicializarValor();
-            
-            // Configurar eventos
             this.configurarEventos();
-            
-            // Configurar botones de sugerencia
             this.configurarBotonesSugerencia();
-            
-            // Configurar botones de acción
             this.configurarBotonesAccion();
         }
     }
     
     inicializarValor() {
         if (this.valorReal && this.valorReal.value) {
-            // Convertir valor a número
             valorNumerico = parseFloat(this.valorReal.value) || 0;
-            
-            // Formatear visualmente
             if (valorNumerico > 0) {
                 this.valorVisual.value = this.formatearNumero(valorNumerico);
             }
-            
-            // Actualizar sugerencia
             this.actualizarSugerencia(valorNumerico);
         }
     }
     
     configurarEventos() {
-        // Evento input para formatear moneda
         this.valorVisual.addEventListener('input', (e) => this.formatearMonedaVisual(e.target));
-        
-        // Evento blur para validar valor completo
         this.valorVisual.addEventListener('blur', (e) => this.validarValorCompleto(e.target));
-        
-        // Evento keypress para permitir solo números
         this.valorVisual.addEventListener('keypress', (e) => this.soloNumeros(e));
-        
-        // Evento submit del formulario
         if (this.form) {
             this.form.addEventListener('submit', (e) => this.validarYEnviarFormulario(e));
         }
     }
     
     configurarBotonesSugerencia() {
-        // Botones de sugerencia rápida
         document.querySelectorAll('.btn-outline-primary[data-valor]').forEach(btn => {
             btn.addEventListener('click', (e) => {
                 const valor = parseInt(e.currentTarget.getAttribute('data-valor'), 10);
@@ -74,7 +55,6 @@ class PrecioFormManager {
             });
         });
         
-        // Botones de sugerencia por categoría
         document.querySelectorAll('.btn-sugerencia').forEach(btn => {
             btn.addEventListener('click', (e) => {
                 const valor = parseInt(e.currentTarget.getAttribute('data-valor'), 10);
@@ -84,13 +64,11 @@ class PrecioFormManager {
     }
     
     configurarBotonesAccion() {
-        // Botón de ayuda
         const btnAyuda = document.querySelector('button[onclick="mostrarAyuda()"]');
         if (btnAyuda) {
             btnAyuda.addEventListener('click', () => this.mostrarAyuda());
         }
         
-        // Botones de ver productos
         document.querySelectorAll('.btn-ver-productos').forEach(btn => {
             btn.addEventListener('click', (e) => {
                 const id = e.currentTarget.getAttribute('data-id');
@@ -99,7 +77,6 @@ class PrecioFormManager {
             });
         });
         
-        // Botones de migrar precio
         document.querySelectorAll('.btn-migrar-precio').forEach(btn => {
             btn.addEventListener('click', (e) => {
                 const id = e.currentTarget.getAttribute('data-id');
@@ -108,7 +85,6 @@ class PrecioFormManager {
             });
         });
         
-        // Botones de eliminar precio
         document.querySelectorAll('.btn-eliminar-precio').forEach(btn => {
             btn.addEventListener('click', (e) => {
                 e.preventDefault();
@@ -120,7 +96,6 @@ class PrecioFormManager {
         });
     }
     
-    // Formatear moneda visualmente (solo para mostrar)
     formatearMonedaVisual(input) {
         let valor = input.value.replace(/[^\d]/g, '');
         
@@ -132,27 +107,18 @@ class PrecioFormManager {
             return;
         }
         
-        // Convertir a número y almacenar
         valorNumerico = parseInt(valor, 10);
-        
-        // Formatear visualmente con separadores de miles
         input.value = this.formatearNumero(valorNumerico);
-        
-        // Actualizar campo oculto con el valor real
         this.actualizarCampoOculto();
-        
-        // Actualizar sugerencia y preview
         this.actualizarSugerencia(valorNumerico);
     }
     
-    // Actualizar campo oculto con el valor real
     actualizarCampoOculto() {
         if (this.valorReal) {
             this.valorReal.value = valorNumerico;
         }
     }
     
-    // Validar valor completo cuando se pierde el foco
     validarValorCompleto(input) {
         let valor = input.value.replace(/[^\d]/g, '');
         
@@ -162,47 +128,30 @@ class PrecioFormManager {
             return;
         }
         
-        // Asegurar que se guarde el valor completo
         valorNumerico = parseInt(valor, 10);
         this.actualizarCampoOculto();
-        
-        // Formatear visualmente
         input.value = this.formatearNumero(valorNumerico);
     }
     
-    // Permitir solo números en el input
     soloNumeros(e) {
-        // Permitir solo números y teclas de control
         if (!/[\d]|Backspace|Delete|Tab|Enter|Arrow/.test(e.key)) {
             e.preventDefault();
         }
     }
     
-    // Sugerir valor
     sugerirValor(valor) {
         if (!this.valorVisual) return;
         
-        // Establecer valor numérico
         valorNumerico = valor;
-        
-        // Actualizar campo oculto
         this.actualizarCampoOculto();
-        
-        // Formatear visualmente
         this.valorVisual.value = this.formatearNumero(valor);
-        
-        // Actualizar sugerencia
         this.actualizarSugerencia(valor);
-        
-        // Mostrar feedback
         this.mostrarMensaje('Valor sugerido', `Se ha establecido el valor en $${this.formatearNumero(valor)}`, 'info');
     }
     
-    // Actualizar sugerencia según el valor
     actualizarSugerencia(valor) {
         if (!this.sugerenciaElement || !this.previewElement) return;
         
-        // Mostrar valor numérico real
         this.previewElement.textContent = `(${this.formatearNumero(valor)})`;
         
         let sugerenciaHTML = '';
@@ -225,7 +174,6 @@ class PrecioFormManager {
         this.sugerenciaElement.innerHTML = sugerenciaHTML;
     }
     
-    // Validar y enviar formulario
     validarYEnviarFormulario(event) {
         if (!this.valorVisual || !this.valorReal) {
             event.preventDefault();
@@ -233,7 +181,6 @@ class PrecioFormManager {
             return false;
         }
         
-        // Obtener valor del campo oculto
         let valor = parseInt(this.valorReal.value, 10);
         
         if (isNaN(valor) || valor <= 0) {
@@ -248,15 +195,13 @@ class PrecioFormManager {
             return false;
         }
         
-        // Todo correcto, permitir envío
         return true;
     }
     
-    // Función para ver productos asociados a un precio
     verProductosPrecio(idPrecio, valor) {
         Swal.fire({
-            title: 'Cargando productos...',
-            html: 'Buscando productos que usan este precio',
+            title: 'Cargando artículos...',
+            html: 'Buscando artículos que usan este precio',
             allowOutsideClick: false,
             didOpen: () => {
                 Swal.showLoading();
@@ -272,7 +217,7 @@ class PrecioFormManager {
                 Swal.close();
                 
                 if (!data.success) {
-                    this.mostrarError(data.message || 'No se pudieron cargar los productos');
+                    this.mostrarError(data.message || 'No se pudieron cargar los artículos');
                     return;
                 }
                 
@@ -281,60 +226,65 @@ class PrecioFormManager {
             .catch(error => {
                 Swal.close();
                 console.error('Error:', error);
-                this.mostrarError('No se pudieron cargar los productos. Verifica la conexión.');
+                this.mostrarError('No se pudieron cargar los artículos. Verifica la conexión.');
             });
     }
     
-    // Mostrar modal con productos
     mostrarModalProductos(valor, articulos, variantes) {
-        let html = `<h5 class="mb-4 text-primary-dark">Productos con precio: <strong>$${valor}</strong></h5>`;
+        let html = `<h5 class="mb-4 text-primary-dark">Artículos con precio: <strong>$${valor}</strong></h5>`;
         
-        if (articulos.length === 0 && variantes.length === 0) {
+        if (articulos.length === 0) {
             html += `<div class="text-center py-5">
                         <i class="fas fa-box-open fa-3x text-primary-light mb-3"></i>
-                        <h5 class="text-primary-dark">No hay productos asociados</h5>
-                        <p class="text-primary-light">Este precio no está siendo usado por ningún producto.</p>
+                        <h5 class="text-primary-dark">No hay artículos asociados</h5>
+                        <p class="text-primary-light">Este precio no está siendo usado por ningún artículo base.</p>
                     </div>`;
         } else {
             // Mostrar artículos base
-            if (articulos.length > 0) {
-                html += `<h6 class="text-primary-dark mt-3 mb-2">
-                            <i class="fas fa-cube me-2"></i>Artículos Base (${articulos.length})
-                        </h6>
-                        <div class="table-responsive">
-                            <table class="table table-sm table-hover">
-                                <thead class="table-primary">
-                                    <tr>
-                                        <th>Nombre</th>
-                                        <th>Categoría</th>
-                                        <th>Subcategoría</th>
-                                        <th>Género</th>
-                                        <th>Estado</th>
-                                    </tr>
-                                </thead>
-                                <tbody>`;
-                
-                articulos.forEach(art => {
-                    html += `<tr>
-                                <td><strong>${art.N_Articulo || 'Sin nombre'}</strong></td>
-                                <td><span class="badge bg-primary-light">${art.Categoria || '-'}</span></td>
-                                <td><small class="text-primary-light">${art.SubCategoria || '-'}</small></td>
-                                <td><small class="text-primary-light">${art.Genero || '-'}</small></td>
-                                <td>
-                                    <span class="badge ${art.Activo == 1 ? 'bg-primary' : 'bg-secondary'}">
-                                        ${art.Activo == 1 ? 'Activo' : 'Inactivo'}
-                                    </span>
-                                </td>
-                            </tr>`;
-                });
-                
-                html += `</tbody></table></div>`;
-            }
+            html += `<h6 class="text-primary-dark mt-3 mb-2">
+                        <i class="fas fa-cube me-2"></i>Artículos Base (${articulos.length})
+                    </h6>
+                    <div class="table-responsive">
+                        <table class="table table-sm table-hover">
+                            <thead class="table-primary">
+                                <tr>
+                                    <th>Nombre</th>
+                                    <th>Categoría</th>
+                                    <th>Subcategoría</th>
+                                    <th>Género</th>
+                                    <th>Variantes</th>
+                                    <th>Estado</th>
+                                </tr>
+                            </thead>
+                            <tbody>`;
             
-            // Mostrar variantes (productos)
+            articulos.forEach(art => {
+                const totalVariantes = art.total_variantes || 0;
+                html += `<tr>
+                            <td><strong>${art.N_Articulo || 'Sin nombre'}</strong></td>
+                            <td><span class="badge bg-primary-light">${art.Categoria || '-'}</span></td>
+                            <td><small class="text-primary-light">${art.SubCategoria || '-'}</small></td>
+                            <td><small class="text-primary-light">${art.Genero || '-'}</small></td>
+                            <td>
+                                <span class="badge ${totalVariantes > 0 ? 'bg-primary' : 'bg-secondary'}">
+                                    ${totalVariantes} variante(s)
+                                </span>
+                            </td>
+                            <td>
+                                <span class="badge ${art.Activo == 1 ? 'bg-primary' : 'bg-secondary'}">
+                                    ${art.Activo == 1 ? 'Activo' : 'Inactivo'}
+                                </span>
+                            </td>
+                        </tr>`;
+            });
+            
+            html += `</tbody></table></div>`;
+            
+            // Mostrar variantes directas solo si existen
             if (variantes.length > 0) {
                 html += `<h6 class="text-primary-dark mt-4 mb-2">
-                            <i class="fas fa-layer-group me-2"></i>Variantes de Productos (${variantes.length})
+                            <i class="fas fa-layer-group me-2"></i>Variantes Directas (${variantes.length})
+                            <small class="text-primary-light ms-2">(Variantes que usan este precio específicamente)</small>
                         </h6>
                         <div class="table-responsive">
                             <table class="table table-sm table-hover">
@@ -372,19 +322,19 @@ class PrecioFormManager {
                 html += `</tbody></table></div>`;
             }
             
-            // Resumen
+            // Resumen CORREGIDO - Solo artículos base
             html += `<div class="alert alert-primary-light mt-4">
                         <i class="fas fa-info-circle me-2"></i>
                         <small class="text-primary-dark">
                             <strong>Resumen:</strong> 
-                            ${articulos.length} artículo(s) base + ${variantes.length} variante(s) = 
-                            <strong>${articulos.length + variantes.length} producto(s) en total</strong>
+                            <strong>${articulos.length} artículo(s) base</strong>
+                            ${variantes.length > 0 ? ` + ${variantes.length} variante(s) directa(s)` : ''}
                         </small>
                     </div>`;
         }
         
         Swal.fire({
-            title: 'Productos Asociados',
+            title: 'Artículos Asociados',
             html: html,
             width: '900px',
             confirmButtonText: 'Cerrar',
@@ -397,28 +347,92 @@ class PrecioFormManager {
         });
     }
     
-    // Confirmación para eliminar precio
     confirmarEliminarPrecio(valor, idPrecio, url) {
+        // Primero verificar si el precio está en uso (solo artículos base)
+        fetch(`?c=Precio&a=obtenerProductos&id=${idPrecio}`)
+            .then(response => response.json())
+            .then(data => {
+                if (data.success && data.articulos?.length > 0) {
+                    // El precio está en uso por artículos base, ofrecer migrar y eliminar
+                    this.migrarYEliminarPrecio(idPrecio, valor);
+                } else {
+                    // El precio no está en uso, proceder con eliminación normal
+                    Swal.fire({
+                        title: '¿Eliminar precio?',
+                        html: `¿Estás seguro de eliminar el precio <strong>$${valor}</strong>?<br><br>
+                               <small class="text-primary-light">Esta acción no se puede deshacer.</small>`,
+                        icon: 'warning',
+                        showCancelButton: true,
+                        confirmButtonText: 'Sí, eliminar',
+                        cancelButtonText: 'Cancelar',
+                        confirmButtonColor: '#dc3545',
+                        cancelButtonColor: '#1B202D',
+                        reverseButtons: true
+                    }).then((result) => {
+                        if (result.isConfirmed) {
+                            window.location.href = url;
+                        }
+                    });
+                }
+            })
+            .catch(() => {
+                // Si hay error en la verificación, proceder con eliminación normal
+                Swal.fire({
+                    title: '¿Eliminar precio?',
+                    html: `¿Estás seguro de eliminar el precio <strong>$${valor}</strong>?<br><br>
+                           <small class="text-primary-light">Esta acción no se puede deshacer.</small>`,
+                    icon: 'warning',
+                    showCancelButton: true,
+                    confirmButtonText: 'Sí, eliminar',
+                    cancelButtonText: 'Cancelar',
+                    confirmButtonColor: '#dc3545',
+                    cancelButtonColor: '#1B202D',
+                    reverseButtons: true
+                }).then((result) => {
+                    if (result.isConfirmed) {
+                        window.location.href = url;
+                    }
+                });
+            });
+    }
+    
+    migrarPrecio(idPrecioOrigen, valorOrigen) {
+        this.migrarProductosParaEliminar(idPrecioOrigen, valorOrigen, false);
+    }
+    
+    migrarYEliminarPrecio(idPrecioOrigen, valorOrigen) {
         Swal.fire({
-            title: '¿Eliminar precio?',
-            html: `¿Estás seguro de eliminar el precio <strong>$${valor}</strong>?<br><br>
-                   <small class="text-primary-light">Esta acción no se puede deshacer.</small>`,
-            icon: 'warning',
+            title: 'Precio en uso',
+            html: `El precio <strong>$${valorOrigen}</strong> está siendo usado por artículos base.<br>
+                   <div class="mt-3">
+                     <strong>Opciones:</strong>
+                     <ul class="text-start mt-2">
+                       <li><strong>Migrar y Eliminar:</strong> Migra los artículos a otro precio y elimina este</li>
+                       <li><strong>Solo Migrar:</strong> Solo migra los artículos (mantiene el precio actual)</li>
+                       <li><strong>Cancelar:</strong> Mantener el precio actual</li>
+                     </ul>
+                   </div>`,
+            icon: 'info',
+            showDenyButton: true,
             showCancelButton: true,
-            confirmButtonText: 'Sí, eliminar',
+            confirmButtonText: 'Migrar y Eliminar',
+            denyButtonText: 'Solo Migrar',
             cancelButtonText: 'Cancelar',
-            confirmButtonColor: '#dc3545',
-            cancelButtonColor: '#1B202D',
-            reverseButtons: true
+            confirmButtonColor: '#1B202D',
+            denyButtonColor: '#1B202D',
+            cancelButtonColor: '#6c757d',
+            reverseButtons: true,
+            width: 600
         }).then((result) => {
             if (result.isConfirmed) {
-                window.location.href = url;
+                this.migrarProductosParaEliminar(idPrecioOrigen, valorOrigen, true);
+            } else if (result.isDenied) {
+                this.migrarProductosParaEliminar(idPrecioOrigen, valorOrigen, false);
             }
         });
     }
     
-    // Migrar productos de un precio a otro
-    migrarPrecio(idPrecioOrigen, valorOrigen) {
+    migrarProductosParaEliminar(idPrecioOrigen, valorOrigen, eliminarDespues = false) {
         Swal.fire({
             title: 'Cargando precios disponibles...',
             allowOutsideClick: false,
@@ -435,7 +449,7 @@ class PrecioFormManager {
                 if (!precios || Object.keys(precios).length === 0) {
                     Swal.fire({
                         title: 'No hay precios disponibles',
-                        html: 'No existen otros precios activos a los que migrar los productos.',
+                        html: 'No existen otros precios activos a los que migrar los artículos.',
                         icon: 'warning',
                         confirmButtonText: 'Entendido',
                         confirmButtonColor: '#1B202D'
@@ -444,18 +458,22 @@ class PrecioFormManager {
                 }
                 
                 Swal.fire({
-                    title: 'Migrar productos',
-                    html: `Selecciona el nuevo precio al que migrar los productos que actualmente usan <strong>$${valorOrigen}</strong>`,
+                    title: eliminarDespues ? 'Migrar y Eliminar' : 'Migrar artículos',
+                    html: eliminarDespues 
+                        ? `Selecciona el nuevo precio al que migrar los artículos que usan <strong>$${valorOrigen}</strong><br>
+                           <small class="text-primary-light">Después de la migración, el precio actual será eliminado.</small>`
+                        : `Selecciona el nuevo precio al que migrar los artículos que usan <strong>$${valorOrigen}</strong>`,
                     input: 'select',
                     inputOptions: precios,
                     inputPlaceholder: 'Selecciona un precio',
                     showCancelButton: true,
-                    confirmButtonText: 'Migrar',
+                    confirmButtonText: eliminarDespues ? 'Migrar y Eliminar' : 'Migrar',
                     cancelButtonText: 'Cancelar',
-                    confirmButtonColor: '#1B202D',
+                    confirmButtonColor: eliminarDespues ? '#dc3545' : '#1B202D',
                     cancelButtonColor: '#6c757d',
                     showLoaderOnConfirm: true,
                     reverseButtons: true,
+                    width: 600,
                     preConfirm: (idPrecioDestino) => {
                         if (!idPrecioDestino) {
                             Swal.showValidationMessage('Debes seleccionar un precio');
@@ -468,6 +486,11 @@ class PrecioFormManager {
                                 if (!data.success) {
                                     throw new Error(data.message || 'Error en la migración');
                                 }
+                                
+                                if (eliminarDespues) {
+                                    return this.eliminarPrecioDespuesDeMigrar(idPrecioOrigen, data);
+                                }
+                                
                                 return data;
                             })
                             .catch(error => {
@@ -476,18 +499,35 @@ class PrecioFormManager {
                     }
                 }).then((result) => {
                     if (result.isConfirmed) {
-                        Swal.fire({
-                            title: '¡Migración exitosa!',
-                            html: `Los productos han sido migrados correctamente.<br>
-                                   <small class="text-primary-light">
-                                   Se migraron ${result.value.total_migrados} producto(s).
-                                   </small>`,
-                            icon: 'success',
-                            confirmButtonText: 'OK',
-                            confirmButtonColor: '#1B202D'
-                        }).then(() => {
-                            location.reload();
-                        });
+                        if (eliminarDespues) {
+                            Swal.fire({
+                                title: '¡Proceso completado!',
+                                html: `✅ Los artículos han sido migrados y el precio ha sido eliminado.<br>
+                                       <small class="text-primary-light">
+                                       Se migraron ${result.value.articulos_migrados} artículo(s) base
+                                       ${result.value.variantes_migradas > 0 ? ` + ${result.value.variantes_migradas} variante(s) directa(s)` : ''}
+                                       </small>`,
+                                icon: 'success',
+                                confirmButtonText: 'OK',
+                                confirmButtonColor: '#1B202D'
+                            }).then(() => {
+                                location.reload();
+                            });
+                        } else {
+                            Swal.fire({
+                                title: '¡Migración exitosa!',
+                                html: `Los artículos han sido migrados correctamente.<br>
+                                       <small class="text-primary-light">
+                                       Se migraron ${result.value.articulos_migrados} artículo(s) base
+                                       ${result.value.variantes_migradas > 0 ? ` + ${result.value.variantes_migradas} variante(s) directa(s)` : ''}
+                                       </small>`,
+                                icon: 'success',
+                                confirmButtonText: 'OK',
+                                confirmButtonColor: '#1B202D'
+                            }).then(() => {
+                                location.reload();
+                            });
+                        }
                     }
                 });
             })
@@ -498,7 +538,19 @@ class PrecioFormManager {
             });
     }
     
-    // Mostrar ayuda
+    eliminarPrecioDespuesDeMigrar(idPrecio, datosMigracion) {
+        return fetch(`?c=Precio&a=eliminar&id=${idPrecio}`)
+            .then(() => {
+                return {
+                    ...datosMigracion,
+                    eliminado: true
+                };
+            })
+            .catch(error => {
+                throw new Error(`Error al eliminar el precio después de migrar: ${error.message}`);
+            });
+    }
+    
     mostrarAyuda() {
         Swal.fire({
             title: 'Ayuda - Gestión de Precios',
@@ -528,7 +580,6 @@ class PrecioFormManager {
         });
     }
     
-    // Funciones auxiliares
     formatearNumero(numero) {
         return numero.toLocaleString('es-CO');
     }
@@ -556,10 +607,10 @@ class PrecioListManager {
     
     init() {
         this.configurarBotonesAccion();
+        this.configurarEventosGenerales();
     }
     
     configurarBotonesAccion() {
-        // Botones de ver productos en la tabla
         document.querySelectorAll('button[onclick^="verProductosPrecio"]').forEach(btn => {
             const onclick = btn.getAttribute('onclick');
             const matches = onclick.match(/verProductosPrecio\((\d+),\s*'([^']+)'\)/);
@@ -571,7 +622,6 @@ class PrecioListManager {
             }
         });
         
-        // Botones de cambiar estado
         document.querySelectorAll('a[onclick^="confirmarCambiarEstado"]').forEach(link => {
             const onclick = link.getAttribute('onclick');
             const matches = onclick.match(/confirmarCambiarEstado\(event,\s*'([^']+)',\s*(\d+),\s*(\d+)\)/);
@@ -584,7 +634,6 @@ class PrecioListManager {
             }
         });
         
-        // Botones de migrar precio
         document.querySelectorAll('button[onclick^="migrarPrecio"]').forEach(btn => {
             const onclick = btn.getAttribute('onclick');
             const matches = onclick.match(/migrarPrecio\((\d+),\s*'([^']+)'\)/);
@@ -596,7 +645,6 @@ class PrecioListManager {
             }
         });
         
-        // Botones de eliminar precio
         document.querySelectorAll('a[onclick^="confirmarEliminarPrecio"]').forEach(link => {
             const onclick = link.getAttribute('onclick');
             const matches = onclick.match(/confirmarEliminarPrecio\(event,\s*'([^']+)',\s*(\d+)\)/);
@@ -604,17 +652,47 @@ class PrecioListManager {
                 link.removeAttribute('onclick');
                 link.addEventListener('click', (e) => {
                     e.preventDefault();
-                    const url = link.getAttribute('href');
-                    this.confirmarEliminarPrecio(matches[1], matches[2], url);
+                    this.confirmarEliminarPrecio(matches[1], matches[2]);
+                });
+            }
+        });
+        
+        document.querySelectorAll('button[onclick^="migrarYEliminarPrecio"]').forEach(btn => {
+            const onclick = btn.getAttribute('onclick');
+            const matches = onclick.match(/migrarYEliminarPrecio\((\d+),\s*'([^']+)'\)/);
+            if (matches) {
+                btn.removeAttribute('onclick');
+                btn.addEventListener('click', () => {
+                    this.migrarYEliminarPrecio(matches[1], matches[2]);
                 });
             }
         });
     }
     
+    configurarEventosGenerales() {
+        document.querySelectorAll('.btn[disabled], a[disabled]').forEach(element => {
+            element.addEventListener('click', function(e) {
+                e.preventDefault();
+                e.stopPropagation();
+                
+                const title = this.getAttribute('title') || 'Acción no disponible';
+                Swal.fire({
+                    title: 'Acción no disponible',
+                    text: title,
+                    icon: 'info',
+                    timer: 2000,
+                    showConfirmButton: false
+                });
+                
+                return false;
+            });
+        });
+    }
+    
     verProductosPrecio(idPrecio, valor) {
         Swal.fire({
-            title: 'Cargando productos...',
-            html: 'Buscando productos que usan este precio',
+            title: 'Cargando artículos...',
+            html: 'Buscando artículos que usan este precio',
             allowOutsideClick: false,
             didOpen: () => {
                 Swal.showLoading();
@@ -630,7 +708,7 @@ class PrecioListManager {
                 Swal.close();
                 
                 if (!data.success) {
-                    Swal.fire('Error', data.message || 'No se pudieron cargar los productos', 'error');
+                    Swal.fire('Error', data.message || 'No se pudieron cargar los artículos', 'error');
                     return;
                 }
                 
@@ -639,59 +717,63 @@ class PrecioListManager {
             .catch(error => {
                 Swal.close();
                 console.error('Error:', error);
-                Swal.fire('Error', 'No se pudieron cargar los productos. Verifica la conexión.', 'error');
+                Swal.fire('Error', 'No se pudieron cargar los artículos. Verifica la conexión.', 'error');
             });
     }
     
     mostrarModalProductos(valor, articulos, variantes) {
-        let html = `<h5 class="mb-4 text-primary-dark">Productos con precio: <strong>$${valor}</strong></h5>`;
+        let html = `<h5 class="mb-4 text-primary-dark">Artículos con precio: <strong>$${valor}</strong></h5>`;
         
-        if (articulos.length === 0 && variantes.length === 0) {
+        if (articulos.length === 0) {
             html += `<div class="text-center py-5">
                         <i class="fas fa-box-open fa-3x text-primary-light mb-3"></i>
-                        <h5 class="text-primary-dark">No hay productos asociados</h5>
-                        <p class="text-primary-light">Este precio no está siendo usado por ningún producto.</p>
+                        <h5 class="text-primary-dark">No hay artículos asociados</h5>
+                        <p class="text-primary-light">Este precio no está siendo usado por ningún artículo base.</p>
                     </div>`;
         } else {
-            // Mostrar artículos base
-            if (articulos.length > 0) {
-                html += `<h6 class="text-primary-dark mt-3 mb-2">
-                            <i class="fas fa-cube me-2"></i>Artículos Base (${articulos.length})
-                        </h6>
-                        <div class="table-responsive">
-                            <table class="table table-sm table-hover">
-                                <thead class="table-primary">
-                                    <tr>
-                                        <th>Nombre</th>
-                                        <th>Categoría</th>
-                                        <th>Subcategoría</th>
-                                        <th>Género</th>
-                                        <th>Estado</th>
-                                    </tr>
-                                </thead>
-                                <tbody>`;
-                
-                articulos.forEach(art => {
-                    html += `<tr>
-                                <td><strong>${art.N_Articulo || 'Sin nombre'}</strong></td>
-                                <td><span class="badge bg-primary-light">${art.Categoria || '-'}</span></td>
-                                <td><small class="text-primary-light">${art.SubCategoria || '-'}</small></td>
-                                <td><small class="text-primary-light">${art.Genero || '-'}</small></td>
-                                <td>
-                                    <span class="badge ${art.Activo == 1 ? 'bg-primary' : 'bg-secondary'}">
-                                        ${art.Activo == 1 ? 'Activo' : 'Inactivo'}
-                                    </span>
-                                </td>
-                            </tr>`;
-                });
-                
-                html += `</tbody></table></div>`;
-            }
+            html += `<h6 class="text-primary-dark mt-3 mb-2">
+                        <i class="fas fa-cube me-2"></i>Artículos Base (${articulos.length})
+                    </h6>
+                    <div class="table-responsive">
+                        <table class="table table-sm table-hover">
+                            <thead class="table-primary">
+                                <tr>
+                                    <th>Nombre</th>
+                                    <th>Categoría</th>
+                                    <th>Subcategoría</th>
+                                    <th>Género</th>
+                                    <th>Variantes</th>
+                                    <th>Estado</th>
+                                </tr>
+                            </thead>
+                            <tbody>`;
             
-            // Mostrar variantes (productos)
+            articulos.forEach(art => {
+                const totalVariantes = art.total_variantes || 0;
+                html += `<tr>
+                            <td><strong>${art.N_Articulo || 'Sin nombre'}</strong></td>
+                            <td><span class="badge bg-primary-light">${art.Categoria || '-'}</span></td>
+                            <td><small class="text-primary-light">${art.SubCategoria || '-'}</small></td>
+                            <td><small class="text-primary-light">${art.Genero || '-'}</small></td>
+                            <td>
+                                <span class="badge ${totalVariantes > 0 ? 'bg-primary' : 'bg-secondary'}">
+                                    ${totalVariantes} variante(s)
+                                </span>
+                            </td>
+                            <td>
+                                <span class="badge ${art.Activo == 1 ? 'bg-primary' : 'bg-secondary'}">
+                                    ${art.Activo == 1 ? 'Activo' : 'Inactivo'}
+                                </span>
+                            </td>
+                        </tr>`;
+            });
+            
+            html += `</tbody></table></div>`;
+            
             if (variantes.length > 0) {
                 html += `<h6 class="text-primary-dark mt-4 mb-2">
-                            <i class="fas fa-layer-group me-2"></i>Variantes de Productos (${variantes.length})
+                            <i class="fas fa-layer-group me-2"></i>Variantes Directas (${variantes.length})
+                            <small class="text-primary-light ms-2">(Variantes que usan este precio específicamente)</small>
                         </h6>
                         <div class="table-responsive">
                             <table class="table table-sm table-hover">
@@ -729,19 +811,18 @@ class PrecioListManager {
                 html += `</tbody></table></div>`;
             }
             
-            // Resumen
             html += `<div class="alert alert-primary-light mt-4">
                         <i class="fas fa-info-circle me-2"></i>
                         <small class="text-primary-dark">
                             <strong>Resumen:</strong> 
-                            ${articulos.length} artículo(s) base + ${variantes.length} variante(s) = 
-                            <strong>${articulos.length + variantes.length} producto(s) en total</strong>
+                            <strong>${articulos.length} artículo(s) base</strong>
+                            ${variantes.length > 0 ? ` + ${variantes.length} variante(s) directa(s)` : ''}
                         </small>
                     </div>`;
         }
         
         Swal.fire({
-            title: 'Productos Asociados',
+            title: 'Artículos Asociados',
             html: html,
             width: '900px',
             confirmButtonText: 'Cerrar',
@@ -777,6 +858,89 @@ class PrecioListManager {
     }
     
     migrarPrecio(idPrecioOrigen, valorOrigen) {
+        this.migrarProductosParaEliminar(idPrecioOrigen, valorOrigen, false);
+    }
+    
+    confirmarEliminarPrecio(valor, idPrecio) {
+        const url = `?c=Precio&a=eliminar&id=${idPrecio}`;
+        
+        fetch(`?c=Precio&a=obtenerProductos&id=${idPrecio}`)
+            .then(response => response.json())
+            .then(data => {
+                if (data.success && data.articulos?.length > 0) {
+                    this.migrarYEliminarPrecio(idPrecio, valor);
+                } else {
+                    Swal.fire({
+                        title: '¿Eliminar precio?',
+                        html: `¿Estás seguro de eliminar el precio <strong>$${valor}</strong>?<br><br>
+                               <small class="text-primary-light">Esta acción no se puede deshacer.</small>`,
+                        icon: 'warning',
+                        showCancelButton: true,
+                        confirmButtonText: 'Sí, eliminar',
+                        cancelButtonText: 'Cancelar',
+                        confirmButtonColor: '#dc3545',
+                        cancelButtonColor: '#1B202D',
+                        reverseButtons: true
+                    }).then((result) => {
+                        if (result.isConfirmed) {
+                            window.location.href = url;
+                        }
+                    });
+                }
+            })
+            .catch(() => {
+                Swal.fire({
+                    title: '¿Eliminar precio?',
+                    html: `¿Estás seguro de eliminar el precio <strong>$${valor}</strong>?<br><br>
+                           <small class="text-primary-light">Esta acción no se puede deshacer.</small>`,
+                    icon: 'warning',
+                    showCancelButton: true,
+                    confirmButtonText: 'Sí, eliminar',
+                    cancelButtonText: 'Cancelar',
+                    confirmButtonColor: '#dc3545',
+                    cancelButtonColor: '#1B202D',
+                    reverseButtons: true
+                }).then((result) => {
+                    if (result.isConfirmed) {
+                        window.location.href = url;
+                    }
+                });
+            });
+    }
+    
+    migrarYEliminarPrecio(idPrecioOrigen, valorOrigen) {
+        Swal.fire({
+            title: 'Precio en uso',
+            html: `El precio <strong>$${valorOrigen}</strong> está siendo usado por artículos base.<br>
+                   <div class="mt-3">
+                     <strong>Opciones:</strong>
+                     <ul class="text-start mt-2">
+                       <li><strong>Migrar y Eliminar:</strong> Migra los artículos a otro precio y elimina este</li>
+                       <li><strong>Solo Migrar:</strong> Solo migra los artículos (mantiene el precio actual)</li>
+                       <li><strong>Cancelar:</strong> Mantener el precio actual</li>
+                     </ul>
+                   </div>`,
+            icon: 'info',
+            showDenyButton: true,
+            showCancelButton: true,
+            confirmButtonText: 'Migrar y Eliminar',
+            denyButtonText: 'Solo Migrar',
+            cancelButtonText: 'Cancelar',
+            confirmButtonColor: '#1B202D',
+            denyButtonColor: '#1B202D',
+            cancelButtonColor: '#6c757d',
+            reverseButtons: true,
+            width: 600
+        }).then((result) => {
+            if (result.isConfirmed) {
+                this.migrarProductosParaEliminar(idPrecioOrigen, valorOrigen, true);
+            } else if (result.isDenied) {
+                this.migrarProductosParaEliminar(idPrecioOrigen, valorOrigen, false);
+            }
+        });
+    }
+    
+    migrarProductosParaEliminar(idPrecioOrigen, valorOrigen, eliminarDespues = false) {
         Swal.fire({
             title: 'Cargando precios disponibles...',
             allowOutsideClick: false,
@@ -793,7 +957,7 @@ class PrecioListManager {
                 if (!precios || Object.keys(precios).length === 0) {
                     Swal.fire({
                         title: 'No hay precios disponibles',
-                        html: 'No existen otros precios activos a los que migrar los productos.',
+                        html: 'No existen otros precios activos a los que migrar los artículos.',
                         icon: 'warning',
                         confirmButtonText: 'Entendido',
                         confirmButtonColor: '#1B202D'
@@ -802,18 +966,22 @@ class PrecioListManager {
                 }
                 
                 Swal.fire({
-                    title: 'Migrar productos',
-                    html: `Selecciona el nuevo precio al que migrar los productos que actualmente usan <strong>$${valorOrigen}</strong>`,
+                    title: eliminarDespues ? 'Migrar y Eliminar' : 'Migrar artículos',
+                    html: eliminarDespues 
+                        ? `Selecciona el nuevo precio al que migrar los artículos que usan <strong>$${valorOrigen}</strong><br>
+                           <small class="text-primary-light">Después de la migración, el precio actual será eliminado.</small>`
+                        : `Selecciona el nuevo precio al que migrar los artículos que usan <strong>$${valorOrigen}</strong>`,
                     input: 'select',
                     inputOptions: precios,
                     inputPlaceholder: 'Selecciona un precio',
                     showCancelButton: true,
-                    confirmButtonText: 'Migrar',
+                    confirmButtonText: eliminarDespues ? 'Migrar y Eliminar' : 'Migrar',
                     cancelButtonText: 'Cancelar',
-                    confirmButtonColor: '#1B202D',
+                    confirmButtonColor: eliminarDespues ? '#dc3545' : '#1B202D',
                     cancelButtonColor: '#6c757d',
                     showLoaderOnConfirm: true,
                     reverseButtons: true,
+                    width: 600,
                     preConfirm: (idPrecioDestino) => {
                         if (!idPrecioDestino) {
                             Swal.showValidationMessage('Debes seleccionar un precio');
@@ -826,6 +994,11 @@ class PrecioListManager {
                                 if (!data.success) {
                                     throw new Error(data.message || 'Error en la migración');
                                 }
+                                
+                                if (eliminarDespues) {
+                                    return this.eliminarPrecioDespuesDeMigrar(idPrecioOrigen, data);
+                                }
+                                
                                 return data;
                             })
                             .catch(error => {
@@ -834,18 +1007,35 @@ class PrecioListManager {
                     }
                 }).then((result) => {
                     if (result.isConfirmed) {
-                        Swal.fire({
-                            title: '¡Migración exitosa!',
-                            html: `Los productos han sido migrados correctamente.<br>
-                                   <small class="text-primary-light">
-                                   Se migraron ${result.value.total_migrados} producto(s).
-                                   </small>`,
-                            icon: 'success',
-                            confirmButtonText: 'OK',
-                            confirmButtonColor: '#1B202D'
-                        }).then(() => {
-                            location.reload();
-                        });
+                        if (eliminarDespues) {
+                            Swal.fire({
+                                title: '¡Proceso completado!',
+                                html: `✅ Los artículos han sido migrados y el precio ha sido eliminado.<br>
+                                       <small class="text-primary-light">
+                                       Se migraron ${result.value.articulos_migrados} artículo(s) base
+                                       ${result.value.variantes_migradas > 0 ? ` + ${result.value.variantes_migradas} variante(s) directa(s)` : ''}
+                                       </small>`,
+                                icon: 'success',
+                                confirmButtonText: 'OK',
+                                confirmButtonColor: '#1B202D'
+                            }).then(() => {
+                                location.reload();
+                            });
+                        } else {
+                            Swal.fire({
+                                title: '¡Migración exitosa!',
+                                html: `Los artículos han sido migrados correctamente.<br>
+                                       <small class="text-primary-light">
+                                       Se migraron ${result.value.articulos_migrados} artículo(s) base
+                                       ${result.value.variantes_migradas > 0 ? ` + ${result.value.variantes_migradas} variante(s) directa(s)` : ''}
+                                       </small>`,
+                                icon: 'success',
+                                confirmButtonText: 'OK',
+                                confirmButtonColor: '#1B202D'
+                            }).then(() => {
+                                location.reload();
+                            });
+                        }
                     }
                 });
             })
@@ -856,41 +1046,60 @@ class PrecioListManager {
             });
     }
     
-    confirmarEliminarPrecio(valor, idPrecio, url) {
-        Swal.fire({
-            title: '¿Eliminar precio?',
-            html: `¿Estás seguro de eliminar el precio <strong>$${valor}</strong>?<br><br>
-                   <small class="text-primary-light">Esta acción no se puede deshacer.</small>`,
-            icon: 'warning',
-            showCancelButton: true,
-            confirmButtonText: 'Sí, eliminar',
-            cancelButtonText: 'Cancelar',
-            confirmButtonColor: '#dc3545',
-            cancelButtonColor: '#1B202D',
-            reverseButtons: true
-        }).then((result) => {
-            if (result.isConfirmed) {
-                window.location.href = url;
-            }
-        });
+    eliminarPrecioDespuesDeMigrar(idPrecio, datosMigracion) {
+        return fetch(`?c=Precio&a=eliminar&id=${idPrecio}`)
+            .then(() => {
+                return {
+                    ...datosMigracion,
+                    eliminado: true
+                };
+            })
+            .catch(error => {
+                throw new Error(`Error al eliminar el precio después de migrar: ${error.message}`);
+            });
     }
 }
 
 // Inicializar cuando el DOM esté listo
 document.addEventListener('DOMContentLoaded', function() {
-    // Verificar si estamos en el formulario de precios
     if (document.getElementById('form-precio')) {
         precioFormManager = new PrecioFormManager();
     }
     
-    // Verificar si estamos en la lista de precios
     if (document.querySelector('table.table-striped')) {
         const precioListManager = new PrecioListManager();
     }
     
-    // Tooltips de Bootstrap
     const tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
     tooltipTriggerList.map(function (tooltipTriggerEl) {
         return new bootstrap.Tooltip(tooltipTriggerEl);
     });
 });
+
+// Funciones globales para compatibilidad con onclick HTML
+function migrarYEliminarPrecio(idPrecio, valor) {
+    const manager = new PrecioListManager();
+    manager.migrarYEliminarPrecio(idPrecio, valor);
+}
+
+function confirmarEliminarPrecio(event, valor, idPrecio) {
+    event.preventDefault();
+    const manager = new PrecioListManager();
+    manager.confirmarEliminarPrecio(valor, idPrecio);
+}
+
+function confirmarCambiarEstado(event, valor, idPrecio, estado) {
+    event.preventDefault();
+    const manager = new PrecioListManager();
+    manager.confirmarCambiarEstado(valor, idPrecio, estado);
+}
+
+function verProductosPrecio(idPrecio, valor) {
+    const manager = new PrecioListManager();
+    manager.verProductosPrecio(idPrecio, valor);
+}
+
+function migrarPrecio(idPrecio, valor) {
+    const manager = new PrecioListManager();
+    manager.migrarPrecio(idPrecio, valor);
+}

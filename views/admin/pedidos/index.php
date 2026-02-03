@@ -2,8 +2,8 @@
     <!-- Encabezado -->
     <div class="d-flex justify-content-between align-items-center mb-4">
         <h2><i class="fas fa-shopping-cart me-2"></i>Gestión de Pedidos</h2>
-        <div>
-            <a href="<?= BASE_URL ?>?c=Pedido&a=enviados" class="btn btn-warning me-2">
+        <div class="d-flex gap-2">
+            <a href="<?= BASE_URL ?>?c=Pedido&a=enviados" class="btn btn-warning">
                 <i class="fas fa-truck me-1"></i> Pedidos Enviados
             </a>
             <a href="<?= BASE_URL ?>?c=Pedido&a=reporte" class="btn btn-info">
@@ -12,19 +12,24 @@
         </div>
     </div>
 
-    <!-- Mensajes -->
+    <!-- Mensajes Globales -->
     <?php if (isset($_SESSION['mensaje'])): ?>
-        <div class="alert alert-<?= $_SESSION['mensaje_tipo'] ?? 'info' ?> alert-dismissible fade show" role="alert">
-            <?= $_SESSION['mensaje'] ?>
-            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        <div id="mensajeGlobal" class="alert-message alert-<?= $_SESSION['mensaje_tipo'] ?? 'info' ?>">
+            <div class="alert-content">
+                <i class="fas fa-info-circle me-2"></i>
+                <span><?= $_SESSION['mensaje'] ?></span>
+                <button type="button" class="btn-close-alert" onclick="this.parentElement.parentElement.style.display='none'">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
         </div>
         <?php unset($_SESSION['mensaje'], $_SESSION['mensaje_tipo']); ?>
     <?php endif; ?>
 
     <!-- Barra de Búsqueda y Filtros -->
     <div class="card mb-4">
-        <div class="card-header bg-light">
-            <h5 class="mb-0"><i class="fas fa-filter me-2"></i>Filtrar Pedidos</h5>
+        <div class="card-header bg-primary-dark">
+            <h5 class="mb-0 text-white"><i class="fas fa-search me-2"></i>Buscar y Filtrar Pedidos</h5>
         </div>
         <div class="card-body">
             <form action="<?= BASE_URL ?>?c=Pedido&a=index" method="get" class="row g-3 align-items-end">
@@ -34,13 +39,15 @@
                 <div class="col-md-3">
                     <label for="buscar" class="form-label">Buscar pedido</label>
                     <div class="input-group">
-                        <span class="input-group-text"><i class="fas fa-search"></i></span>
+                        <span class="input-group-text bg-primary">
+                            <i class="fas fa-search text-white"></i>
+                        </span>
                         <input type="text" 
-                               class="form-control" 
-                               id="buscar" 
-                               name="buscar" 
-                               value="<?= htmlspecialchars($_GET['buscar'] ?? '') ?>" 
-                               placeholder="ID, código, nombre, email...">
+                            class="form-control" 
+                            id="buscar" 
+                            name="buscar" 
+                            value="<?= htmlspecialchars($_GET['buscar'] ?? '') ?>" 
+                            placeholder="Código, nombre, Email">
                     </div>
                 </div>
                 
@@ -48,7 +55,6 @@
                     <label for="estado" class="form-label">Estado</label>
                     <select class="form-select" id="estado" name="estado">
                         <option value="">Todos</option>
-                        <option value="Emitido" <?= ($_GET['estado'] ?? '') === 'Emitido' ? 'selected' : '' ?>>Emitido</option>
                         <option value="Confirmado" <?= ($_GET['estado'] ?? '') === 'Confirmado' ? 'selected' : '' ?>>Confirmado</option>
                         <option value="Preparando" <?= ($_GET['estado'] ?? '') === 'Preparando' ? 'selected' : '' ?>>Preparando</option>
                         <option value="Enviado" <?= ($_GET['estado'] ?? '') === 'Enviado' ? 'selected' : '' ?>>Enviado</option>
@@ -59,149 +65,193 @@
                     </select>
                 </div>
                 
-                <div class="col-md-3">
+                <div class="col-md-2">
                     <label for="fecha_inicio" class="form-label">Fecha inicio</label>
                     <input type="date" 
-                           class="form-control" 
-                           id="fecha_inicio" 
-                           name="fecha_inicio" 
-                           value="<?= htmlspecialchars($_GET['fecha_inicio'] ?? '') ?>">
+                        class="form-control" 
+                        id="fecha_inicio" 
+                        name="fecha_inicio" 
+                        value="<?= htmlspecialchars($_GET['fecha_inicio'] ?? '') ?>">
                 </div>
                 
-                <div class="col-md-3">
+                <div class="col-md-2">
                     <label for="fecha_fin" class="form-label">Fecha fin</label>
                     <input type="date" 
-                           class="form-control" 
-                           id="fecha_fin" 
-                           name="fecha_fin" 
-                           value="<?= htmlspecialchars($_GET['fecha_fin'] ?? '') ?>">
+                        class="form-control" 
+                        id="fecha_fin" 
+                        name="fecha_fin" 
+                        value="<?= htmlspecialchars($_GET['fecha_fin'] ?? '') ?>">
                 </div>
                 
-                <div class="col-md-1">
-                    <button type="submit" class="btn btn-primary w-100">
-                        <i class="fas fa-filter"></i>
+                <div class="col-md-3 d-flex gap-2 align-items-end">
+                    <button type="submit" class="btn btn-primary-dark flex-grow-1">
+                        <i class="fas fa-filter me-1"></i> Aplicar Filtros
                     </button>
+                    <a href="<?= BASE_URL ?>?c=Pedido&a=index" class="btn btn-outline-primary btn-limpiar-filtros" title="Limpiar filtros">
+                        <i class="fas fa-times"></i>
+                    </a>
                 </div>
             </form>
             
-            <!-- Alertas de pedidos atrasados -->
-            <?php if (!empty($pedidosAtrasados)): ?>
-                <div class="alert alert-warning mt-3">
-                    <i class="fas fa-exclamation-triangle me-2"></i>
-                    <strong>Tienes <?= count($pedidosAtrasados) ?> pedido(s) atrasado(s)</strong> 
-                    (más de 3 días en estado "Enviado" sin entregar)
-                    <a href="<?= BASE_URL ?>?c=Pedido&a=enviados" class="alert-link ms-2">Ver pedidos enviados</a>
+            <!-- Alertas de pedidos atrasados y con tiempo -->
+            <?php if (!empty($pedidosAtrasados) || (isset($alertasPedidos) && ($alertasPedidos['alerta_count'] > 0 || $alertasPedidos['mega_alerta_count'] > 0))): ?>
+                <div class="mt-3">
+                    <?php if (!empty($pedidosAtrasados)): ?>
+                        <div class="alert alert-warning-pedidos mb-2 d-flex justify-content-between align-items-center">
+                            <div>
+                                <i class="fas fa-exclamation-triangle me-2"></i>
+                                <strong>Tienes <?= count($pedidosAtrasados) ?> pedido(s) atrasado(s)</strong> 
+                                (más de 3 días en estado "Enviado" sin entregar)
+                            </div>
+                            <a href="<?= BASE_URL ?>?c=Pedido&a=enviados" class="btn btn-warning btn-sm">
+                                <i class="fas fa-truck me-1"></i> Ver pedidos enviados
+                            </a>
+                        </div>
+                    <?php endif; ?>
+                    
+                    <?php if (isset($alertasPedidos)): ?>
+                        <?php if ($alertasPedidos['mega_alerta_count'] > 0): ?>
+                            <div class="alert alert-danger mb-2 d-flex justify-content-between align-items-center">
+                                <div>
+                                    <i class="fas fa-exclamation-circle me-2"></i>
+                                    <strong>MEGA ALERTA: <?= $alertasPedidos['mega_alerta_count'] ?> pedido(s) con más de 24 horas sin atender</strong>
+                                    <small class="d-block">¡Atención inmediata requerida!</small>
+                                </div>
+                                <a href="#tablaPedidos" class="btn btn-outline-primary btn-sm">
+                                    <i class="fas fa-arrow-down me-1"></i> Ver pedidos
+                                </a>
+                            </div>
+                        <?php endif; ?>
+                    <?php endif; ?>
                 </div>
             <?php endif; ?>
         </div>
     </div>
 
-    <!-- Estadísticas Mejoradas -->
+    <!-- Estadísticas - SIN EMITIDOS -->
     <div class="row mb-4">
         <div class="col-md-2">
-            <div class="card bg-primary text-white">
+            <div class="card stats-card-pedido estadistica-confirmados">
                 <div class="card-body">
-                    <h5 class="card-title">Emitidos</h5>
-                    <h3 class="card-text"><?= $estadisticas['emitidos'] ?? 0 ?></h3>
-                    <small><i class="fas fa-clock"></i> Pendientes</small>
-                </div>
-            </div>
-        </div>
-        <div class="col-md-2">
-            <div class="card bg-info text-white">
-                <div class="card-body">
-                    <h5 class="card-title">Confirmados</h5>
+                    <h5 class="card-title text-primary-dark">Confirmados</h5>
                     <h3 class="card-text"><?= $estadisticas['confirmados'] ?? 0 ?></h3>
-                    <small><i class="fas fa-check"></i> Validados</small>
+                    <small><i class="fas fa-check text-primary"></i> Validados</small>
                 </div>
             </div>
         </div>
         <div class="col-md-2">
-            <div class="card bg-warning text-white">
+            <div class="card stats-card-pedido estadistica-preparando">
                 <div class="card-body">
-                    <h5 class="card-title">Enviados</h5>
+                    <h5 class="card-title text-primary-dark">Preparando</h5>
+                    <h3 class="card-text"><?= $estadisticas['preparando'] ?? 0 ?></h3>
+                    <small><i class="fas fa-cogs text-primary"></i> En proceso</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-2">
+            <div class="card stats-card-pedido estadistica-enviados">
+                <div class="card-body">
+                    <h5 class="card-title text-primary-dark">Enviados</h5>
                     <h3 class="card-text"><?= $estadisticas['enviados'] ?? 0 ?></h3>
-                    <small><i class="fas fa-truck"></i> En tránsito</small>
+                    <small><i class="fas fa-truck text-primary"></i> En tránsito</small>
                 </div>
             </div>
         </div>
         <div class="col-md-2">
-            <div class="card bg-success text-white">
+            <div class="card stats-card-pedido estadistica-retrasados">
                 <div class="card-body">
-                    <h5 class="card-title">Entregados</h5>
+                    <h5 class="card-title text-primary-dark">Retrasados</h5>
+                    <h3 class="card-text"><?= $estadisticas['retrasados'] ?? 0 ?></h3>
+                    <small><i class="fas fa-exclamation-triangle text-primary"></i> Urgentes</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-2">
+            <div class="card stats-card-pedido estadistica-devuelto">
+                <div class="card-body">
+                    <h5 class="card-title text-primary-dark">Devueltos</h5>
+                    <h3 class="card-text"><?= $estadisticas['devueltos'] ?? 0 ?></h3>
+                    <small><i class="fas fa-undo text-primary"></i> Por revisar</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-2">
+            <div class="card stats-card-pedido estadistica-entregados">
+                <div class="card-body">
+                    <h5 class="card-title text-primary-dark">Entregados</h5>
                     <h3 class="card-text"><?= $estadisticas['entregados'] ?? 0 ?></h3>
-                    <small><i class="fas fa-box-check"></i> Completados</small>
-                </div>
-            </div>
-        </div>
-        <div class="col-md-2">
-            <div class="card bg-danger text-white">
-                <div class="card-body">
-                    <h5 class="card-title">Anulados</h5>
-                    <h3 class="card-text"><?= $estadisticas['anulados'] ?? 0 ?></h3>
-                    <small><i class="fas fa-times"></i> Cancelados</small>
-                </div>
-            </div>
-        </div>
-        <div class="col-md-2">
-            <div class="card bg-dark text-white">
-                <div class="card-body">
-                    <h5 class="card-title">Ventas Hoy</h5>
-                    <h3 class="card-text">$<?= number_format($resumenDiario['ventas_hoy'] ?? 0, 2) ?></h3>
-                    <small><i class="fas fa-calendar-day"></i> <?= date('d/m/Y') ?></small>
+                    <small><i class="fas fa-box-check text-primary"></i> Completados</small>
                 </div>
             </div>
         </div>
     </div>
 
     <!-- Tabla de Pedidos -->
-    <div class="card">
-        <div class="card-header bg-light d-flex justify-content-between align-items-center">
-            <h5 class="mb-0"><i class="fas fa-list me-2"></i>Lista de Pedidos (Ordenados por Prioridad)</h5>
-            <span class="badge bg-primary">Total: <?= count($pedidos) ?> pedidos</span>
+    <div class="card" id="tablaPedidos">
+        <div class="card-header bg-primary-dark d-flex justify-content-between align-items-center">
+            <h5 class="mb-0 text-white"><i class="fas fa-list me-2"></i>Lista de Pedidos (Ordenados por prioridad)</h5>
+            <span class="badge bg-primary-light">Total: <?= count($pedidos) ?> pedidos</span>
         </div>
         <div class="card-body">
             <?php if (empty($pedidos)): ?>
-                <div class="text-center py-5">
-                    <i class="fas fa-shopping-cart fa-3x text-muted mb-3"></i>
-                    <h5 class="text-muted">No hay pedidos</h5>
+                <div class="no-results text-center py-5">
+                    <i class="fas fa-shopping-cart fa-4x text-primary mb-3"></i>
+                    <h5 class="text-primary-dark">No hay pedidos</h5>
                     <?php if ($modoBusqueda): ?>
                         <p class="text-muted">No se encontraron resultados para la búsqueda.</p>
-                        <a href="<?= BASE_URL ?>?c=Pedido&a=index" class="btn btn-primary">
-                            <i class="fas fa-list me-1"></i> Ver todos los pedidos
-                        </a>
+                    <?php else: ?>
+                        <p class="text-muted">Comienza recibiendo el primer pedido.</p>
                     <?php endif; ?>
+                    <a href="<?= BASE_URL ?>?c=Pedido&a=index" class="btn btn-primary-dark mt-2">
+                        <i class="fas fa-list me-1"></i> Ver todos los pedidos
+                    </a>
                 </div>
             <?php else: ?>
                 <div class="table-responsive">
                     <table class="table table-striped table-hover">
-                        <thead class="table-dark">
+                        <thead class="table-primary-dark">
                             <tr>
-                                <th>ID</th>
-                                <th>Cliente</th>
-                                <th>Fecha</th>
-                                <th>Total</th>
-                                <th>Estado</th>
-                                <th>Envío</th>
-                                <th>Acciones</th>
+                                <th width="5%">#</th>
+                                <th width="12%">Código</th>
+                                <th width="18%">Cliente</th>
+                                <th width="12%">Fecha</th>
+                                <th width="10%">Total</th>
+                                <th width="12%">Estado</th>
+                                <th width="15%">Tiempo</th>
+                                <th width="16%">Acciones</th>
                             </tr>
                         </thead>
                         <tbody>
-                            <?php foreach ($pedidos as $pedido): ?>
-                                <?php 
-                                // Clase CSS según prioridad
-                                $rowClass = '';
-                                if ($pedido['Estado'] === 'Emitido') $rowClass = 'table-warning';
-                                if ($pedido['Estado'] === 'Confirmado') $rowClass = 'table-info';
-                                if ($pedido['Estado'] === 'Enviado') $rowClass = 'table-primary';
-                                if ($pedido['Estado'] === 'Retrasado') $rowClass = 'table-danger';
-                                if ($pedido['Estado'] === 'Anulado') $rowClass = 'table-secondary';
-                                ?>
-                                <tr class="<?= $rowClass ?>">
+                            <?php 
+                            $contador = 1;
+                            foreach ($pedidos as $pedido): 
+                                // Determinar alerta basada en horas desde creación (solo para pedidos activos)
+                                $horasDesdeCreacion = $pedido['horas_desde_creacion'] ?? 0;
+                                $estadoAlerta = $pedido['estado_alerta'] ?? 'normal';
+                                $estado = $pedido['Estado'];
+                                
+                                // Solo mostrar alertas para pedidos que NO estén entregados o anulados
+                                $mostrarAlerta = !in_array($estado, ['Entregado', 'Anulado']);
+                                
+                                // Clases CSS basadas en alerta
+                                $claseFila = '';
+                                $iconoAlerta = '';
+                                $textoAlerta = '';
+                                
+                                if ($mostrarAlerta && $estadoAlerta === 'mega_alerta') {
+                                    $claseFila = 'table-danger';
+                                    $iconoAlerta = 'fa-exclamation-circle text-danger';
+                                    $textoAlerta = 'MEGA ALERTA: Más de 24 horas';
+                                } elseif ($mostrarAlerta && $estadoAlerta === 'alerta') {
+                                    $claseFila = 'table-primary-ligth';
+                                    $iconoAlerta = 'fa-clock text-primary-dark';
+                                    $textoAlerta = 'Alerta: Más de 5 horas';
+                                }
+                            ?>
+                                <tr class="hover-shadow-pedido <?= $claseFila ?>">
+                                    <td class="text-center"><?= $contador++ ?></td>
                                     <td>
-                                        <strong>#<?= $pedido['ID_Factura'] ?></strong>
-                                        <br>
-                                        <small class="text-muted"><?= $pedido['Codigo_Acceso'] ?></small>
+                                        <strong class="text-primary-dark"><?= $pedido['Codigo_Acceso'] ?></strong>
                                     </td>
                                     <td>
                                         <strong><?= htmlspecialchars($pedido['Nombre'] . ' ' . $pedido['Apellido']) ?></strong>
@@ -214,44 +264,85 @@
                                         <small class="text-muted"><?= date('H:i', strtotime($pedido['Fecha_Factura'])) ?></small>
                                     </td>
                                     <td>
-                                        <span class="fw-bold text-success">
+                                        <span class="fw-bold text-primary-dark">
                                             $<?= number_format($pedido['Monto_Total'], 2) ?>
                                         </span>
                                     </td>
                                     <td>
-                                        <?= $getEstadoBadge($pedido['Estado']) ?>
-                                        <?php if ($pedido['Estado'] === 'Enviado' && !empty($pedido['Fecha_Envio'])): ?>
-                                            <br>
-                                            <small class="text-muted">
-                                                <?= date('d/m', strtotime($pedido['Fecha_Envio'])) ?>
-                                            </small>
-                                        <?php endif; ?>
+                                        <?php 
+                                        $estado = $pedido['Estado'];
+                                        $badgeClass = '';
+                                        $icon = '';
+                                        
+                                        switch($estado) {
+                                            case 'Confirmado':
+                                                $badgeClass = 'badge-estado-confirmado';
+                                                $icon = 'fa-check';
+                                                break;
+                                            case 'Preparando':
+                                                $badgeClass = 'badge-estado-preparando';
+                                                $icon = 'fa-cogs';
+                                                break;
+                                            case 'Enviado':
+                                                $badgeClass = 'badge-estado-enviado';
+                                                $icon = 'fa-truck';
+                                                break;
+                                            case 'Retrasado':
+                                                $badgeClass = 'badge-estado-retrasado';
+                                                $icon = 'fa-exclamation-triangle';
+                                                break;
+                                            case 'Devuelto':
+                                                $badgeClass = 'badge-estado-devuelto';
+                                                $icon = 'fa-undo';
+                                                break;
+                                            case 'Entregado':
+                                                $badgeClass = 'badge-estado-entregado';
+                                                $icon = 'fa-box-check';
+                                                break;
+                                            case 'Anulado':
+                                                $badgeClass = 'badge-estado-anulado';
+                                                $icon = 'fa-ban';
+                                                break;
+                                        }
+                                        ?>
+                                        <span class="badge <?= $badgeClass ?> d-flex align-items-center justify-content-center gap-1" style="min-width: 120px;">
+                                            <i class="fas <?= $icon ?>"></i>
+                                            <?= $estado ?>
+                                        </span>
                                     </td>
                                     <td>
-                                        <?php if (!empty($pedido['Numero_Guia'])): ?>
-                                            <small>
-                                                <i class="fas fa-barcode"></i> <?= $pedido['Numero_Guia'] ?>
-                                                <?php if (!empty($pedido['Transportadora'])): ?>
+                                        <?php if ($mostrarAlerta && $horasDesdeCreacion > 0 && $estadoAlerta !== 'normal'): ?>
+                                            <div class="d-flex align-items-center">
+                                                <i class="fas <?= $iconoAlerta ?> me-1"></i>
+                                                <small class="<?= $estadoAlerta === 'mega_alerta' ? 'text-danger fw-bold' : 'text-primary-dark' ?>">
+                                                    <?= $textoAlerta ?>
                                                     <br>
-                                                    <i class="fas fa-truck"></i> <?= $pedido['Transportadora'] ?>
-                                                <?php endif; ?>
-                                            </small>
+                                                    <span class="text-muted"><?= $horasDesdeCreacion ?> horas</span>
+                                                </small>
+                                            </div>
+                                        <?php elseif ($mostrarAlerta && $horasDesdeCreacion > 0): ?>
+                                            <span class="text-muted">
+                                                <i class="fas fa-check-circle text-primary-dark me-1"></i>
+                                                <?= $horasDesdeCreacion ?> horas
+                                            </span>
+                                        <?php elseif (in_array($estado, ['Entregado', 'Anulado'])): ?>
+                                            <span class="text-muted">
+                                                <i class="fas fa-flag-checkered text-primary me-1"></i>
+                                                Proceso finalizado
+                                            </span>
                                         <?php else: ?>
-                                            <span class="text-muted">No enviado</span>
+                                            <span class="text-muted">
+                                                <i class="fas fa-clock text-primary-dark me-1"></i>
+                                                Reciente
+                                            </span>
                                         <?php endif; ?>
                                     </td>
                                     <td>
-                                        <div class="btn-group btn-group-sm">
+                                        <div class="btn-group btn-group-sm btn-group-pedidos">
                                             <a href="<?= BASE_URL ?>?c=Pedido&a=detalle&id=<?= $pedido['ID_Factura'] ?>" 
                                                class="btn btn-outline-primary" title="Ver detalle">
                                                 <i class="fas fa-eye"></i>
                                             </a>
-                                            <?php if ($pedido['Estado'] !== 'Anulado' && $pedido['Estado'] !== 'Entregado'): ?>
-                                                <a href="<?= BASE_URL ?>?c=Pedido&a=detalle&id=<?= $pedido['ID_Factura'] ?>#seguimiento" 
-                                                   class="btn btn-outline-info" title="Actualizar estado">
-                                                    <i class="fas fa-sync"></i>
-                                                </a>
-                                            <?php endif; ?>
                                         </div>
                                     </td>
                                 </tr>
@@ -260,7 +351,7 @@
                     </table>
                 </div>
                 
-                <!-- Total de ventas mostradas -->
+                <!-- Resumen de ventas -->
                 <div class="mt-3 p-3 bg-light rounded">
                     <div class="row">
                         <div class="col-md-4">
@@ -268,11 +359,15 @@
                         </div>
                         <div class="col-md-4 text-center">
                             <strong>Suma total:</strong> 
-                            $<?= number_format(array_sum(array_column($pedidos, 'Monto_Total')), 2) ?>
+                            <span class="text-primary-dark fw-bold">
+                                $<?= number_format(array_sum(array_column($pedidos, 'Monto_Total')), 2) ?>
+                            </span>
                         </div>
-                        <div class="col-md-4 text-end">
+                        <div class="col-md-4 text-center">
                             <strong>Ventas entregadas:</strong> 
-                            $<?= number_format($estadisticas['ventas_entregadas'] ?? 0, 2) ?>
+                            <span class="text-primary-dark fw-bold">
+                                $<?= number_format($estadisticas['ventas_entregadas'] ?? 0, 2) ?>
+                            </span>
                         </div>
                     </div>
                 </div>
@@ -280,3 +375,10 @@
         </div>
     </div>
 </div>
+
+<!-- CSS -->
+<link rel="stylesheet" href="assets/css/usuario.css">
+<link rel="stylesheet" href="assets/css/pedido.css">
+
+<!-- JS -->
+<script src="assets/js/pedido.js"></script>

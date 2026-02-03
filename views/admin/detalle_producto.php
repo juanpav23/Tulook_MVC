@@ -19,25 +19,29 @@ if ($rutaImagen !== '') {
     $rutaImagen = BASE_URL . 'assets/img/sin_imagen.png';
 }
 
-// Obtener información de categoría, género y subcategoría
-$categoriaAuto = $articulo['N_Categoria'] ?? '';
-$generoAuto = $articulo['N_Genero'] ?? '';
-$subcategoriaAuto = $articulo['SubCategoria'] ?? '';
+// Obtener información de categoría, género y subcategoría DESDE EL CONTROLADOR
+$categoriaAuto = $articulo['N_Categoria'] ?? 'No especificada';
+$generoAuto = $articulo['N_Genero'] ?? 'No especificado';
+$subcategoriaAuto = $articulo['SubCategoria'] ?? 'No especificada';
+$precioBase = $articulo['PrecioBase'] ?? 0;
 
 // Calcular el número total de columnas para el colspan
 $totalColumnas = 7 + count($atributosData);
 ?>
 
 <div class="container mt-4 detalle-producto-container">
-    <!-- Mensajes de sesión -->
-    <?php if (isset($_SESSION['msg'])): ?>
-        <div class="alert alert-<?= $_SESSION['msg_type'] ?? 'info' ?> alert-dismissible fade show shadow-sm">
-            <i class="fas <?= $_SESSION['msg_type'] === 'success' ? 'fa-check-circle' : 'fa-info-circle' ?>"></i>
-            <?= $_SESSION['msg'] ?>
-            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-        </div>
-        <?php unset($_SESSION['msg'], $_SESSION['msg_type']); ?>
-    <?php endif; ?>
+        <!-- ESTA LÍNEA PARA DEFINIR BASE_URL -->
+        <meta name="base-url" content="<?= BASE_URL ?>">
+        
+        <!-- Mensajes de sesión -->
+        <?php if (isset($_SESSION['msg'])): ?>
+            <div class="alert alert-<?= $_SESSION['msg_type'] ?? 'info' ?> alert-dismissible fade show shadow-sm">
+                <i class="fas <?= $_SESSION['msg_type'] === 'success' ? 'fa-check-circle' : 'fa-info-circle' ?>"></i>
+                <?= $_SESSION['msg'] ?>
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            </div>
+            <?php unset($_SESSION['msg'], $_SESSION['msg_type']); ?>
+        <?php endif; ?>
 
     <div class="d-flex justify-content-between align-items-center mb-4">
         <h3 class="fw-bold text-primary-dark"><i class="fas fa-box-open"></i> Detalle del Producto Base</h3>
@@ -46,40 +50,104 @@ $totalColumnas = 7 + count($atributosData);
         </a>
     </div>
 
-    <div class="row">
-        <div class="col-md-4 text-center">
-            <img src="<?= htmlspecialchars($rutaImagen); ?>" class="img-fluid rounded border shadow-sm" alt="Imagen del producto" style="max-height: 300px;">
+    <!-- INFORMACIÓN COMPLETA DEL PRODUCTO - LAYOUT EN 2 COLUMNAS -->
+    <div class="card shadow-sm mb-4">
+        <div class="card-header bg-primary text-white">
+            <h5 class="mb-0"><i class="fas fa-info-circle"></i> Información del Producto</h5>
         </div>
-
-        <div class="col-md-8">
-            <h4 class="fw-bold text-primary-dark"><?= htmlspecialchars($articulo['N_Articulo']); ?></h4>
-            <p><strong class="text-primary-dark">💰 Precio base:</strong> <?= formatoPrecio($articulo['PrecioBase']); ?></p>
-            <p><strong class="text-primary-dark">📂 Categoría:</strong> <?= htmlspecialchars($categoriaAuto); ?></p>
-            <p><strong class="text-primary-dark">👥 Género:</strong> <?= htmlspecialchars($generoAuto); ?></p>
-            <p><strong class="text-primary-dark">📁 Subcategoría:</strong> <?= htmlspecialchars($subcategoriaAuto); ?></p>
-            <p><strong class="text-primary-dark">🎯 Atributos requeridos:</strong> 
-                <?php if (!empty($atributosData)): ?>
-                    <?php 
-                    $soloColor = false;
-                    if (count($atributosData) === 1 && strtolower($atributosData[0]['tipo']['Nombre']) === 'color') {
-                        $soloColor = true;
-                        echo '<span class="badge bg-primary text-light"><i class="fas fa-palette"></i> Solo Color</span>';
-                    } else {
-                        foreach ($atributosData as $atributo): ?>
-                            <span class="badge bg-primary text-light"><?= htmlspecialchars($atributo['tipo']['Nombre']) ?></span>
-                        <?php endforeach;
-                    }
-                    ?>
-                <?php else: ?>
-                    <span class="text-muted">Ninguno</span>
-                <?php endif; ?>
-            </p>
-            <?php if (isset($soloColor) && $soloColor): ?>
-                <div class="alert alert-primary-dark mt-2 border-primary-detalle">
-                    <i class="fas fa-info-circle"></i> 
-                    <strong>Producto especial:</strong> Este producto solo requiere seleccionar el color como atributo.
+        <div class="card-body">
+            <div class="row">
+                <!-- Columna 1: Imagen -->
+                <div class="col-md-4 text-center">
+                    <img src="<?= htmlspecialchars($rutaImagen); ?>" 
+                         class="img-fluid rounded border shadow-sm mb-3" 
+                         alt="Imagen del producto" 
+                         style="max-height: 300px; object-fit: contain;">
                 </div>
-            <?php endif; ?>
+                
+                <!-- Columna 2: Información en 2 subcolumnas -->
+                <div class="col-md-8">
+                    <h4 class="fw-bold text-primary-dark mb-3 border-bottom pb-2">
+                        <?= htmlspecialchars($articulo['N_Articulo']); ?>
+                    </h4>
+                    
+                    <div class="row">
+                        <!-- Subcolumna 1 -->
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <strong class="text-primary-dark d-block mb-1">Categoría:</strong>
+                                <span class="badge bg-primary text-white p-2">
+                                    <i class="fas fa-tag me-1"></i> <?= htmlspecialchars($categoriaAuto); ?>
+                                </span>
+                            </div>
+                            
+                            <div class="mb-3">
+                                <strong class="text-primary-dark d-block mb-1">Género:</strong>
+                                <span class="badge bg-primary text-white p-2">
+                                    <i class="fas fa-venus-mars me-1"></i> <?= htmlspecialchars($generoAuto); ?>
+                                </span>
+                            </div>
+                            
+                            <div class="mb-3">
+                                <strong class="text-primary-dark d-block mb-1">Precio base:</strong>
+                                <span class="badge bg-primary text-white p-2">
+                                    <i class="fas fa-dollar-sign me-1"></i> <?= formatoPrecio($precioBase); ?>
+                                </span>
+                            </div>
+                        </div>
+                        
+                        <!-- Subcolumna 2 -->
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <strong class="text-primary-dark d-block mb-1">Subcategoría:</strong>
+                                <span class="badge bg-primary text-white p-2">
+                                    <i class="fas fa-tags me-1"></i> <?= htmlspecialchars($subcategoriaAuto); ?>
+                                </span>
+                            </div>
+                            
+                            <div class="mb-3">
+                                <strong class="text-primary-dark d-block mb-1">Estado:</strong>
+                                <span class="badge <?= $articulo['Activo'] == 1 ? 'bg-primary text-white' : 'bg-secondary text-white' ?> p-2">
+                                    <i class="fas fa-power-off me-1"></i> 
+                                    <?= $articulo['Activo'] == 1 ? 'Activo' : 'Inactivo' ?>
+                                </span>
+                            </div>
+                            
+                            <!-- REMOVÍ EL ID DEL PRODUCTO (INNECESARIO) -->
+                        </div>
+                    </div>
+                    
+                    <!-- Atributos requeridos -->
+                    <div class="mt-4 pt-3 border-top">
+                        <strong class="text-primary-dark d-block mb-2">Atributos requeridos:</strong>
+                        <?php if (!empty($atributosData)): ?>
+                            <?php 
+                            $soloColor = false;
+                            if (count($atributosData) === 1 && strtolower($atributosData[0]['tipo']['Nombre']) === 'color') {
+                                $soloColor = true;
+                                echo '<span class="badge bg-primary text-white p-2 me-2"><i class="fas fa-palette"></i> Solo Color</span>';
+                            } else {
+                                foreach ($atributosData as $atributo): ?>
+                                    <span class="badge bg-primary text-white p-2 me-2">
+                                        <i class="fas fa-check-circle me-1"></i> 
+                                        <?= htmlspecialchars($atributo['tipo']['Nombre']) ?>
+                                    </span>
+                                <?php endforeach;
+                            }
+                            ?>
+                        <?php else: ?>
+                            <span class="text-muted">No se requieren atributos adicionales</span>
+                        <?php endif; ?>
+                    </div>
+                    
+                    <?php if (isset($soloColor) && $soloColor): ?>
+                        <div class="alert alert-primary-dark mt-3 border-primary-detalle">
+                            <i class="fas fa-info-circle"></i> 
+                            <strong>Producto especial:</strong> Este producto solo requiere seleccionar el color como atributo.
+                        </div>
+                    <?php endif; ?>
+                </div>
+            </div>
         </div>
     </div>
 
@@ -120,270 +188,274 @@ $totalColumnas = 7 + count($atributosData);
                         $porcentaje = floatval($v['Porcentaje']);
                         $precioFinal = $precioBase + ($precioBase * ($porcentaje / 100));
 
-                            // Construir nombre basado en atributos
-                            $nombrePartes = [$articulo['N_Articulo']];
-                            if (!empty($v['ValorAtributo1'])) $nombrePartes[] = $v['ValorAtributo1'];
-                            if (!empty($v['ValorAtributo2'])) $nombrePartes[] = $v['ValorAtributo2'];
-                            if (!empty($v['ValorAtributo3'])) $nombrePartes[] = $v['ValorAtributo3'];
-                            
-                            $nombreVariante = !empty($v['Nombre_Producto']) 
-                                ? $v['Nombre_Producto'] 
-                                : implode(' ', $nombrePartes);
-                            ?>
-                            <tr>
-                                <td>
-                                    <?php if ($rutaVar && $rutaVar != BASE_URL . 'assets/img/sin_imagen.png'): ?>
-                                        <img src="<?= htmlspecialchars($rutaVar); ?>" 
-                                            style="width: 70px; height: 70px; object-fit: cover; border: 1px solid #dee2e6; border-radius: 0.375rem; box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);" 
-                                            alt="Imagen variante">
-                                    <?php else: ?>
-                                        <div style="width: 70px; height: 70px; border: 1px solid #dee2e6; border-radius: 0.375rem; box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075); display: flex; align-items: center; justify-content: center; background-color: #f8f9fa;">
-                                            <span class="text-muted small">Sin imagen</span>
-                                        </div>
-                                    <?php endif; ?>
-                                </td>
-                                <td class="text-start"><?= htmlspecialchars($nombreVariante); ?></td>
-                                
-                                <!-- Mostrar SOLO los atributos que existen -->
-                                <?php foreach ($atributosData as $index => $atributo): ?>
-                                    <?php $numero = $index + 1; ?>
-                                    <td>
-                                        <?php 
-                                        $valorAtributo = $v["ValorAtributo{$numero}"] ?? '';
-                                        if (!empty($valorAtributo)): ?>
-                                            <span class="badge bg-light text-dark border">
-                                                <?= htmlspecialchars($valorAtributo) ?>
-                                            </span>
-                                        <?php else: ?>
-                                            <span class="text-muted">—</span>
-                                        <?php endif; ?>
-                                    </td>
-                                <?php endforeach; ?>
-                                
-                                <!-- COLUMNA % VARIACIÓN (con colores) -->
-                                <td>
-                                    <?php if ($v['Porcentaje'] >= 0): ?>
-                                        <span class="badge bg-success text-white">
-                                            +<?= htmlspecialchars($v['Porcentaje']); ?>%
-                                        </span>
-                                    <?php else: ?>
-                                        <span class="badge bg-danger text-white">
-                                            <?= htmlspecialchars($v['Porcentaje']); ?>%
-                                        </span>
-                                    <?php endif; ?>
-                                </td>
-                                
-                                <!-- COLUMNA PRECIO FINAL -->
-                                <td>
-                                    <strong><?= formatoPrecio($precioFinal); ?></strong>
-                                </td>
-                                
-                                <!-- COLUMNA CANTIDAD -->
-                                <td>
-                                    <?php if ($v['Cantidad'] > 0): ?>
-                                        <span class="badge bg-success">
-                                            <?= htmlspecialchars($v['Cantidad']); ?>
-                                        </span>
-                                    <?php else: ?>
-                                        <span class="badge bg-danger">
-                                            <?= htmlspecialchars($v['Cantidad']); ?>
-                                        </span>
-                                    <?php endif; ?>
-                                </td>
-                                
-                                <!-- COLUMNA ESTADO -->
-                                <td>
-                                    <span class="badge <?= $v['Activo'] ? 'bg-success' : 'bg-secondary' ?>">
-                                        <?= $v['Activo'] ? '✅ Activa' : '❌ Inactiva' ?>
-                                    </span>
-                                </td>
-                                
-                                <!-- COLUMNA ACCIONES -->
-                                <td>
-                                    <div class="btn-group btn-group-sm">
-                                        <!-- BOTÓN ACTIVAR/DESACTIVAR -->
-                                        <?php if ($v['Activo']): ?>
-                                            <a href="<?= BASE_URL ?>?c=Admin&a=toggleVariante&id=<?= $v['ID_Producto'] ?>&articulo=<?= $articulo['ID_Articulo'] ?>" 
-                                            class="btn btn-outline-warning"
-                                            onclick="return confirm('¿Desactivar esta variante?')"
-                                            title="Desactivar variante">
-                                                <i class="fas fa-pause"></i>
-                                            </a>
-                                        <?php else: ?>
-                                            <a href="<?= BASE_URL ?>?c=Admin&a=toggleVariante&id=<?= $v['ID_Producto'] ?>&articulo=<?= $articulo['ID_Articulo'] ?>" 
-                                            class="btn btn-outline-success"
-                                            onclick="return confirm('¿Activar esta variante?')"
-                                            title="Activar variante">
-                                                <i class="fas fa-play"></i>
-                                            </a>
-                                        <?php endif; ?>
-
-                                    <!-- Botón editar -->
-                                    <button type="button" class="btn btn-detalle-outline-primary" 
-                                            data-bs-toggle="modal" 
-                                            data-bs-target="#modalEditarVariante"
-                                            data-id="<?= $v['ID_Producto']; ?>"
-                                            data-nombre="<?= htmlspecialchars($v['Nombre_Producto'] ?? ''); ?>"
-                                            data-porcentaje="<?= $v['Porcentaje']; ?>"
-                                            data-cantidad="<?= $v['Cantidad']; ?>"
-                                            data-foto="<?= htmlspecialchars($v['Foto'] ?? ''); ?>"
-                                            data-activo="<?= $v['Activo']; ?>"
-                                            <?php for ($i = 1; $i <= count($atributosData); $i++): ?>
-                                                data-atributo<?= $i ?>="<?= $v["ID_Atributo{$i}"] ?? '' ?>" 
-                                                data-valor-atributo<?= $i ?>="<?= htmlspecialchars($v["ValorAtributo{$i}"] ?? '') ?>"
-                                            <?php endfor; ?>>
-                                        <i class="fas fa-edit"></i>
-                                    </button>
-
-                                    <!-- Botón eliminar (ROJO para peligro) -->
-                                    <a href="<?= BASE_URL ?>?c=Admin&a=eliminarVariante&id=<?= $v['ID_Producto'] ?>&articulo=<?= $articulo['ID_Articulo'] ?>" 
-                                    class="btn btn-detalle-outline-danger"
-                                    onclick="return confirm('⚠️ ¿Seguro que deseas eliminar esta variante? Esta acción no se puede deshacer.')">
-                                        <i class="fas fa-trash"></i>
-                                    </a>
-                                </div>
+                        // Construir nombre basado en atributos
+                        $nombrePartes = [$articulo['N_Articulo']];
+                        if (!empty($v['ValorAtributo1'])) $nombrePartes[] = $v['ValorAtributo1'];
+                        if (!empty($v['ValorAtributo2'])) $nombrePartes[] = $v['ValorAtributo2'];
+                        if (!empty($v['ValorAtributo3'])) $nombrePartes[] = $v['ValorAtributo3'];
+                        
+                        $nombreVariante = !empty($v['Nombre_Producto']) 
+                            ? $v['Nombre_Producto'] 
+                            : implode(' ', $nombrePartes);
+                        ?>
+                        <tr>
+                            <td>
+                                <?php if ($rutaVar && $rutaVar != BASE_URL . 'assets/img/sin_imagen.png'): ?>
+                                    <img src="<?= htmlspecialchars($rutaVar); ?>" 
+                                        style="width: 70px; height: 70px; object-fit: cover; border: 1px solid #dee2e6; border-radius: 0.375rem; box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);" 
+                                        alt="Imagen variante">
+                                <?php else: ?>
+                                    <div style="width: 70px; height: 70px; border: 1px solid #dee2e6; border-radius: 0.375rem; box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075); display: flex; align-items: center; justify-content: center; background-color: #f8f9fa;">
+                                        <span class="text-muted small">Sin imagen</span>
+                                    </div>
+                                <?php endif; ?>
                             </td>
-                        </tr>
-                    <?php endforeach; ?>
-                <?php else: ?>
-                    <tr>
-                        <td colspan="<?= $totalColumnas ?>" class="text-muted py-4">
-                            <div class="text-center">
-                                <i class="fas fa-inbox fa-2x text-muted mb-2"></i>
-                                <p class="mb-0">No hay variantes registradas aún.</p>
+                            <td class="text-start"><?= htmlspecialchars($nombreVariante); ?></td>
+                            
+                            <!-- Mostrar SOLO los atributos que existen -->
+                            <?php foreach ($atributosData as $index => $atributo): ?>
+                                <?php $numero = $index + 1; ?>
+                                <td>
+                                    <?php 
+                                    $valorAtributo = $v["ValorAtributo{$numero}"] ?? '';
+                                    if (!empty($valorAtributo)): ?>
+                                        <span class="badge bg-light text-dark border">
+                                            <?= htmlspecialchars($valorAtributo) ?>
+                                        </span>
+                                    <?php else: ?>
+                                        <span class="text-muted">—</span>
+                                    <?php endif; ?>
+                                </td>
+                            <?php endforeach; ?>
+                            
+                            <!-- COLUMNA % VARIACIÓN (con colores) -->
+                            <td>
+                                <?php if ($v['Porcentaje'] > 0): ?>
+                                    <span class="badge bg-primary text-white">
+                                        +<?= htmlspecialchars($v['Porcentaje']); ?>%
+                                    </span>
+                                <?php elseif ($v['Porcentaje'] < 0): ?>
+                                    <span class="badge bg-primary-light text-primary-dark">
+                                        <?= htmlspecialchars($v['Porcentaje']); ?>%
+                                    </span>
+                                <?php else: ?>
+                                    <span class="badge bg-light text-dark border">
+                                        <?= htmlspecialchars($v['Porcentaje']); ?>%
+                                    </span>
+                                <?php endif; ?>
+                            </td>
+
+                            <!-- COLUMNA PRECIO FINAL - Mismo color que los demás -->
+                            <td>
+                                <span class="badge bg-primary text-white">
+                                    <?= formatoPrecio($precioFinal); ?>
+                                </span>
+                            </td>
+
+                            <!-- COLUMNA CANTIDAD -->
+                            <td>
+                                <span class="badge <?= $v['Cantidad'] > 0 ? 'bg-primary text-white' : 'bg-light text-dark border' ?>">
+                                    <?= htmlspecialchars($v['Cantidad']); ?>
+                                </span>
+                            </td>
+
+                            <!-- COLUMNA ESTADO -->
+                            <td>
+                                <span class="badge <?= $v['Activo'] ? 'bg-primary text-white' : 'bg-light text-dark border' ?>">
+                                    <?= $v['Activo'] ? 'Activo' : 'Inactivo' ?>
+                                </span>
+                            </td>
+                            
+                            <!-- COLUMNA ACCIONES - CORREGIDO -->
+                            <td>
+                                <div class="btn-group btn-group-sm">
+                                    <!-- BOTÓN ACTIVAR/DESACTIVAR - CON COLOR PRIMARIO CLARO -->
+                                    <?php if ($v['Activo']): ?>
+                                        <a href="<?= BASE_URL ?>?c=Admin&a=toggleVariante&id=<?= $v['ID_Producto'] ?>&articulo=<?= $articulo['ID_Articulo'] ?>" 
+                                        class="btn btn-variante-outline-warning"
+                                        onclick="return confirm('¿Desactivar esta variante?')"
+                                        title="Desactivar variante">
+                                            <i class="fas fa-pause"></i>
+                                        </a>
+                                    <?php else: ?>
+                                        <a href="<?= BASE_URL ?>?c=Admin&a=toggleVariante&id=<?= $v['ID_Producto'] ?>&articulo=<?= $articulo['ID_Articulo'] ?>" 
+                                        class="btn btn-variante-outline-primary-light"
+                                        onclick="return confirm('¿Activar esta variante?')"
+                                        title="Activar variante">
+                                            <i class="fas fa-play"></i>
+                                        </a>
+                                    <?php endif; ?>
+
+                                <!-- Botón editar -->
+                                <button type="button" class="btn btn-detalle-outline-primary" 
+                                        data-bs-toggle="modal" 
+                                        data-bs-target="#modalEditarVariante"
+                                        data-id="<?= $v['ID_Producto']; ?>"
+                                        data-nombre="<?= htmlspecialchars($v['Nombre_Producto'] ?? ''); ?>"
+                                        data-porcentaje="<?= $v['Porcentaje']; ?>"
+                                        data-cantidad="<?= $v['Cantidad']; ?>"
+                                        data-foto="<?= htmlspecialchars($v['Foto'] ?? ''); ?>"
+                                        data-activo="<?= $v['Activo']; ?>"
+                                        <?php for ($i = 1; $i <= count($atributosData); $i++): ?>
+                                            data-atributo<?= $i ?>="<?= $v["ID_Atributo{$i}"] ?? '' ?>" 
+                                            data-valor-atributo<?= $i ?>="<?= htmlspecialchars($v["ValorAtributo{$i}"] ?? '') ?>"
+                                        <?php endfor; ?>>
+                                    <i class="fas fa-edit"></i>
+                                </button>
+
+                                <!-- Botón eliminar (ROJO para peligro) -->
+                                <a href="<?= BASE_URL ?>?c=Admin&a=eliminarVariante&id=<?= $v['ID_Producto'] ?>&articulo=<?= $articulo['ID_Articulo'] ?>" 
+                                class="btn btn-detalle-outline-danger"
+                                onclick="return confirm('¿Seguro que deseas eliminar esta variante? Esta acción no se puede deshacer.')">
+                                    <i class="fas fa-trash"></i>
+                                </a>
                             </div>
                         </td>
                     </tr>
-                <?php endif; ?>
-            </tbody>
-        </table>
+                <?php endforeach; ?>
+            <?php else: ?>
+                <tr>
+                    <td colspan="<?= $totalColumnas ?>" class="text-muted py-4">
+                        <div class="text-center">
+                            <i class="fas fa-inbox fa-2x text-muted mb-2"></i>
+                            <p class="mb-0">No hay variantes registradas aún.</p>
+                        </div>
+                    </td>
+                </tr>
+            <?php endif; ?>
+        </tbody>
+    </table>
+</div>
+
+<hr>
+<h4 class="mt-4 text-primary-dark fw-bold"><i class="fas fa-plus-circle"></i> Agregar Nueva Variante</h4>
+
+<!-- Contenedor de mensajes -->
+<div id="msgContainer"></div>
+
+<form id="formVariante" action="<?= BASE_URL; ?>?c=Admin&a=agregarVariante" method="POST" enctype="multipart/form-data" class="row g-3 mt-2 shadow-sm p-3 rounded border form-detalle-variante">
+    <input type="hidden" name="ID_Articulo" value="<?= htmlspecialchars($articulo['ID_Articulo']); ?>">
+
+    <div class="col-md-4">
+        <label class="form-label fw-bold text-primary-dark">Nombre de Variante</label>
+        <input type="text" name="Nombre_Producto" class="form-control" placeholder="Ej: Boxer Azul Mediano" required>
     </div>
 
-    <hr>
-    <h4 class="mt-4 text-primary-dark fw-bold"><i class="fas fa-plus-circle"></i> Agregar Nueva Variante</h4>
-
-    <!-- Contenedor de mensajes -->
-    <div id="msgContainer"></div>
-
-    <form id="formVariante" action="<?= BASE_URL; ?>?c=Admin&a=agregarVariante" method="POST" enctype="multipart/form-data" class="row g-3 mt-2 shadow-sm p-3 rounded border form-detalle-variante">
-        <input type="hidden" name="ID_Articulo" value="<?= htmlspecialchars($articulo['ID_Articulo']); ?>">
-
-        <div class="col-md-4">
-            <label class="form-label fw-bold text-primary-dark">Nombre de Variante</label>
-            <input type="text" name="Nombre_Producto" class="form-control" placeholder="Ej: Boxer Azul Mediano" required>
-        </div>
-
-        <!-- CONTENEDOR DINÁMICO PARA ATRIBUTOS -->
-        <div id="atributos-container" class="row">
-            <?php foreach ($atributosData as $index => $atributo): ?>
-                <?php $numero = $index + 1; ?>
-                <div class="col-md-4">
-                    <div class="mb-3">
-                        <label class="form-label fw-bold text-primary-dark">
-                            <?= htmlspecialchars($atributo['tipo']['Nombre']) ?>
-                        </label>
-                        <input type="hidden" name="atributo<?= $numero ?>" value="<?= $atributo['tipo']['ID_TipoAtributo'] ?>">
-                        
-                        <select class="form-select" name="valor_atributo<?= $numero ?>" required>
-                            <option value="">Seleccionar <?= htmlspecialchars($atributo['tipo']['Nombre']) ?></option>
-                            <?php foreach ($atributo['valores'] as $valor): ?>
+    <!-- CONTENEDOR DINÁMICO PARA ATRIBUTOS - SOLO MUESTRA ACTIVOS -->
+    <div id="atributos-container" class="row">
+        <?php foreach ($atributosData as $index => $atributo): ?>
+            <?php $numero = $index + 1; ?>
+            <div class="col-md-4">
+                <div class="mb-3">
+                    <label class="form-label fw-bold text-primary-dark">
+                        <?= htmlspecialchars($atributo['tipo']['Nombre']) ?>
+                    </label>
+                    <input type="hidden" name="atributo<?= $numero ?>" value="<?= $atributo['tipo']['ID_TipoAtributo'] ?>">
+                    
+                    <select class="form-select" name="valor_atributo<?= $numero ?>" required>
+                        <option value="">Seleccionar <?= htmlspecialchars($atributo['tipo']['Nombre']) ?></option>
+                        <?php foreach ($atributo['valores'] as $valor): ?>
+                            <?php if (!isset($valor['Activo']) || $valor['Activo'] == 1): ?>
                                 <option value="<?= htmlspecialchars($valor['Valor']) ?>">
                                     <?= htmlspecialchars($valor['Valor']) ?>
+                                    <?php if (isset($valor['CodigoHex']) && !empty($valor['CodigoHex'])): ?>
+                                        (<?= $valor['CodigoHex'] ?>)
+                                    <?php endif; ?>
                                 </option>
-                            <?php endforeach; ?>
-                        </select>
-                        
-                        <?php if (!empty($atributo['tipo']['Descripcion'])): ?>
-                            <small class="form-text text-muted"><?= htmlspecialchars($atributo['tipo']['Descripcion']) ?></small>
-                        <?php endif; ?>
-                    </div>
-                </div>
-            <?php endforeach; ?>
-        </div>
-
-        <!-- CAMBIO: Permitir porcentajes negativos -->
-        <div class="col-md-2">
-            <label class="form-label fw-bold text-primary-dark">% Variación Precio</label>
-            <input type="number" step="0.1" name="Porcentaje" class="form-control" 
-                placeholder="Ej: 10 (aumento) o -10 (descuento)" 
-                min="-90" max="300" required>
-            <small class="form-text text-muted">
-                <span class="text-primary-dark">Positivo: aumento</span> | 
-                <span class="text-primary-light-detalle">Negativo: descuento</span><br>
-                Rango: -90% a +300%
-            </small>
-        </div>
-
-        <div class="col-md-2">
-            <label class="form-label fw-bold text-primary-dark">Cantidad</label>
-            <input type="number" name="Cantidad" min="0" max="99999" value="0" class="form-control">
-            <small class="form-text text-muted">Máximo: 99,999 unidades</small>
-        </div>
-
-            <!-- ESTADO -->
-            <div class="col-md-2">
-                <label class="form-label fw-bold">Estado</label>
-                <select name="Activo" class="form-select" required>
-                    <option value="0">❌ Inactiva</option>
-                    <option value="1" selected>✅ Activa</option>
-                </select>
-                <small class="form-text text-muted">Las variantes inactivas no se mostrarán en la tienda</small>
-            </div>
-
-        <!-- Sistema automático de subida de imagen -->
-        <div class="col-md-12 mb-3">
-            <label class="form-label fw-bold text-primary-dark">Subir Imagen de la Variante *</label>
-            
-            <div class="card card-border-primary">
-                <div class="card-header bg-primary text-light">
-                    <i class="fas fa-upload"></i> Subida de Imagen (15MB máximo)
-                </div>
-                <div class="card-body">
-                    <div class="row mb-3">
-                        <div class="col-md-4">
-                            <p><strong class="text-primary-dark">Categoría:</strong><br>
-                                <span class="badge bg-primary text-light"><?= htmlspecialchars($categoriaAuto) ?></span>
-                            </p>
-                        </div>
-                        <div class="col-md-4">
-                            <p><strong class="text-primary-dark">Género:</strong><br>
-                                <span class="badge bg-primary text-light"><?= htmlspecialchars($generoAuto) ?></span>
-                            </p>
-                        </div>
-                        <div class="col-md-4">
-                            <p><strong class="text-primary-dark">Subcategoría:</strong><br>
-                                <span class="badge bg-primary-light text-primary-dark"><?= htmlspecialchars($subcategoriaAuto) ?></span>
-                            </p>
-                        </div>
-                    </div>
+                            <?php endif; ?>
+                        <?php endforeach; ?>
+                    </select>
                     
-                    <div class="row">
-                        <div class="col-md-6">
-                            <label class="form-label fw-bold text-primary-dark">Seleccionar imagen *</label>
-                            <input type="file" name="imagen_variante" class="form-control" id="imagenVariante" 
-                                accept=".jpg,.jpeg,.png,.gif,.webp" required
-                                onchange="procesarSubidaImagen()">
-                            <small class="form-text text-muted">
-                                Formatos permitidos: JPG, JPEG, PNG, GIF, WebP. Tamaño máximo: 15MB
-                            </small>
+                    <?php if (!empty($atributo['tipo']['Descripcion'])): ?>
+                        <small class="form-text text-muted"><?= htmlspecialchars($atributo['tipo']['Descripcion']) ?></small>
+                    <?php endif; ?>
+                </div>
+            </div>
+        <?php endforeach; ?>
+    </div>
+
+    <!-- CAMBIO: Permitir porcentajes negativos -->
+    <div class="col-md-2">
+        <label class="form-label fw-bold text-primary-dark">% Variación Precio</label>
+        <input type="number" step="0.1" name="Porcentaje" class="form-control" 
+            placeholder="Ej: 10 (aumento) o -10 (descuento)" 
+            min="-90" max="300" required>
+        <small class="form-text text-muted">
+            <span class="text-primary-dark">Positivo: aumento</span> | 
+            <span class="text-primary-light-detalle">Negativo: descuento</span><br>
+            Rango: -90% a +300%
+        </small>
+    </div>
+
+    <div class="col-md-2">
+        <label class="form-label fw-bold text-primary-dark">Cantidad</label>
+        <input type="number" name="Cantidad" min="0" max="99999" value="0" class="form-control">
+        <small class="form-text text-muted">Máximo: 99,999 unidades</small>
+    </div>
+
+        <!-- ESTADO -->
+        <div class="col-md-2">
+            <label class="form-label fw-bold">Estado</label>
+            <select name="Activo" class="form-select" required>
+                <option value="0">Inactivo</option>
+                <option value="1" selected>Activo</option>
+            </select>
+            <small class="form-text text-muted">Las variantes inactivas no se mostrarán en la tienda</small>
+        </div>
+
+    <!-- Sistema automático de subida de imagen -->
+    <div class="col-md-12 mb-3">
+        <label class="form-label fw-bold text-primary-dark">Subir Imagen de la Variante *</label>
+        
+        <div class="card card-border-primary">
+            <div class="card-header bg-primary text-light">
+                <i class="fas fa-upload"></i> Subida de Imagen (15MB máximo)
+            </div>
+            <div class="card-body">
+                <div class="row mb-3">
+                    <div class="col-md-4">
+                        <p><strong class="text-primary-dark">Categoría:</strong><br>
+                            <span class="badge bg-primary text-light"><?= htmlspecialchars($categoriaAuto) ?></span>
+                        </p>
+                    </div>
+                    <div class="col-md-4">
+                        <p><strong class="text-primary-dark">Género:</strong><br>
+                            <span class="badge bg-primary text-light"><?= htmlspecialchars($generoAuto) ?></span>
+                        </p>
+                    </div>
+                    <div class="col-md-4">
+                        <p><strong class="text-primary-dark">Subcategoría:</strong><br>
+                            <span class="badge bg-primary text-light"><?= htmlspecialchars($subcategoriaAuto) ?></span>
+                        </p>
+                    </div>
+                </div>
+                
+                <div class="row">
+                    <div class="col-md-6">
+                        <label class="form-label fw-bold text-primary-dark">Seleccionar imagen *</label>
+                        <input type="file" name="imagen_variante" class="form-control" id="imagenVariante" 
+                            accept=".jpg,.jpeg,.png,.gif,.webp" required
+                            onchange="procesarSubidaImagen()">
+                        <small class="form-text text-muted">
+                            Formatos permitidos: JPG, JPEG, PNG, GIF, WebP. Tamaño máximo: 15MB
+                        </small>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label fw-bold text-primary-dark">Ruta donde se guardará:</label>
+                        <div class="input-group">
+                            <span class="input-group-text bg-light">ImgProducto/<?= htmlspecialchars($categoriaAuto) ?>/<?= htmlspecialchars($generoAuto) ?>/<?= htmlspecialchars($subcategoriaAuto) ?>/</span>
+                            <input type="text" class="form-control bg-light" id="nombreArchivoFinal" readonly>
                         </div>
-                        <div class="col-md-6">
-                            <label class="form-label fw-bold text-primary-dark">Ruta donde se guardará:</label>
-                            <div class="input-group">
-                                <span class="input-group-text bg-light">ImgProducto/<?= htmlspecialchars($categoriaAuto) ?>/<?= htmlspecialchars($generoAuto) ?>/<?= htmlspecialchars($subcategoriaAuto) ?>/</span>
-                                <input type="text" class="form-control bg-light" id="nombreArchivoFinal" readonly>
-                            </div>
-                            <input type="hidden" name="Foto" id="fotoFinal">
-                            
-                            <!-- Vista previa de la imagen seleccionada -->
-                            <div class="row mt-3" id="vistaPreviaContainer" style="display:none;">
-                                <div class="col-md-12">
-                                    <label class="form-label fw-bold text-primary-dark">Vista previa de la imagen:</label>
-                                    <div class="border rounded p-3 text-center bg-light vista-previa-detalle">
-                                        <img id="vistaPreviaImg" src="" alt="Vista previa" style="max-height: 150px; max-width: 100%;">
-                                        <div class="mt-2">
-                                            <small class="text-muted" id="infoArchivo"></small>
-                                        </div>
+                        <input type="hidden" name="Foto" id="fotoFinal">
+                        
+                        <!-- Vista previa de la imagen seleccionada -->
+                        <div class="row mt-3" id="vistaPreviaContainer" style="display:none;">
+                            <div class="col-md-12">
+                                <label class="form-label fw-bold text-primary-dark">Vista previa de la imagen:</label>
+                                <div class="border rounded p-3 text-center bg-light vista-previa-detalle">
+                                    <img id="vistaPreviaImg" src="" alt="Vista previa" style="max-height: 150px; max-width: 100%;">
+                                    <div class="mt-2">
+                                        <small class="text-muted" id="infoArchivo"></small>
                                     </div>
                                 </div>
                             </div>
@@ -392,17 +464,18 @@ $totalColumnas = 7 + count($atributosData);
                 </div>
             </div>
         </div>
+    </div>
 
-        <div class="col-md-12 text-end mt-3">
-            <button type="submit" class="btn btn-detalle-primary btn-lg shadow">
-                <i class="fas fa-save"></i> Guardar Variante
-            </button>
-        </div>
-    </form>
+    <div class="col-md-12 text-end mt-3">
+        <button type="submit" class="btn btn-detalle-primary btn-lg shadow">
+            <i class="fas fa-save"></i> Guardar Variante
+        </button>
+    </div>
+</form>
 </div>
 
 <!-- Incluir CSS específico para detalle de variantes -->
-<link rel="stylesheet" href="<?= BASE_URL; ?>assets/css/detalleVarianteAdmin.css">
+<link rel="stylesheet" href="<?= BASE_URL; ?>assets/css/variantesAdmin.css">
 
 <!-- MODAL PARA EDITAR VARIANTE -->
 <div class="modal fade" id="modalEditarVariante" tabindex="-1">
@@ -425,7 +498,7 @@ $totalColumnas = 7 + count($atributosData);
                             </div>
                         </div>
                         
-                        <!-- CONTENEDOR DINÁMICO PARA ATRIBUTOS EN EDICIÓN -->
+                        <!-- CONTENEDOR DINÁMICO PARA ATRIBUTOS EN EDICIÓN - SOLO MUESTRA ACTIVOS -->
                         <div id="edit-atributos-container" class="row">
                             <?php foreach ($atributosData as $index => $atributo): ?>
                                 <?php $numero = $index + 1; ?>
@@ -439,9 +512,14 @@ $totalColumnas = 7 + count($atributosData);
                                         <select class="form-select" name="valor_atributo<?= $numero ?>" id="edit_valor_atributo<?= $numero ?>" required>
                                             <option value="">Seleccionar <?= htmlspecialchars($atributo['tipo']['Nombre']) ?></option>
                                             <?php foreach ($atributo['valores'] as $valor): ?>
-                                                <option value="<?= htmlspecialchars($valor['Valor']) ?>">
-                                                    <?= htmlspecialchars($valor['Valor']) ?>
-                                                </option>
+                                                <?php if (!isset($valor['Activo']) || $valor['Activo'] == 1): ?>
+                                                    <option value="<?= htmlspecialchars($valor['Valor']) ?>">
+                                                        <?= htmlspecialchars($valor['Valor']) ?>
+                                                        <?php if (isset($valor['CodigoHex']) && !empty($valor['CodigoHex'])): ?>
+                                                            (<?= $valor['CodigoHex'] ?>)
+                                                        <?php endif; ?>
+                                                    </option>
+                                                <?php endif; ?>
                                             <?php endforeach; ?>
                                         </select>
                                     </div>
@@ -549,5 +627,7 @@ $totalColumnas = 7 + count($atributosData);
     </div>
 </div>
 
-<!-- Incluir JavaScript para variantes -->
+<!--JavaScript para variantes -->
 <script src="<?= BASE_URL; ?>assets/js/variantesAdmin.js"></script>
+<!--Sistema de confirmaciones personalizadas -->
+<script src="<?= BASE_URL; ?>assets/js/variantesConfirmaciones.js"></script>

@@ -210,26 +210,48 @@ class Atributo {
         return ($result['total_uso'] > 0);
     }
 
-    // OBTENER PRODUCTOS QUE USAN UN ATRIBUTO
+    // NUEVO MÉTODO: OBTENER PRODUCTOS QUE USAN UN ATRIBUTO (para el modal flotante)
     public function obtenerProductosPorAtributo($idAtributo) {
         $atributo = $this->obtenerPorId($idAtributo);
         if (!$atributo) {
             return [];
         }
         
+        // Consulta MODIFICADA: eliminar columna PosicionAtributo
         $query = "SELECT 
-                    p.Nombre_Producto, 
-                    a.N_Articulo as Articulo
+                    p.ID_Producto,
+                    p.Nombre_Producto,
+                    p.Foto,
+                    p.Cantidad,
+                    p.Activo,
+                    a.N_Articulo as Articulo,
+                    -- Mostrar qué atributo específico está usando
+                    CONCAT(
+                        CASE 
+                            WHEN p.ID_Atributo1 = ? OR p.ValorAtributo1 = ? THEN 'Usa: ' 
+                            WHEN p.ID_Atributo2 = ? OR p.ValorAtributo2 = ? THEN 'Usa: ' 
+                            WHEN p.ID_Atributo3 = ? OR p.ValorAtributo3 = ? THEN 'Usa: ' 
+                            ELSE ''
+                        END,
+                        ?
+                    ) as AtributoUsado
                 FROM producto p
                 INNER JOIN articulo a ON p.ID_Articulo = a.ID_Articulo
                 WHERE (p.ID_Atributo1 = ? OR p.ID_Atributo2 = ? OR p.ID_Atributo3 = ?
                        OR p.ValorAtributo1 = ? OR p.ValorAtributo2 = ? OR p.ValorAtributo3 = ?)
                 ORDER BY p.Nombre_Producto";
         
+        $atributoValor = $atributo['Valor'];
         $stmt = $this->conn->prepare($query);
         $stmt->execute([
+            // Para la columna AtributoUsado
+            $idAtributo, $atributoValor,
+            $idAtributo, $atributoValor,
+            $idAtributo, $atributoValor,
+            $atributoValor,
+            // Para el WHERE
             $idAtributo, $idAtributo, $idAtributo,
-            $atributo['Valor'], $atributo['Valor'], $atributo['Valor']
+            $atributoValor, $atributoValor, $atributoValor
         ]);
         
         return $stmt->fetchAll(PDO::FETCH_ASSOC);

@@ -32,7 +32,7 @@ class PrecioController {
         }
     }
 
-    // 📋 LISTAR PRECIOS CON FILTROS (como en colores)
+    // 📋 LISTAR PRECIOS CON FILTROS
     public function index() {
         $termino = $_GET['buscar'] ?? '';
         $estado = $_GET['estado'] ?? 'todos';
@@ -104,6 +104,14 @@ class PrecioController {
             exit;
         }
 
+        // Verificar si el precio está en uso - si lo está, redirigir con mensaje
+        if ($precio['en_uso']) {
+            $_SESSION['mensaje'] = "⚠ No se puede editar un precio que está siendo usado por artículos. Usa 'Migrar artículos' primero.";
+            $_SESSION['mensaje_tipo'] = "warning";
+            header("Location: " . BASE_URL . "?c=Precio&a=index");
+            exit;
+        }
+
         // Obtener productos que usan este precio
         $productosAsociados = $this->precioModel->obtenerProductosPorPrecio($id);
         
@@ -122,6 +130,12 @@ class PrecioController {
                 $_SESSION['mensaje_tipo'] = "danger";
                 header("Location: " . BASE_URL . "?c=Precio&a=index");
                 exit;
+            }
+            
+            // Verificar si el precio está en uso antes de actualizar
+            $precioActual = $this->precioModel->obtenerPorId($id);
+            if ($precioActual && $precioActual['en_uso']) {
+                throw new Exception("No se puede actualizar un precio que está siendo usado por artículos");
             }
 
             $resultado = $this->precioModel->actualizar($id, $valor, $activo);
@@ -309,7 +323,6 @@ class PrecioController {
         
         return $valor;
     }
-
 
     // 💡 CALCULAR SUGERENCIAS DE PRECIOS
     private function calcularSugerenciasPrecios($preciosExistentes) {

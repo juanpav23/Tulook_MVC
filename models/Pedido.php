@@ -4,6 +4,8 @@ class Pedido
     private $conn;
     private $table_name = "factura";
     private $table_seguimiento = "pedido_seguimiento";
+    private $table_factura_producto = "factura_producto";
+    private $table_producto = "producto";
 
     public function __construct($db)
     {
@@ -11,8 +13,7 @@ class Pedido
     }
 
     // OBTENER PEDIDO POR ID CON DETALLE
-    public function obtenerPorId($id)
-    {
+    public function obtenerPorId($id) {
         // Obtener información del pedido
         $query = "SELECT 
                     f.*, 
@@ -27,13 +28,13 @@ class Pedido
                     mp.T_Pago as MetodoPago,
                     ue.Nombre as NombreEnvio,
                     uent.Nombre as NombreEntrega
-                  FROM " . $this->table_name . " f
-                  LEFT JOIN usuario u ON f.ID_Usuario = u.ID_Usuario
-                  LEFT JOIN direccion d ON f.ID_Usuario = d.ID_Usuario AND d.Predeterminada = 1
-                  LEFT JOIN metodo_pago mp ON f.ID_Metodo_Pago = mp.ID_Metodo_Pago
-                  LEFT JOIN usuario ue ON f.Usuario_Envio = ue.ID_Usuario
-                  LEFT JOIN usuario uent ON f.Usuario_Entrega = uent.ID_Usuario
-                  WHERE f.ID_Factura = ?";
+                FROM " . $this->table_name . " f
+                LEFT JOIN usuario u ON f.ID_Usuario = u.ID_Usuario
+                LEFT JOIN direccion d ON f.ID_Direccion = d.ID_Direccion
+                LEFT JOIN metodo_pago mp ON f.ID_Metodo_Pago = mp.ID_Metodo_Pago
+                LEFT JOIN usuario ue ON f.Usuario_Envio = ue.ID_Usuario
+                LEFT JOIN usuario uent ON f.Usuario_Entrega = uent.ID_Usuario
+                WHERE f.ID_Factura = ?";
 
         $stmt = $this->conn->prepare($query);
         $stmt->execute([$id]);
@@ -50,13 +51,13 @@ class Pedido
                                 av1.Valor as Atributo1,
                                 av2.Valor as Atributo2,
                                 av3.Valor as Atributo3
-                              FROM factura_producto fp
-                              LEFT JOIN articulo a ON fp.ID_Articulo = a.ID_Articulo
-                              LEFT JOIN producto p ON fp.ID_Producto = p.ID_Producto
-                              LEFT JOIN atributo_valor av1 ON p.ID_Atributo1 = av1.ID_AtributoValor
-                              LEFT JOIN atributo_valor av2 ON p.ID_Atributo2 = av2.ID_AtributoValor
-                              LEFT JOIN atributo_valor av3 ON p.ID_Atributo3 = av3.ID_AtributoValor
-                              WHERE fp.ID_Factura = ?";
+                            FROM factura_producto fp
+                            LEFT JOIN producto p ON fp.ID_Producto = p.ID_Producto
+                            LEFT JOIN articulo a ON p.ID_Articulo = a.ID_Articulo
+                            LEFT JOIN atributo_valor av1 ON p.ID_Atributo1 = av1.ID_AtributoValor
+                            LEFT JOIN atributo_valor av2 ON p.ID_Atributo2 = av2.ID_AtributoValor
+                            LEFT JOIN atributo_valor av3 ON p.ID_Atributo3 = av3.ID_AtributoValor
+                            WHERE fp.ID_Factura = ?";
 
             $stmtProductos = $this->conn->prepare($queryProductos);
             $stmtProductos->execute([$id]);
@@ -69,7 +70,7 @@ class Pedido
         return $pedido;
     }
 
-    // OBTENER TODOS LOS PEDIDOS CON INFORMACIÓN DE USUARIO (ORDEN POR PRIORIDAD)
+    // OBTENER TODOS LOS PEDIDOS CON NUEVA LÓGICA DE PRIORIDAD
     public function obtenerTodos()
     {
         $query = "SELECT 
@@ -80,32 +81,59 @@ class Pedido
                     u.Celular,
                     mp.T_Pago as MetodoPago,
                     ue.Nombre as NombreEnvio,
-                    uent.Nombre as NombreEntrega
+                    uent.Nombre as NombreEntrega,
+                    -- Calcular horas desde la creación del pedido (solo para pedidos activos)
+                    CASE 
+                        WHEN f.Estado IN ('Entregado', 'Anulado') THEN 0
+                        ELSE TIMESTAMPDIFF(HOUR, f.Fecha_Factura, NOW())
+                    END as horas_desde_creacion,
+                    -- Calcular tiempo para alertas (solo para pedidos activos)
+                    CASE 
+                        WHEN f.Estado IN ('Entregado', 'Anulado') THEN 'normal'
+                        WHEN TIMESTAMPDIFF(HOUR, f.Fecha_Factura, NOW()) >= 24 THEN 'mega_alerta'
+                        WHEN TIMESTAMPDIFF(HOUR, f.Fecha_Factura, NOW()) >= 5 THEN 'alerta'
+                        ELSE 'normal'
+                    END as estado_alerta,
+                    -- Prioridad para ordenamiento
+                    CASE 
+                        WHEN f.Estado = 'Retrasado' THEN 1
+                        WHEN f.Estado = 'Devuelto' THEN 2
+                        WHEN f.Estado = 'Confirmado' THEN 3
+                        WHEN f.Estado = 'Preparando' THEN 4
+                        WHEN f.Estado = 'Enviado' THEN 5
+                        WHEN f.Estado = 'Entregado' THEN 6
+                        WHEN f.Estado = 'Anulado' THEN 7
+                        ELSE 8
+                    END as prioridad_orden
                   FROM " . $this->table_name . " f
                   LEFT JOIN usuario u ON f.ID_Usuario = u.ID_Usuario
                   LEFT JOIN metodo_pago mp ON f.ID_Metodo_Pago = mp.ID_Metodo_Pago
                   LEFT JOIN usuario ue ON f.Usuario_Envio = ue.ID_Usuario
                   LEFT JOIN usuario uent ON f.Usuario_Entrega = uent.ID_Usuario
-                  ORDER BY 
-                    CASE 
-                        WHEN f.Estado = 'Emitido' THEN 1
-                        WHEN f.Estado = 'Confirmado' THEN 2
-                        WHEN f.Estado = 'Preparando' THEN 3
-                        WHEN f.Estado = 'Enviado' THEN 4
-                        WHEN f.Estado = 'Retrasado' THEN 5
-                        WHEN f.Estado = 'Devuelto' THEN 6
-                        WHEN f.Estado = 'Entregado' THEN 7
-                        WHEN f.Estado = 'Anulado' THEN 8
-                        ELSE 9
-                    END,
-                    f.Fecha_Factura ASC";
+                  ORDER BY prioridad_orden ASC, f.Fecha_Factura ASC";
 
         $stmt = $this->conn->prepare($query);
         $stmt->execute();
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
     }
 
-    // OBTENER PEDIDOS POR ESTADO CON PRIORIDAD
+    // OBTENER PEDIDOS CON ALERTAS ACTIVAS (para estadísticas) - EXCLUIR ENTREGADOS Y ANULADOS
+    public function obtenerPedidosConAlertas()
+    {
+        $query = "SELECT 
+                    COUNT(*) as total_pedidos,
+                    SUM(CASE WHEN TIMESTAMPDIFF(HOUR, Fecha_Factura, NOW()) >= 24 THEN 1 ELSE 0 END) as mega_alerta_count,
+                    SUM(CASE WHEN TIMESTAMPDIFF(HOUR, Fecha_Factura, NOW()) >= 5 
+                              AND TIMESTAMPDIFF(HOUR, Fecha_Factura, NOW()) < 24 THEN 1 ELSE 0 END) as alerta_count
+                  FROM " . $this->table_name . "
+                  WHERE Estado NOT IN ('Entregado', 'Anulado')";
+
+        $stmt = $this->conn->prepare($query);
+        $stmt->execute();
+        return $stmt->fetch(PDO::FETCH_ASSOC);
+    }
+
+    // OBTENER PEDIDOS POR ESTADO CON PRIORIDAD Y ORDEN CRONOLÓGICO
     public function obtenerPorEstado($estado)
     {
         $query = "SELECT 
@@ -113,7 +141,11 @@ class Pedido
                     u.Nombre, 
                     u.Apellido, 
                     u.Correo,
-                    mp.T_Pago as MetodoPago
+                    mp.T_Pago as MetodoPago,
+                    CASE 
+                        WHEN f.Estado IN ('Entregado', 'Anulado') THEN 0
+                        ELSE TIMESTAMPDIFF(HOUR, f.Fecha_Factura, NOW())
+                    END as horas_desde_creacion
                   FROM " . $this->table_name . " f
                   LEFT JOIN usuario u ON f.ID_Usuario = u.ID_Usuario
                   LEFT JOIN metodo_pago mp ON f.ID_Metodo_Pago = mp.ID_Metodo_Pago
@@ -125,7 +157,7 @@ class Pedido
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
     }
 
-    // OBTENER PEDIDOS ENVIADOS (PARA SEGUIMIENTO)
+    // OBTENER PEDIDOS ENVIADOS (PARA SEGUIMIENTO) - ACTUALIZADO
     public function obtenerEnviados()
     {
         $query = "SELECT 
@@ -137,13 +169,26 @@ class Pedido
                     f.Numero_Guia,
                     f.Transportadora,
                     f.Fecha_Envio,
-                    ue.Nombre as NombreEnvio
+                    f.Fecha_Estimada_Entrega,
+                    ue.Nombre as NombreEnvio,
+                    CASE 
+                        WHEN f.Fecha_Estimada_Entrega IS NOT NULL AND CURDATE() > f.Fecha_Estimada_Entrega THEN 
+                            DATEDIFF(CURDATE(), f.Fecha_Estimada_Entrega)
+                        WHEN f.Fecha_Envio IS NOT NULL THEN 
+                            DATEDIFF(CURDATE(), f.Fecha_Envio)
+                        ELSE 0
+                    END as dias_transcurridos,
+                    CASE 
+                        WHEN f.Estado = 'Retrasado' THEN 
+                            DATEDIFF(CURDATE(), f.Fecha_Estimada_Entrega)
+                        ELSE 0
+                    END as dias_retraso
                   FROM " . $this->table_name . " f
                   LEFT JOIN usuario u ON f.ID_Usuario = u.ID_Usuario
                   LEFT JOIN metodo_pago mp ON f.ID_Metodo_Pago = mp.ID_Metodo_Pago
                   LEFT JOIN usuario ue ON f.Usuario_Envio = ue.ID_Usuario
                   WHERE f.Estado IN ('Enviado', 'Retrasado')
-                  ORDER BY f.Fecha_Envio ASC, f.Fecha_Factura ASC";
+                  ORDER BY f.Fecha_Envio ASC";
 
         $stmt = $this->conn->prepare($query);
         $stmt->execute();
@@ -179,27 +224,73 @@ class Pedido
     }
 
     // BUSCAR PEDIDOS
-    public function buscar($termino)
-    {
+    public function buscar($termino) {
+        // Primero, intentar buscar por ID de factura exacto
+        if (is_numeric($termino)) {
+            $query = "SELECT 
+                        f.*, 
+                        u.Nombre, 
+                        u.Apellido, 
+                        u.Correo,
+                        mp.T_Pago as MetodoPago,
+                        -- Prioridad para ordenamiento
+                        CASE 
+                            WHEN f.Estado = 'Retrasado' THEN 1
+                            WHEN f.Estado = 'Devuelto' THEN 2
+                            WHEN f.Estado = 'Confirmado' THEN 3
+                            WHEN f.Estado = 'Preparando' THEN 4
+                            WHEN f.Estado = 'Enviado' THEN 5
+                            WHEN f.Estado = 'Entregado' THEN 6
+                            WHEN f.Estado = 'Anulado' THEN 7
+                            ELSE 8
+                        END as prioridad_orden
+                      FROM " . $this->table_name . " f
+                      LEFT JOIN usuario u ON f.ID_Usuario = u.ID_Usuario
+                      LEFT JOIN metodo_pago mp ON f.ID_Metodo_Pago = mp.ID_Metodo_Pago
+                      WHERE f.ID_Factura = ? 
+                      ORDER BY prioridad_orden ASC, f.Fecha_Factura ASC";
+
+            $stmt = $this->conn->prepare($query);
+            $stmt->execute([$termino]);
+            $resultadosPorId = $stmt->fetchAll(PDO::FETCH_ASSOC);
+            
+            // Si encontramos por ID, devolver solo esos resultados
+            if (!empty($resultadosPorId)) {
+                return $resultadosPorId;
+            }
+        }
+
+        // Si no se encontró por ID exacto o el término no es numérico, buscar por otros campos
         $query = "SELECT 
                     f.*, 
                     u.Nombre, 
                     u.Apellido, 
                     u.Correo,
-                    mp.T_Pago as MetodoPago
+                    mp.T_Pago as MetodoPago,
+                    -- Prioridad para ordenamiento
+                    CASE 
+                        WHEN f.Estado = 'Retrasado' THEN 1
+                        WHEN f.Estado = 'Devuelto' THEN 2
+                        WHEN f.Estado = 'Confirmado' THEN 3
+                        WHEN f.Estado = 'Preparando' THEN 4
+                        WHEN f.Estado = 'Enviado' THEN 5
+                        WHEN f.Estado = 'Entregado' THEN 6
+                        WHEN f.Estado = 'Anulado' THEN 7
+                        ELSE 8
+                    END as prioridad_orden
                   FROM " . $this->table_name . " f
                   LEFT JOIN usuario u ON f.ID_Usuario = u.ID_Usuario
                   LEFT JOIN metodo_pago mp ON f.ID_Metodo_Pago = mp.ID_Metodo_Pago
-                  WHERE f.ID_Factura = ? 
-                     OR f.Codigo_Acceso LIKE ?
+                  WHERE f.Codigo_Acceso LIKE ?
+                     OR CONCAT(u.Nombre, ' ', u.Apellido) LIKE ?
                      OR u.Nombre LIKE ? 
                      OR u.Apellido LIKE ?
                      OR u.Correo LIKE ?
-                  ORDER BY f.Fecha_Factura DESC";
+                  ORDER BY prioridad_orden ASC, f.Fecha_Factura ASC";
 
         $likeTerm = '%' . $termino . '%';
         $stmt = $this->conn->prepare($query);
-        $stmt->execute([$termino, $likeTerm, $likeTerm, $likeTerm, $likeTerm]);
+        $stmt->execute([$likeTerm, $likeTerm, $likeTerm, $likeTerm, $likeTerm]);
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
     }
 
@@ -211,19 +302,30 @@ class Pedido
                     u.Nombre, 
                     u.Apellido, 
                     u.Correo,
-                    mp.T_Pago as MetodoPago
+                    mp.T_Pago as MetodoPago,
+                    -- Prioridad para ordenamiento
+                    CASE 
+                        WHEN f.Estado = 'Retrasado' THEN 1
+                        WHEN f.Estado = 'Devuelto' THEN 2
+                        WHEN f.Estado = 'Confirmado' THEN 3
+                        WHEN f.Estado = 'Preparando' THEN 4
+                        WHEN f.Estado = 'Enviado' THEN 5
+                        WHEN f.Estado = 'Entregado' THEN 6
+                        WHEN f.Estado = 'Anulado' THEN 7
+                        ELSE 8
+                    END as prioridad_orden
                   FROM " . $this->table_name . " f
                   LEFT JOIN usuario u ON f.ID_Usuario = u.ID_Usuario
                   LEFT JOIN metodo_pago mp ON f.ID_Metodo_Pago = mp.ID_Metodo_Pago
                   WHERE DATE(f.Fecha_Factura) BETWEEN ? AND ?
-                  ORDER BY f.Fecha_Factura DESC";
+                  ORDER BY prioridad_orden ASC, f.Fecha_Factura ASC";
 
         $stmt = $this->conn->prepare($query);
         $stmt->execute([$fechaInicio, $fechaFin]);
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
     }
 
-    // ACTUALIZAR ESTADO DEL PEDIDO CON SEGUIMIENTO
+    // ACTUALIZAR ESTADO DEL PEDIDO CON SEGUIMIENTO - ACTUALIZADO PARA FECHA ESTIMADA
     public function actualizarEstado($id, $estado, $descripcion, $usuarioId, $datosAdicionales = [])
     {
         // Iniciar transacción
@@ -239,13 +341,14 @@ class Pedido
             // Agregar campos adicionales según el estado
             switch ($estado) {
                 case 'Enviado':
-                    $query .= ", Fecha_Envio = NOW(), Usuario_Envio = ?, Numero_Guia = ?, Transportadora = ?, Notas_Envio = ?";
+                    $query .= ", Fecha_Envio = NOW(), Usuario_Envio = ?, Numero_Guia = ?, Transportadora = ?, Notas_Envio = ?, Fecha_Estimada_Entrega = ?";
                     array_push(
                         $params,
                         $usuarioId,
                         $datosAdicionales['numero_guia'] ?? null,
                         $datosAdicionales['transportadora'] ?? null,
-                        $datosAdicionales['notas_envio'] ?? null
+                        $datosAdicionales['notas_envio'] ?? null,
+                        $datosAdicionales['fecha_estimada_entrega'] ?? null
                     );
                     break;
 
@@ -261,6 +364,11 @@ class Pedido
                     break;
 
                 case 'Retrasado':
+                    $query .= ", Notas_Envio = ?, Fecha_Estimada_Entrega = ?";
+                    $params[] = $descripcion;
+                    $params[] = $datosAdicionales['nueva_fecha_estimada'] ?? null;
+                    break;
+
                 case 'Devuelto':
                     $query .= ", Notas_Envio = ?";
                     $params[] = $descripcion;
@@ -282,6 +390,58 @@ class Pedido
         } catch (Exception $e) {
             $this->conn->rollBack();
             throw $e;
+        }
+    }
+
+    // DEVOLVER STOCK CUANDO SE ANULA UN PEDIDO
+    public function devolverStockPedidoAnulado($idFactura)
+    {
+        // Obtener los productos del pedido
+        $query = "SELECT 
+                    fp.ID_Producto,
+                    fp.Cantidad,
+                    p.Cantidad as StockActual,
+                    a.N_Articulo as NombreProducto
+                  FROM " . $this->table_factura_producto . " fp
+                  INNER JOIN " . $this->table_producto . " p ON fp.ID_Producto = p.ID_Producto
+                  INNER JOIN articulo a ON p.ID_Articulo = a.ID_Articulo
+                  WHERE fp.ID_Factura = ?";
+
+        $stmt = $this->conn->prepare($query);
+        $stmt->execute([$idFactura]);
+        $productos = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+        if (empty($productos)) {
+            return false;
+        }
+
+        $this->conn->beginTransaction();
+
+        try {
+            foreach ($productos as $producto) {
+                $nuevoStock = $producto['StockActual'] + $producto['Cantidad'];
+                
+                $queryUpdate = "UPDATE " . $this->table_producto . " 
+                                SET Cantidad = ? 
+                                WHERE ID_Producto = ?";
+                
+                $stmtUpdate = $this->conn->prepare($queryUpdate);
+                $stmtUpdate->execute([$nuevoStock, $producto['ID_Producto']]);
+
+                // Registrar en el historial de seguimiento
+                $descripcion = "Stock devuelto por anulación de pedido: " . 
+                              $producto['Cantidad'] . " unidades de '" . 
+                              $producto['NombreProducto'] . "'. Stock anterior: " . 
+                              $producto['StockActual'] . ", Stock nuevo: " . $nuevoStock;
+                
+                $this->registrarSeguimiento($idFactura, 'Anulado', $descripcion, 1);
+            }
+
+            $this->conn->commit();
+            return true;
+        } catch (Exception $e) {
+            $this->conn->rollBack();
+            return false;
         }
     }
 
@@ -310,7 +470,6 @@ class Pedido
 
         // Definir transiciones permitidas
         $transicionesPermitidas = [
-            'Emitido' => ['Confirmado', 'Anulado'],
             'Confirmado' => ['Preparando', 'Anulado'],
             'Preparando' => ['Enviado', 'Anulado'],
             'Enviado' => ['Entregado', 'Retrasado', 'Devuelto'],
@@ -322,8 +481,8 @@ class Pedido
         return in_array($nuevoEstado, $transicionesPermitidas[$estadoActual] ?? []);
     }
 
-    // MARCAR COMO ENVIADO CON DETALLES
-    public function marcarComoEnviado($id, $usuarioId, $transportadora = null, $notas = null, $numeroGuiaPersonalizado = null)
+    // MARCAR COMO ENVIADO CON DETALLES - ACTUALIZADO CON FECHA ESTIMADA
+    public function marcarComoEnviado($id, $usuarioId, $transportadora = null, $notas = null, $numeroGuiaPersonalizado = null, $fechaEstimadaEntrega = null)
     {
         // Generar número de guía automático si no se proporciona uno personalizado
         $numeroGuia = $numeroGuiaPersonalizado ?? $this->generarNumeroGuiaUnico($id);
@@ -333,15 +492,89 @@ class Pedido
             throw new Exception("El número de guía '$numeroGuiaPersonalizado' ya está en uso");
         }
 
-        $descripcion = "Envío registrado" . ($notas ? ": $notas" : "");
+        $descripcion = "Envío registrado" . ($notas ? ": $notas" : "") . ($fechaEstimadaEntrega ? " - Entrega estimada: " . date('d/m/Y', strtotime($fechaEstimadaEntrega)) : "");
 
         return $this->actualizarEstado($id, 'Enviado', $descripcion, $usuarioId, [
             'numero_guia' => $numeroGuia,
             'transportadora' => $transportadora,
-            'notas_envio' => $notas
+            'notas_envio' => $notas,
+            'fecha_estimada_entrega' => $fechaEstimadaEntrega
         ]);
     }
 
+    // ACTUALIZAR FECHA ESTIMADA DE ENTREGA
+    public function actualizarFechaEstimada($id, $fechaEstimada)
+    {
+        $query = "UPDATE " . $this->table_name . " 
+                  SET Fecha_Estimada_Entrega = ? 
+                  WHERE ID_Factura = ?";
+
+        $stmt = $this->conn->prepare($query);
+        return $stmt->execute([$fechaEstimada, $id]);
+    }
+
+    // OBTENER PEDIDOS QUE DEBERÍAN SER MARCADOS COMO RETRASADOS
+    public function obtenerPedidosParaRetrasar()
+    {
+        $query = "SELECT 
+                    f.*, 
+                    u.Nombre, 
+                    u.Apellido, 
+                    u.Correo
+                  FROM " . $this->table_name . " f
+                  LEFT JOIN usuario u ON f.ID_Usuario = u.ID_Usuario
+                  WHERE f.Estado = 'Enviado'
+                    AND f.Fecha_Estimada_Entrega IS NOT NULL
+                    AND CURDATE() > f.Fecha_Estimada_Entrega
+                    AND (f.Fecha_Estimada_Entrega < CURDATE() - INTERVAL 1 DAY OR f.Estado != 'Retrasado')
+                  ORDER BY f.Fecha_Estimada_Entrega ASC";
+
+        $stmt = $this->conn->prepare($query);
+        $stmt->execute();
+        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    }
+
+    // MARCAR PEDIDOS COMO RETRASADOS AUTOMÁTICAMENTE
+    public function marcarRetrasadosAutomaticamente($usuarioId = null)
+    {
+        $pedidosParaRetrasar = $this->obtenerPedidosParaRetrasar();
+        $contador = 0;
+
+        foreach ($pedidosParaRetrasar as $pedido) {
+            $descripcion = "Pedido automáticamente marcado como retrasado. Fecha estimada de entrega superada (" . date('d/m/Y', strtotime($pedido['Fecha_Estimada_Entrega'])) . ").";
+            
+            $this->actualizarEstado(
+                $pedido['ID_Factura'], 
+                'Retrasado', 
+                $descripcion, 
+                $usuarioId ?? 1, // Usuario sistema por defecto
+                ['nueva_fecha_estimada' => null] // Quitar fecha estimada ya que está retrasado
+            );
+            
+            $contador++;
+        }
+
+        return $contador;
+    }
+
+    // OBTENER ESTADÍSTICAS DE RETRASOS
+    public function obtenerEstadisticasRetrasos()
+    {
+        $query = "SELECT 
+                    COUNT(*) as total_retrasados,
+                    AVG(DATEDIFF(CURDATE(), Fecha_Estimada_Entrega)) as promedio_dias_retraso,
+                    MAX(DATEDIFF(CURDATE(), Fecha_Estimada_Entrega)) as max_dias_retraso,
+                    MIN(DATEDIff(CURDATE(), Fecha_Estimada_Entrega)) as min_dias_retraso
+                  FROM " . $this->table_name . "
+                  WHERE Estado = 'Retrasado'
+                    AND Fecha_Estimada_Entrega IS NOT NULL";
+
+        $stmt = $this->conn->prepare($query);
+        $stmt->execute();
+        return $stmt->fetch(PDO::FETCH_ASSOC);
+    }
+
+    // OBTENER TRANSPORTADORAS FRECUENTES
     public function obtenerTransportadorasFrecuentes($limite = 5)
     {
         $limite = (int)$limite; // Validar que sea un entero
@@ -360,6 +593,7 @@ class Pedido
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
     }
 
+    // GENERAR NÚMERO DE GUÍA
     public function generarNumeroGuia($idFactura)
     {
         // Formato: TLL-AAAAMMDD-ID-XXXX
@@ -375,6 +609,7 @@ class Pedido
         return $numeroGuia;
     }
 
+    // VERIFICAR SI EXISTE NÚMERO DE GUÍA
     public function existeNumeroGuia($numeroGuia, $excluirId = null)
     {
         $query = "SELECT COUNT(*) FROM " . $this->table_name . " WHERE Numero_Guia = ?";
@@ -390,6 +625,7 @@ class Pedido
         return $stmt->fetchColumn() > 0;
     }
 
+    // GENERAR NÚMERO DE GUÍA ÚNICO
     public function generarNumeroGuiaUnico($idFactura)
     {
         $intentos = 0;
@@ -409,14 +645,11 @@ class Pedido
         return $numeroGuia;
     }
 
-
-
-    // OBTENER ESTADÍSTICAS MEJORADAS
+    // OBTENER ESTADÍSTICAS MEJORADAS - SIN EMITIDOS
     public function obtenerEstadisticas()
     {
         $query = "SELECT 
                     COUNT(*) as total_pedidos,
-                    SUM(CASE WHEN Estado = 'Emitido' THEN 1 ELSE 0 END) as emitidos,
                     SUM(CASE WHEN Estado = 'Confirmado' THEN 1 ELSE 0 END) as confirmados,
                     SUM(CASE WHEN Estado = 'Preparando' THEN 1 ELSE 0 END) as preparando,
                     SUM(CASE WHEN Estado = 'Enviado' THEN 1 ELSE 0 END) as enviados,
@@ -470,6 +703,28 @@ class Pedido
                     AND f.Fecha_Envio IS NOT NULL
                     AND DATEDIFF(NOW(), f.Fecha_Envio) > 3
                   ORDER BY f.Fecha_Envio ASC";
+
+        $stmt = $this->conn->prepare($query);
+        $stmt->execute();
+        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    }
+
+    // OBTENER PEDIDOS CON DIAS DE RETRASO
+    public function obtenerRetrasadosConDias()
+    {
+        $query = "SELECT 
+                    f.*, 
+                    u.Nombre, 
+                    u.Apellido, 
+                    u.Correo,
+                    mp.T_Pago as MetodoPago,
+                    DATEDIFF(CURDATE(), f.Fecha_Estimada_Entrega) as dias_retraso
+                  FROM " . $this->table_name . " f
+                  LEFT JOIN usuario u ON f.ID_Usuario = u.ID_Usuario
+                  LEFT JOIN metodo_pago mp ON f.ID_Metodo_Pago = mp.ID_Metodo_Pago
+                  WHERE f.Estado = 'Retrasado' 
+                    AND f.Fecha_Estimada_Entrega IS NOT NULL
+                  ORDER BY dias_retraso DESC";
 
         $stmt = $this->conn->prepare($query);
         $stmt->execute();

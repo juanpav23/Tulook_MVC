@@ -800,28 +800,28 @@ document.addEventListener('DOMContentLoaded', function() {
     // Paleta de colores mejorada con más variedad
     const palette = {
         primary: [
-            '#e74c3c', // Rojo
-            '#3498db', // Azul
-            '#2ecc71', // Verde
-            '#f1c40f', // Amarillo
-            '#9b59b6', // Púrpura
-            '#1abc9c', // Turquesa
-            '#34495e', // Azul oscuro
-            '#e67e22', // Naranja
-            '#95a5a6', // Gris
-            '#16a085'  // Verde oscuro
+            '#1B202D', // primary-dark - Azul muy oscuro (usado en headers y bordes)
+            '#2A3448', // primary - Azul oscuro
+            '#3A4A6B', // primary-light - Azul medio
+            '#4A5B7D', // secondary - Azul grisáceo
+            '#5B6E8F', // light - Azul grisáceo claro
+            '#1e2944', // success - Azul oscuro (variante de primary)
+            '#15171d', // warning - Casi negro azulado
+            '#342a56', // danger - Púrpura oscuro
+            '#c1d9f1b7', // gray-light - Blanco grisáceo muy claro
+            '#b6daff55'  // gray-medium - Gris claro
         ],
         light: [
-            'rgba(231, 76, 60, 0.1)',
-            'rgba(52, 152, 219, 0.1)',
-            'rgba(46, 204, 113, 0.1)',
-            'rgba(241, 196, 15, 0.1)',
-            'rgba(155, 89, 182, 0.1)',
-            'rgba(26, 188, 156, 0.1)',
-            'rgba(52, 73, 94, 0.1)',
-            'rgba(230, 126, 34, 0.1)',
-            'rgba(149, 165, 166, 0.1)',
-            'rgba(22, 160, 133, 0.1)'
+            'rgba(27, 32, 45, 0.1)',    // primary-dark
+            'rgba(42, 52, 72, 0.1)',    // primary
+            'rgba(58, 74, 107, 0.1)',   // primary-light
+            'rgba(74, 91, 125, 0.1)',   // secondary
+            'rgba(91, 110, 143, 0.1)',   // light
+            'rgba(30, 41, 68, 0.1)',    // success
+            'rgba(21, 23, 29, 0.1)',    // warning
+            'rgba(52, 42, 86, 0.1)',    // danger
+            'rgba(248, 249, 250, 0.1)', // gray-light
+            'rgba(233, 236, 239, 0.1)'  // gray-medium
         ]
     };
 

@@ -215,7 +215,7 @@ class ColorController {
         exit;
     }
 
-    // 🔄 ACTIVAR/DESACTIVAR COLOR (AJAX) - CORREGIDO
+    // ACTIVAR/DESACTIVAR COLOR (AJAX) - CORREGIDO
     public function cambiarEstado() {
         $id = (int)($_GET['id'] ?? 0);
         $estado = (int)($_GET['estado'] ?? 0); // 0 para desactivar, 1 para activar
@@ -225,6 +225,16 @@ class ColorController {
             $_SESSION['mensaje_tipo'] = "danger";
             header("Location: " . BASE_URL . "?c=Color&a=index");
             exit;
+        }
+
+        // NUEVA RESTRICCIÓN: Verificar si se intenta desactivar un color en uso
+        if ($estado === 0) { // Solo aplica cuando se intenta DESACTIVAR
+            if ($this->colorModel->estaEnUso($id)) {
+                $_SESSION['mensaje'] = "⚠ No se puede desactivar: El color está en uso por productos";
+                $_SESSION['mensaje_tipo'] = "warning";
+                header("Location: " . BASE_URL . "?c=Color&a=index");
+                exit;
+            }
         }
 
         // Actualizar estado directamente

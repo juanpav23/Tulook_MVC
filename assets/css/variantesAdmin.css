@@ -13,6 +13,8 @@
     --transition: all 0.3s ease;
     --danger-color: #dc3545;
     --danger-dark: #c82333;
+    --warning-color: #ffc107;
+    --warning-dark: #e0a800;
 }
 
 /* Alertas con gradiente oscuro */
@@ -44,7 +46,7 @@
 
 .alert-variante.alert-warning {
     background-color: rgba(255, 193, 7, 0.1);
-    border-left: 4px solid #ffc107;
+    border-left: 4px solid var(--warning-color);
     color: var(--text-dark);
 }
 
@@ -52,6 +54,11 @@
     background-color: rgba(27, 32, 45, 0.1);
     border-left: 4px solid var(--primary-color);
     color: var(--text-dark);
+}
+
+/* Alertas de sesión PHP */
+.alert-dismissible .btn-close {
+    filter: none;
 }
 
 /* Cards con diseño moderno para variantes */
@@ -97,7 +104,7 @@
 }
 
 .badge.bg-warning {
-    background-color: var(--primary-lighter) !important;
+    background-color: var(--warning-color) !important;
     color: white !important;
 }
 
@@ -200,6 +207,30 @@
     color: white;
 }
 
+/* Botón outline para el color primario claro */
+.btn-variante-outline-primary-light {
+    color: var(--primary-light);
+    border-color: var(--primary-light);
+}
+
+.btn-variante-outline-primary-light:hover {
+    background-color: var(--primary-light);
+    border-color: var(--primary-light);
+    color: white;
+}
+
+/* Botón outline para el color primario claro */
+.btn-variante-outline-warning {
+    color: var(--primary-light);
+    border-color: var(--primary-light);
+}
+
+.btn-variante-outline-warning:hover {
+    background-color: var(--primary-light);
+    border-color: var(--primary-light);
+    color: white;
+}
+
 /* ÚNICO color diferente permitido: ROJO para eliminar */
 .btn-variante-outline-danger {
     color: var(--danger-color);
@@ -220,18 +251,6 @@
 .btn-variante-outline-secondary:hover {
     background-color: var(--text-light);
     border-color: var(--text-light);
-    color: white;
-}
-
-/* Botón outline para el color primario claro */
-.btn-variante-outline-primary-light {
-    color: var(--primary-light);
-    border-color: var(--primary-light);
-}
-
-.btn-variante-outline-primary-light:hover {
-    background-color: var(--primary-light);
-    border-color: var(--primary-light);
     color: white;
 }
 
@@ -268,6 +287,8 @@
 /* Imágenes de variantes */
 .product-image-variante {
     transition: var(--transition);
+    max-height: 150px;
+    object-fit: contain;
 }
 
 .product-image-variante:hover {
@@ -581,4 +602,153 @@
 
 .atributos-container .badge:hover {
     transform: scale(1.05);
+}
+
+/* Estilos para la tabla de detalle de producto */
+.table-primary-dark {
+    background-color: #1B202D;
+    color: white;
+}
+
+.table-primary-dark th {
+    border-color: #2A3246;
+    font-weight: 600;
+}
+
+.bg-primary-light {
+    background-color: #E8EAF2 !important;
+    color: #1B202D !important;
+}
+
+.bg-primary-dark {
+    background-color: #1B202D !important;
+    color: white !important;
+}
+
+/* Estilos para los badges */
+.badge.bg-primary {
+    background-color: #1B202D !important;
+    color: white !important;
+}
+
+.badge.bg-primary-light {
+    background-color: #E8EAF2 !important;
+    color: #1B202D !important;
+    border: 1px solid #D1D5E0;
+}
+
+.badge.bg-light {
+    background-color: #F8F9FA !important;
+    color: #1B202D !important;
+    border: 1px solid #DEE2E6;
+}
+
+/* Estilos para botones */
+.btn-detalle-primary {
+    background-color: #1B202D;
+    border-color: #1B202D;
+    color: white;
+}
+
+.btn-detalle-primary:hover {
+    background-color: #2A3246;
+    border-color: #2A3246;
+    color: white;
+}
+
+.btn-detalle-outline-primary {
+    border-color: #1B202D;
+    color: #1B202D;
+}
+
+.btn-detalle-outline-primary:hover {
+    background-color: #1B202D;
+    color: white;
+}
+
+.btn-detalle-outline-danger {
+    border-color: #dc3545;
+    color: #dc3545;
+}
+
+.btn-detalle-outline-danger:hover {
+    background-color: #dc3545;
+    color: white;
+}
+
+/* Botón outline para activar/desactivar */
+.btn-outline-warning {
+    border-color: var(--primary-light) !important;
+    color: var(--primary-light) !important;
+}
+
+.btn-outline-warning:hover {
+    background-color: var(--primary-light) !important;
+    border-color: var(--primary-light) !important;
+    color: white !important;
+}
+
+.btn-outline-success {
+    border-color: var(--primary-light) !important;
+    color: var(--primary-light) !important;
+}
+
+.btn-outline-success:hover {
+    background-color: var(--primary-light) !important;
+    border-color: var(--primary-light) !important;
+    color: white !important;
+}
+
+/* Estilos para la vista previa de imágenes */
+.vista-previa-detalle {
+    border: 1px solid #DEE2E6;
+    border-radius: 0.375rem;
+    background-color: #F8F9FA;
+}
+
+/* Estilos para formularios */
+.form-detalle-variante {
+    background-color: #F8F9FA;
+    border: 1px solid #E8EAF2;
+}
+
+.text-primary-light-detalle {
+    color: #4A5568;
+}
+
+/* Estilos específicos para la tabla */
+.table > tbody > tr > td {
+    vertical-align: middle;
+}
+
+.border-primary-detalle {
+    border-color: #1B202D;
+}
+
+/* Información de producto en detalle */
+.producto-info-detalle {
+    background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+    border-radius: 0.5rem;
+    padding: 1.5rem;
+    border-left: 4px solid var(--primary-color);
+}
+
+.producto-info-detalle h5 {
+    color: var(--primary-color);
+    font-weight: 600;
+    border-bottom: 2px solid rgba(27, 32, 45, 0.1);
+    padding-bottom: 0.5rem;
+    margin-bottom: 1rem;
+}
+
+.producto-info-detalle p {
+    margin-bottom: 0.5rem;
+    display: flex;
+    align-items: center;
+}
+
+.producto-info-detalle strong {
+    color: var(--primary-color);
+    min-width: 120px;
+    display: inline-block;
 }

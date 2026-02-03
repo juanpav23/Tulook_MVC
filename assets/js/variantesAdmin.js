@@ -1,5 +1,20 @@
 // variantesAdmin.js - Funcionalidades JavaScript para gestión de variantes
 
+// ===== DEFINIR BASE_URL SI NO ESTÁ DEFINIDO =====
+if (typeof BASE_URL === 'undefined') {
+    // Intentar obtener BASE_URL del contexto
+    const baseUrlElement = document.querySelector('meta[name="base-url"]');
+    if (baseUrlElement) {
+        window.BASE_URL = baseUrlElement.getAttribute('content');
+    } else {
+        // Fallback: calcular desde la URL actual
+        const currentPath = window.location.pathname;
+        const pathParts = currentPath.split('/');
+        pathParts.pop(); // Remover el archivo actual
+        window.BASE_URL = window.location.origin + pathParts.join('/') + '/';
+    }
+}
+
 // ===== FUNCIONES PARA FORMULARIO PRINCIPAL =====
 function procesarSubidaImagen() {
     const fileInput = document.getElementById('imagenVariante');
@@ -188,22 +203,44 @@ function mostrarMensajeModal(tipo, texto) {
     }
 }
 
+// FUNCIÓN CORREGIDA - SIN ERROR BASE_URL
 function mostrarImagenActualEdit(rutaExistente) {
+    if (!rutaExistente || rutaExistente.trim() === '') {
+        document.getElementById('imagenActualContainer').style.display = 'none';
+        document.getElementById('edit_nombreArchivoFinal').value = '';
+        document.getElementById('edit_fotoFinal').value = '';
+        return;
+    }
+    
+    // Extraer solo el nombre del archivo
     const partes = rutaExistente.split('/');
     const nombreArchivo = partes.length > 0 ? partes[partes.length - 1] : rutaExistente;
     
     document.getElementById('edit_nombreArchivoFinal').value = nombreArchivo;
-    document.getElementById('edit_fotoFinal').value = nombreArchivo;
+    document.getElementById('edit_fotoFinal').value = rutaExistente; // Guardar ruta completa
     
-    const urlCompleta = BASE_URL + rutaExistente;
-    document.getElementById('imagenActual').src = urlCompleta;
+    // Mostrar información de la imagen actual
     document.getElementById('rutaActual').textContent = `Archivo: ${nombreArchivo}`;
     document.getElementById('imagenActualContainer').style.display = 'block';
     
-    document.getElementById('imagenActual').onerror = function() {
-        document.getElementById('imagenActualContainer').style.display = 'none';
-        document.getElementById('rutaActual').textContent = 'Imagen no encontrada en el servidor';
-    };
+    // Intentar cargar la imagen
+    const imgElement = document.getElementById('imagenActual');
+    if (imgElement) {
+        // Usar la ruta relativa directamente
+        imgElement.src = rutaExistente.startsWith('http') ? rutaExistente : 
+                         (rutaExistente.startsWith('/') ? rutaExistente : '/' + rutaExistente);
+        
+        imgElement.onerror = function() {
+            // Si falla, mostrar placeholder
+            imgElement.src = BASE_URL + 'assets/img/sin_imagen.png';
+            document.getElementById('rutaActual').textContent = 'Imagen no encontrada - Usando placeholder';
+        };
+        
+        imgElement.onload = function() {
+            // Imagen cargada correctamente
+            document.getElementById('rutaActual').textContent = `Archivo: ${nombreArchivo} ✓`;
+        };
+    }
 }
 
 // ===== INICIALIZACIÓN Y VALIDACIÓN =====
@@ -232,16 +269,28 @@ document.addEventListener('DOMContentLoaded', function() {
             }
             
             const fotoExistente = btn.getAttribute('data-foto') || '';
-            if (fotoExistente) {
-                mostrarImagenActualEdit(fotoExistente);
-            } else {
-                document.getElementById('imagenActualContainer').style.display = 'none';
-                document.getElementById('edit_nombreArchivoFinal').value = '';
-                document.getElementById('edit_fotoFinal').value = '';
-            }
+            mostrarImagenActualEdit(fotoExistente);
             
             document.getElementById('edit_vistaPreviaContainer').style.display = 'none';
             document.getElementById('imagenVarianteEdit').value = '';
+        });
+        
+        // Prevenir congelamiento al cerrar modal
+        modalEditar.addEventListener('hidden.bs.modal', function() {
+            // Limpiar focus
+            document.activeElement?.blur();
+            
+            // Limpiar backdrops
+            const backdrops = document.querySelectorAll('.modal-backdrop');
+            backdrops.forEach(backdrop => {
+                if (backdrop.parentNode && backdrop.classList.contains('show')) {
+                    backdrop.parentNode.removeChild(backdrop);
+                }
+            });
+            
+            // Restaurar scroll
+            document.body.style.overflow = '';
+            document.body.style.paddingRight = '';
         });
     }
 
@@ -357,39 +406,17 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 });
 
-// Función para confirmar eliminación con estilo personalizado
-function confirmarEliminacion(url) {
-    const modalHTML = `
-        <div class="modal fade" id="confirmModal" tabindex="-1">
-            <div class="modal-dialog">
-                <div class="modal-content">
-                    <div class="modal-header bg-primary text-light">
-                        <h5 class="modal-title"><i class="fas fa-exclamation-triangle"></i> Confirmar Eliminación</h5>
-                        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
-                    </div>
-                    <div class="modal-body">
-                        <p>⚠️ ¿Seguro que deseas eliminar esta variante?</p>
-                        <p class="text-muted small">Esta acción no se puede deshacer.</p>
-                    </div>
-                    <div class="modal-footer">
-                        <button type="button" class="btn btn-detalle-outline-primary-light" data-bs-dismiss="modal">Cancelar</button>
-                        <a href="${url}" class="btn btn-detalle-primary">Eliminar</a>
-                    </div>
-                </div>
-            </div>
-        </div>
-    `;
-    
-    const modalContainer = document.createElement('div');
-    modalContainer.innerHTML = modalHTML;
-    document.body.appendChild(modalContainer);
-    
-    const modal = new bootstrap.Modal(document.getElementById('confirmModal'));
-    modal.show();
-    
-    modalContainer.addEventListener('hidden.bs.modal', function() {
-        modalContainer.remove();
-    });
-    
-    return false;
+// ===== INCLUIR SISTEMA DE CONFIRMACIONES =====
+// Verificar si hay enlaces que requieren confirmaciones personalizadas
+if (document.querySelector('a[href*="toggleVariante"]') || document.querySelector('a[href*="eliminarVariante"]')) {
+    // Cargar el script de confirmaciones
+    const script = document.createElement('script');
+    script.src = (window.BASE_URL || '') + 'assets/js/variantesConfirmaciones.js';
+    script.onload = function() {
+        console.log('✅ Sistema de confirmaciones cargado correctamente');
+    };
+    script.onerror = function() {
+        console.warn('⚠️ No se pudo cargar el sistema de confirmaciones');
+    };
+    document.head.appendChild(script);
 }
