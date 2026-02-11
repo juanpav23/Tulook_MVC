@@ -92,7 +92,7 @@ unset($_SESSION['form_data']);
         <div class="d-flex justify-content-between align-items-center">
             <div>
                 <h2 class="mb-1">
-                    <i class="fas fa-plus-circle text- me-2"></i>
+                    <i class="fas fa-plus-circle text-warning me-2"></i>
                     Crear Nuevo Descuento
                 </h2>
                 <p class="text-muted mb-0">Registra un nuevo descuento para productos o categorías</p>
@@ -133,7 +133,8 @@ unset($_SESSION['form_data']);
                     </h5>
                 </div>
                 <div class="card-body p-4">
-                    <form method="POST" action="<?= BASE_URL ?>?c=Descuento&a=guardar" id="descuentoForm">
+                    <!-- CORRECCIÓN: Cambiado action de "guardar" a "crear" -->
+                    <form method="POST" action="<?= BASE_URL ?>?c=Descuento&a=crear" id="descuentoForm">
                         <!-- Información Básica -->
                         <div class="form-section">
                             <h6 class="form-section-title">
@@ -167,7 +168,7 @@ unset($_SESSION['form_data']);
                                         <?php endif; ?>
                                     </div>
                                     <div class="form-text mt-2">
-                                        <i class="fas fa-lightbulb text- me-1"></i>
+                                        <i class="fas fa-lightbulb text-warning me-1"></i>
                                         Usa un código único y descriptivo. Solo mayúsculas, números y _
                                     </div>
                                 </div>
@@ -200,14 +201,14 @@ unset($_SESSION['form_data']);
                                     </label>
                                     <div class="input-group">
                                         <span class="input-group-text bg-primary" id="simboloValor">
-                                            <?= ($formData['tipo'] ?? '') == 'Porcentaje' ? '%' : '$' ?>
+                                            <?= (($formData['tipo'] ?? '') == 'Porcentaje' || empty($formData['tipo'])) ? '%' : '$' ?>
                                         </span>
                                         <input type="number" 
                                                class="form-control <?= isset($formErrors['valor']) ? 'is-invalid' : '' ?>" 
                                                name="valor" 
                                                step="0.01" 
                                                min="0.01" 
-                                               max="<?= ($formData['tipo'] ?? '') == 'Porcentaje' ? '100' : '999999' ?>" 
+                                               max="<?= (($formData['tipo'] ?? '') == 'Porcentaje' || empty($formData['tipo'])) ? '100' : '999999' ?>" 
                                                value="<?= htmlspecialchars($formData['valor'] ?? '') ?>" 
                                                required
                                                placeholder="0.00"
@@ -221,7 +222,7 @@ unset($_SESSION['form_data']);
                                     <div class="form-text mt-2" id="textoAyudaValor">
                                         <i class="fas fa-info-circle me-1"></i>
                                         <span id="textoAyuda">
-                                            <?= ($formData['tipo'] ?? '') == 'Porcentaje' ? 
+                                            <?= (($formData['tipo'] ?? '') == 'Porcentaje' || empty($formData['tipo'])) ? 
                                                 'Ingresa el porcentaje de descuento. Máximo 100%.' : 
                                                 'Ingresa el valor fijo del descuento.' ?>
                                         </span>
@@ -233,9 +234,10 @@ unset($_SESSION['form_data']);
                                     </label>
                                     <select class="form-select <?= isset($formErrors['aplicacion']) ? 'is-invalid' : '' ?>" name="tipo_aplicacion" id="tipo_aplicacion" required>
                                         <option value="">¿Dónde aplicar el descuento?</option>
-                                        <option value="articulo" <?= isset($formData['tipo_aplicacion']) && $formData['tipo_aplicacion'] == 'articulo' ? 'selected' : '' ?>>Artículo Específico</option>
-                                        <option value="producto" <?= isset($formData['tipo_aplicacion']) && $formData['tipo_aplicacion'] == 'producto' ? 'selected' : '' ?>>Producto/Variante Específica</option>
-                                        <option value="categoria" <?= isset($formData['tipo_aplicacion']) && $formData['tipo_aplicacion'] == 'categoria' ? 'selected' : '' ?>>Categoría Completa</option>
+                                        <option value="articulo" <?= ($formData['tipo_aplicacion'] ?? '') == 'articulo' ? 'selected' : '' ?>>Artículo Específico</option>
+                                        <option value="producto" <?= ($formData['tipo_aplicacion'] ?? '') == 'producto' ? 'selected' : '' ?>>Producto/Variante Específica</option>
+                                        <option value="categoria" <?= ($formData['tipo_aplicacion'] ?? '') == 'categoria' ? 'selected' : '' ?>>Categoría Completa</option>
+                                        <option value="general" <?= ($formData['tipo_aplicacion'] ?? '') == 'general' ? 'selected' : '' ?>>General (todos los productos)</option>
                                     </select>
                                     <?php if (isset($formErrors['aplicacion'])): ?>
                                         <div class="invalid-feedback">
@@ -255,11 +257,11 @@ unset($_SESSION['form_data']);
                             <div class="row mb-4">
                                 <div class="col-md-4">
                                     <label class="form-label">
-                                        <i class="fas fa-dollar-sign text-success me-1"></i>Monto Mínimo para Ganar
+                                        <i class="fas fa-dollar-sign text-success me-1"></i>Monto Mínimo para Aplicar
                                     </label>
                                     <div class="input-group">
                                         <span class="input-group-text bg-primary">
-                                            <i class="fas fa-trophy text-white"></i>
+                                            <i class="fas fa-money-bill-wave text-white"></i>
                                         </span>
                                         <input type="number" 
                                                class="form-control <?= isset($formErrors['monto_minimo']) ? 'is-invalid' : '' ?>" 
@@ -273,7 +275,7 @@ unset($_SESSION['form_data']);
                                     </div>
                                     <div class="form-text mt-2">
                                         <i class="fas fa-info-circle me-1"></i>
-                                        0 = aplicable inmediatamente, >0 = se gana al alcanzar monto
+                                        Monto mínimo de compra para aplicar el descuento. 0 = sin mínimo
                                     </div>
                                 </div>
                                 
@@ -295,13 +297,13 @@ unset($_SESSION['form_data']);
                                     </div>
                                     <div class="form-text mt-2">
                                         <i class="fas fa-info-circle me-1"></i>
-                                        Límite total de usos para todos los usuarios
+                                        Límite total de usos. 0 = sin límite
                                     </div>
                                 </div>
                                 
                                 <div class="col-md-4">
                                     <label class="form-label">
-                                        <i class="fas fa-user text- me-1"></i>Máximo Usos por Usuario
+                                        <i class="fas fa-user text-warning me-1"></i>Máximo Usos por Usuario
                                     </label>
                                     <div class="input-group">
                                         <span class="input-group-text bg-primary">
@@ -317,7 +319,7 @@ unset($_SESSION['form_data']);
                                     </div>
                                     <div class="form-text mt-2">
                                         <i class="fas fa-info-circle me-1"></i>
-                                        Límite de usos por cada usuario individual
+                                        Límite por usuario. 0 = sin límite
                                     </div>
                                 </div>
                             </div>
@@ -362,7 +364,7 @@ unset($_SESSION['form_data']);
                                                 <?php foreach ($productos as $p): ?>
                                                 <option value="<?= $p['ID_Producto'] ?>" 
                                                         <?= ($formData['id_producto'] ?? '') == $p['ID_Producto'] ? 'selected' : '' ?>>
-                                                    <?= htmlspecialchars($p['Nombre_Completo']) ?>
+                                                    <?= htmlspecialchars($p['Nombre_Producto'] ?? $p['Nombre_Completo'] ?? 'Sin nombre') ?>
                                                 </option>
                                                 <?php endforeach; ?>
                                             </select>
@@ -411,9 +413,10 @@ unset($_SESSION['form_data']);
                                         <input type="datetime-local" 
                                                class="form-control <?= isset($formErrors['fechas']) ? 'is-invalid' : '' ?>" 
                                                name="fecha_inicio" 
-                                               value="<?= isset($formData['fecha_inicio']) ? $formData['fecha_inicio'] : date('Y-m-d\T00:00') ?>" 
+                                               value="<?= $formData['fecha_inicio'] ?? date('Y-m-d\T00:00') ?>" 
                                                required
-                                               id="fechaInicio">
+                                               id="fechaInicio"
+                                               min="<?= date('Y-m-d\T00:00') ?>">
                                     </div>
                                 </div>
                                 <div class="col-md-6">
@@ -427,15 +430,43 @@ unset($_SESSION['form_data']);
                                         <input type="datetime-local" 
                                                class="form-control <?= isset($formErrors['fechas']) ? 'is-invalid' : '' ?>" 
                                                name="fecha_fin" 
-                                               value="<?= isset($formData['fecha_fin']) ? $formData['fecha_fin'] : date('Y-m-d\T23:59', strtotime('+30 days')) ?>" 
+                                               value="<?= $formData['fecha_fin'] ?? date('Y-m-d\T23:59', strtotime('+30 days')) ?>" 
                                                required
-                                               id="fechaFin">
+                                               id="fechaFin"
+                                               min="<?= date('Y-m-d\T00:00', strtotime('+1 hour')) ?>">
                                     </div>
                                     <?php if (isset($formErrors['fechas'])): ?>
                                         <div class="invalid-feedback d-block">
                                             <?= $formErrors['fechas'] ?>
                                         </div>
                                     <?php endif; ?>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Estado del Descuento -->
+                        <div class="form-section">
+                            <h6 class="form-section-title">
+                                <i class="fas fa-toggle-on me-2"></i>Estado del Descuento
+                            </h6>
+                            
+                            <div class="row mb-4">
+                                <div class="col-12">
+                                    <div class="card border-0 bg-light">
+                                        <div class="card-body">
+                                            <div class="form-check form-switch mb-0">
+                                                <input class="form-check-input" type="checkbox" name="activo" id="activo" 
+                                                       value="1" <?= ($formData['activo'] ?? 1) ? 'checked' : '' ?>>
+                                                <label class="form-check-label fw-semibold" for="activo">
+                                                    Descuento Activo
+                                                </label>
+                                            </div>
+                                            <div class="form-text mt-2">
+                                                <i class="fas fa-info-circle me-1"></i>
+                                                Cuando está inactivo, el descuento no se aplicará a ningún producto.
+                                            </div>
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
                         </div>
@@ -490,22 +521,15 @@ document.addEventListener('DOMContentLoaded', function() {
         } else if (tipoAplicacion.value === 'categoria') {
             categoriaField.style.display = 'block';
         }
+        // Para 'general' no se muestra ningún campo específico
     }
 
     tipoAplicacion.addEventListener('change', mostrarCampoAplicacion);
 
     // Mostrar campos según datos existentes
     <?php if (isset($formData['tipo_aplicacion'])): ?>
-        <?php if ($formData['tipo_aplicacion'] == 'articulo'): ?>
-            tipoAplicacion.value = 'articulo';
-            articuloField.style.display = 'block';
-        <?php elseif ($formData['tipo_aplicacion'] == 'producto'): ?>
-            tipoAplicacion.value = 'producto';
-            productoField.style.display = 'block';
-        <?php elseif ($formData['tipo_aplicacion'] == 'categoria'): ?>
-            tipoAplicacion.value = 'categoria';
-            categoriaField.style.display = 'block';
-        <?php endif; ?>
+        tipoAplicacion.value = '<?= $formData['tipo_aplicacion'] ?>';
+        mostrarCampoAplicacion();
     <?php endif; ?>
 
     // Controlar símbolo del valor según tipo
@@ -557,6 +581,22 @@ document.addEventListener('DOMContentLoaded', function() {
     });
 
     fechaFin.addEventListener('change', validarFechas);
+
+    // Validación en tiempo real para el código
+    const codigoInput = document.getElementById('inputCodigo');
+    codigoInput.addEventListener('input', function(e) {
+        const valor = e.target.value;
+        const regex = /^[A-Z0-9_]*$/;
+        
+        if (!regex.test(valor)) {
+            e.target.value = valor.slice(0, -1);
+        }
+        
+        // Validar longitud
+        if (valor.length > 20) {
+            e.target.value = valor.slice(0, 20);
+        }
+    });
 
     // Validación del formulario antes de enviar
     document.getElementById('descuentoForm').addEventListener('submit', function(e) {

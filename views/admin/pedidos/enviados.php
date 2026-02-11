@@ -255,7 +255,7 @@ foreach ($pedidos as $pedido) {
                                         $colorPrioridad = 'danger';
                                     } elseif ($diasRetraso > 3) {
                                         $nivelPrioridad = 'Media';
-                                        $colorPrioridad = 'warning';
+                                        $colorPrioridad = 'primary-dark';
                                     } else {
                                         $nivelPrioridad = 'Baja';
                                         $colorPrioridad = 'primary-light';

@@ -39,30 +39,30 @@ if (!isset($descuentos)) $descuentos = [];
     }
     
     .code-column {
-        min-width: 180px !important;
-        max-width: 200px !important;
+        min-width: 140px !important;
+        max-width: 160px !important;
     }
 
     .app-column {
-        min-width: 200px !important;
-        max-width: 220px !important;
+        min-width: 160px !important;
+        max-width: 180px !important;
     }
 
     .app-compact .d-flex.align-items-center {
         display: flex !important;
         flex-direction: row !important;
         align-items: center !important;
-        gap: 10px !important;
+        gap: 8px !important;
         flex-wrap: nowrap !important;
     }
 
     .app-compact i {
-        font-size: 1rem !important;
+        font-size: 0.9rem !important;
         flex-shrink: 0 !important;
     }
 
     .app-compact .text-truncate-custom {
-        max-width: 150px !important;
+        max-width: 120px !important;
         white-space: nowrap !important;
         overflow: hidden !important;
         text-overflow: ellipsis !important;
@@ -70,44 +70,44 @@ if (!isset($descuentos)) $descuentos = [];
     }
 
     .app-compact small.text-muted {
-        font-size: 0.75rem !important;
+        font-size: 0.7rem !important;
         display: block !important;
         margin-top: 2px !important;
     }
     
     .type-column {
-        min-width: 90px;
-        max-width: 100px;
+        min-width: 80px !important;
+        max-width: 90px !important;
     }
     
     .value-column {
-        min-width: 80px;
-        max-width: 100px;
+        min-width: 70px !important;
+        max-width: 85px !important;
     }
     
     .conditions-column {
-        min-width: 140px;
-        max-width: 180px;
+        min-width: 110px !important;
+        max-width: 140px !important;
     }
     
     .usage-column {
-        min-width: 100px;
-        max-width: 120px;
+        min-width: 90px !important;
+        max-width: 100px !important;
     }
     
     .date-column {
-        min-width: 140px;
-        max-width: 160px;
+        min-width: 120px !important;
+        max-width: 140px !important;
     }
     
     .status-column {
-        min-width: 90px;
-        max-width: 110px;
+        min-width: 80px !important;
+        max-width: 100px !important;
     }
     
     .actions-column {
-        min-width: 120px;
-        max-width: 130px;
+        min-width: 100px !important;
+        max-width: 110px !important;
     }
     
     .text-truncate-custom {
@@ -115,37 +115,37 @@ if (!isset($descuentos)) $descuentos = [];
         text-overflow: ellipsis;
         white-space: nowrap;
         display: inline-block;
-        max-width: 150px;
+        max-width: 130px;
     }
     
     .conditions-compact .small {
-        font-size: 0.8rem;
-        line-height: 1.2;
+        font-size: 0.75rem;
+        line-height: 1.1;
     }
     
     .conditions-compact .small div {
-        margin-bottom: 0.2rem;
+        margin-bottom: 0.1rem;
     }
     
     .dates-compact {
-        font-size: 0.85rem;
-    }
-    
-    .dates-compact .small {
         font-size: 0.8rem;
     }
     
+    .dates-compact .small {
+        font-size: 0.75rem;
+    }
+    
     .usage-compact .small {
-        font-size: 0.85rem;
+        font-size: 0.8rem;
     }
     
     .app-compact .fw-semibold {
-        font-size: 0.9rem;
+        font-size: 0.85rem;
         margin-bottom: 0.1rem;
     }
     
     .app-compact small {
-        font-size: 0.75rem;
+        font-size: 0.7rem;
     }
     
     .badge.bg-info {
@@ -192,38 +192,92 @@ if (!isset($descuentos)) $descuentos = [];
         color: var(--success) !important;
     }
     
-    /* Responsive específico */
+    /* Ajustes para evitar barra horizontal */
+    .table-responsive {
+        overflow-x: auto;
+        max-width: 100%;
+    }
+    
+    .table {
+        min-width: 1200px; /* Ancho mínimo ajustado */
+        width: 100%;
+    }
+    
+    /* Estilos para botones más compactos */
+    .btn-group-sm > .btn {
+        padding: 0.25rem 0.5rem;
+        font-size: 0.75rem;
+    }
+    
+    .btn-group-sm > .btn i {
+        font-size: 0.8rem;
+    }
+    
+    /* Mejoras para pantallas más pequeñas */
     @media (max-width: 1400px) and (min-width: 1200px) {
+        .table {
+            min-width: 1100px;
+        }
+    }
+    
+    @media (max-width: 1400px) {
+        .code-column {
+            min-width: 130px !important;
+        }
+        
+        .app-column {
+            min-width: 150px !important;
+        }
+        
         .text-truncate-custom {
-            max-width: 120px !important;
+            max-width: 100px !important;
         }
         
         .app-compact .text-truncate-custom {
-            max-width: 130px !important;
+            max-width: 110px !important;
         }
     }
     
     @media (max-width: 1200px) {
+        .table {
+            min-width: 1000px;
+        }
+        
         .code-column {
-            min-width: 160px !important;
+            min-width: 120px !important;
         }
         
         .app-column {
-            min-width: 180px !important;
+            min-width: 140px !important;
         }
         
         .conditions-column {
-            min-width: 130px !important;
+            min-width: 100px !important;
         }
         
         .date-column {
-            min-width: 130px !important;
+            min-width: 110px !important;
         }
     }
     
-    @media (max-width: 992px) {
-        .text-truncate-custom {
-            max-width: 120px;
+    @media (max-width: 768px) {
+        .container-fluid {
+            padding-left: 15px;
+            padding-right: 15px;
+        }
+        
+        .page-header .d-flex {
+            flex-direction: column;
+            align-items: flex-start;
+            gap: 15px;
+        }
+        
+        .page-header a.btn {
+            align-self: flex-start;
+        }
+        
+        .card-body.p-0 {
+            padding: 0 !important;
         }
     }
 </style>
@@ -434,7 +488,7 @@ if (!isset($descuentos)) $descuentos = [];
                                     <td class="ps-4">
                                         <div class="d-flex flex-column align-items-start">
                                             <div class="mb-1">
-                                                <span class="badge bg-light text-dark border">
+                                                <span class="badge bg-light text-dark border" style="font-size: 0.85rem;">
                                                     <i class="fas fa-<?= $esAutomatico ? 'bolt' : 'tag' ?> me-1 text-<?= $esAutomatico ? 'warning' : 'muted' ?>"></i>
                                                     <span class="text-truncate-custom" title="<?= htmlspecialchars($d['Codigo']) ?>">
                                                         <?= htmlspecialchars($d['Codigo']) ?>
@@ -443,7 +497,7 @@ if (!isset($descuentos)) $descuentos = [];
                                             </div>
                                             <?php if ($esAutomatico): ?>
                                             <div>
-                                                <span class="badge bg-warning bg-opacity-10 text-warning border border-warning border-opacity-25">
+                                                <span class="badge bg-warning bg-opacity-10 text-warning border border-warning border-opacity-25" style="font-size: 0.7rem;">
                                                     <i class="fas fa-bolt me-1"></i>Automático
                                                 </span>
                                             </div>
@@ -456,7 +510,7 @@ if (!isset($descuentos)) $descuentos = [];
                                         <div class="app-compact">
                                             <?php if ($d['ArticuloNombre']): ?>
                                                 <div class="d-flex align-items-center">
-                                                    <i class="fas fa-cube text-primary-dark me-2"></i>
+                                                    <i class="fas fa-cube text-primary-dark me-1"></i>
                                                     <div>
                                                         <div class="fw-semibold text-truncate-custom" title="<?= htmlspecialchars($d['ArticuloNombre']) ?>">
                                                             <?= htmlspecialchars($d['ArticuloNombre']) ?>
@@ -466,7 +520,7 @@ if (!isset($descuentos)) $descuentos = [];
                                                 </div>
                                             <?php elseif ($d['ProductoNombre']): ?>
                                                 <div class="d-flex align-items-center">
-                                                    <i class="fas fa-palette text-success me-2"></i>
+                                                    <i class="fas fa-palette text-success me-1"></i>
                                                     <div>
                                                         <div class="fw-semibold text-truncate-custom" title="<?= htmlspecialchars($d['ProductoNombre']) ?>">
                                                             <?= htmlspecialchars($d['ProductoNombre']) ?>
@@ -476,7 +530,7 @@ if (!isset($descuentos)) $descuentos = [];
                                                 </div>
                                             <?php elseif ($d['CategoriaNombre']): ?>
                                                 <div class="d-flex align-items-center">
-                                                    <i class="fas fa-layer-group text-secondary me-2"></i>
+                                                    <i class="fas fa-layer-group text-secondary me-1"></i>
                                                     <div>
                                                         <div class="fw-semibold text-truncate-custom" title="<?= htmlspecialchars($d['CategoriaNombre']) ?>">
                                                             <?= htmlspecialchars($d['CategoriaNombre']) ?>
@@ -485,22 +539,22 @@ if (!isset($descuentos)) $descuentos = [];
                                                     </div>
                                                 </div>
                                             <?php else: ?>
-                                                <span class="badge bg-light text-dark">No definido</span>
+                                                <span class="badge bg-light text-dark" style="font-size: 0.85rem;">General</span>
                                             <?php endif; ?>
                                         </div>
                                     </td>
                                     
                                     <!-- Tipo -->
                                     <td>
-                                        <span class="badge bg-<?= $d['Tipo'] == 'Porcentaje' ? 'primary-light' : 'warning' ?>">
+                                        <span class="badge bg-<?= $d['Tipo'] == 'Porcentaje' ? 'primary-light' : 'warning' ?>" style="font-size: 0.85rem;">
                                             <i class="fas fa-<?= $d['Tipo'] == 'Porcentaje' ? 'percent' : 'dollar-sign' ?> me-1"></i>
-                                            <?= $d['Tipo'] ?>
+                                            <?= $d['Tipo'] == 'Porcentaje' ? '%' : '$' ?>
                                         </span>
                                     </td>
                                     
                                     <!-- Valor -->
                                     <td>
-                                        <span class="fw-bold text-<?= $d['Tipo'] == 'Porcentaje' ? 'primary-light' : 'warning' ?>">
+                                        <span class="fw-bold text-<?= $d['Tipo'] == 'Porcentaje' ? 'primary-light' : 'warning' ?>" style="font-size: 0.9rem;">
                                             <?= $d['Tipo'] == 'Porcentaje' ? $d['Valor'] . '%' : '$' . number_format($d['Valor'], 1) ?>
                                         </span>
                                     </td>
@@ -515,12 +569,12 @@ if (!isset($descuentos)) $descuentos = [];
                                             <?php endif; ?>
                                             <?php if ($d['Max_Usos_Global'] > 0): ?>
                                                 <div class="text-primary-light small">
-                                                    <i class="fas fa-globe me-1"></i>Global: <?= $d['Usos_Globales'] ?>/<?= $d['Max_Usos_Global'] ?>
+                                                    <i class="fas fa-globe me-1"></i>G: <?= $d['Usos_Globales'] ?>/<?= $d['Max_Usos_Global'] ?>
                                                 </div>
                                             <?php endif; ?>
                                             <?php if ($d['Max_Usos_Usuario'] > 0): ?>
                                                 <div class="text-warning small">
-                                                    <i class="fas fa-user me-1"></i>Usuario: <?= $d['Max_Usos_Usuario'] ?>
+                                                    <i class="fas fa-user me-1"></i>U: <?= $d['Max_Usos_Usuario'] ?>
                                                 </div>
                                             <?php endif; ?>
                                         </div>
@@ -532,11 +586,11 @@ if (!isset($descuentos)) $descuentos = [];
                                             <div class="small">
                                                 <div class="fw-semibold">
                                                     <i class="fas fa-chart-bar me-1 text-primary-dark"></i>
-                                                    <?= $d['Usos_Globales'] ?> usos
+                                                    <?= $d['Usos_Globales'] ?>
                                                 </div>
                                                 <div class="text-muted">
                                                     <i class="fas fa-users me-1"></i>
-                                                    <?= $d['UsuariosUnicos'] ?? 0 ?> usuarios
+                                                    <?= $d['UsuariosUnicos'] ?? 0 ?>
                                                 </div>
                                             </div>
                                         </div>
@@ -545,7 +599,7 @@ if (!isset($descuentos)) $descuentos = [];
                                     <!-- Vigencia -->
                                     <td>
                                         <div class="dates-compact">
-                                            <div class="fw-semibold <?= $isExpired ? 'text-danger' : 'text-success' ?>">
+                                            <div class="fw-semibold <?= $isExpired ? 'text-danger' : 'text-success' ?>" style="font-size: 0.85rem;">
                                                 <?= date('d/m/Y', strtotime($d['FechaInicio'])) ?> - <?= date('d/m/Y', strtotime($d['FechaFin'])) ?>
                                             </div>
                                             <?php if ($isExhausted): ?>
@@ -575,7 +629,7 @@ if (!isset($descuentos)) $descuentos = [];
                                             ($isExhausted ? 'dark' : 
                                             ($isExpired ? 'warning' : 
                                             ($isFuture ? 'primary-light' : 'success'))) 
-                                        ?>">
+                                        ?>" style="font-size: 0.85rem;">
                                             <i class="fas fa-<?= 
                                                 !$isActive ? 'pause-circle' : 
                                                 ($isExhausted ? 'ban' : 
