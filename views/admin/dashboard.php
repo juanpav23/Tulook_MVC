@@ -93,29 +93,28 @@ $ultimasVariantes = $this->db->query("
 <link rel="stylesheet" href="<?= BASE_URL ?>assets/css/dashboard.css">
 
 <div class="dashboard-body">
-    <!-- HEADER MODERNO -->
+    <!-- HEADER MODERNO - MODIFICADO PARA QUE EL TÍTULO ESTÉ COMPLETAMENTE A LA IZQUIERDA -->
     <div class="dashboard-header">
-        <div class="container">
+        <div class="container-fluid">
             <div class="row align-items-center">
-                <div class="col-md-8">
-                    <div class="user-info">
-                        <div class="user-avatar">
-                            <?php echo substr(htmlspecialchars($_SESSION['Nombre_Completo'] ?? 'A'), 0, 1); ?>
+                <div class="col-12">
+                    <div class="user-info d-flex justify-content-between align-items-center w-100">
+                        <div class="d-flex align-items-center">
+                            <div class="user-avatar me-3">
+                                <?php echo substr(htmlspecialchars($_SESSION['Nombre_Completo'] ?? 'A'), 0, 1); ?>
+                            </div>
+                            <div class="welcome-text">
+                                <h1 class="mb-1">
+                                    <i class="fas fa-chart-pie me-2"></i> Panel de Administración
+                                </h1>
+                                <p class="text mb-0">
+                                    Bienvenido, <strong><?php echo htmlspecialchars($_SESSION['Nombre_Completo'] ?? 'Administrador'); ?></strong>
+                                    <span class="badge badge-custom ms-2 bg-dark">
+                                        <?= $_SESSION['rol'] == 1 ? 'Administrador' : 'Editor' ?>
+                                    </span>
+                                </p>
+                            </div>
                         </div>
-                        <div class="welcome-text">
-                            <h1>Panel de Administración</h1>
-                            <p>
-                                Bienvenido, <strong><?php echo htmlspecialchars($_SESSION['Nombre_Completo'] ?? 'Administrador'); ?></strong>
-                                <span class="badge badge-custom ms-2 bg-dark">
-                                    <?= $_SESSION['rol'] == 1 ? 'Administrador' : 'Editor' ?>
-                                </span>
-                            </p>
-                        </div>
-                    </div>
-                </div>
-                <div class="col-md-4 text-md-end">
-                    <div class="current-time">
-                        <small><?php echo date('d/m/Y H:i:s'); ?></small>
                     </div>
                 </div>
             </div>
@@ -123,7 +122,7 @@ $ultimasVariantes = $this->db->query("
     </div>
 
     <!-- CONTENIDO PRINCIPAL -->
-    <div class="container">
+    <div class="container-fluid">
         <!-- TARJETAS DE ESTADÍSTICAS PRINCIPALES -->
         <div class="row mb-4">
             <div class="col-xl-3 col-md-6 mb-3">
@@ -650,42 +649,5 @@ $ultimasVariantes = $this->db->query("
     </div>
 </div>
 
-<!-- JavaScript para navegación suave -->
-<script>
-function scrollToElement(elementId) {
-    const element = document.getElementById(elementId);
-    if (element) {
-        element.scrollIntoView({ behavior: 'smooth', block: 'start' });
-    }
-}
-
-function scrollToTop() {
-    window.scrollTo({ top: 0, behavior: 'smooth' });
-}
-
-// Navegación rápida desde el menú
-document.addEventListener('DOMContentLoaded', function() {
-    // Enlaces internos con scroll suave
-    document.querySelectorAll('a[href^="#"]').forEach(anchor => {
-        anchor.addEventListener('click', function(e) {
-            const href = this.getAttribute('href');
-            if (href !== '#') {
-                e.preventDefault();
-                scrollToElement(href.substring(1));
-            }
-        });
-    });
-
-    // Mostrar/ocultar botón de volver arriba al hacer scroll
-    const backToTopBtn = document.querySelector('.back-to-top-btn');
-    window.addEventListener('scroll', function() {
-        if (window.scrollY > 300) {
-            backToTopBtn.style.opacity = '1';
-            backToTopBtn.style.visibility = 'visible';
-        } else {
-            backToTopBtn.style.opacity = '0';
-            backToTopBtn.style.visibility = 'hidden';
-        }
-    });
-});
-</script>
+<!-- Incluir el JS externo del dashboard -->
+<script src="<?= BASE_URL ?>assets/js/dashboard.js"></script>

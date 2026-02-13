@@ -214,7 +214,7 @@ class UsuarioAdminController {
             $resultado = $this->usuarioModel->crear($datos);
 
             if ($resultado) {
-                $_SESSION['mensaje'] = "✅ Usuario creado correctamente";
+                $_SESSION['mensaje'] = "Usuario creado correctamente";
                 $_SESSION['mensaje_tipo'] = "success";
                 
                 // Limpiar datos del formulario guardados
@@ -304,9 +304,11 @@ class UsuarioAdminController {
             exit;
         }
 
-        // Validaciones específicas para desactivación
+        // ============================================
+        // VALIDACIONES PARA DESACTIVACIÓN
+        // ============================================
         if ($estado == 0) {
-            // Si es desactivación, el motivo es obligatorio
+            // Si es desactivación, el motivo es OBLIGATORIO
             if (empty($motivo)) {
                 $_SESSION['mensaje'] = "❌ El motivo de desactivación es obligatorio";
                 $_SESSION['mensaje_tipo'] = "danger";
@@ -322,54 +324,30 @@ class UsuarioAdminController {
                 exit;
             }
             
-            // Validar longitud máxima
-            if (strlen($motivo) > 500) {
-                $_SESSION['mensaje'] = "❌ El motivo no puede exceder los 500 caracteres";
-                $_SESSION['mensaje_tipo'] = "danger";
-                header("Location: " . BASE_URL . "?c=UsuarioAdmin&a=index");
-                exit;
+            // 🔴 MOSTRAR ALERTA SI EL USUARIO YA FUE DESACTIVADO ANTES
+            if (!empty($usuario['Motivo_Desactivacion'])) {
+                $_SESSION['aviso_historial'] = "Este usuario ya fue desactivado anteriormente. El nuevo motivo se AGREGARÁ al historial existente.";
+                // No es un error, solo una notificación
             }
-            
-            // Validar que no sea solo espacios
-            $motivoSinEspacios = preg_replace('/\s+/', '', $motivo);
-            if (strlen($motivoSinEspacios) < 10) {
-                $_SESSION['mensaje'] = "❌ El motivo es demasiado corto. Por favor, proporciona más detalles.";
-                $_SESSION['mensaje_tipo'] = "danger";
-                header("Location: " . BASE_URL . "?c=UsuarioAdmin&a=index");
-                exit;
-            }
-            
-            // Validar que tenga contenido real (no solo caracteres especiales)
-            $motivoLimpio = preg_replace('/[^a-zA-Z0-9áéíóúÁÉÍÓÚñÑ\s]/', '', $motivo);
-            if (strlen(trim($motivoLimpio)) < 15) {
-                $_SESSION['mensaje'] = "❌ El motivo debe contener texto significativo";
-                $_SESSION['mensaje_tipo'] = "danger";
-                header("Location: " . BASE_URL . "?c=UsuarioAdmin&a=index");
-                exit;
-            }
-            
-            // Validar que no sea texto repetitivo
-            if ($this->esTextoRepetitivo($motivo)) {
-                $_SESSION['mensaje'] = "❌ El motivo parece contener texto repetitivo. Por favor, escribe un motivo más específico.";
-                $_SESSION['mensaje_tipo'] = "danger";
-                header("Location: " . BASE_URL . "?c=UsuarioAdmin&a=index");
-                exit;
-            }
-            
-            // Formatear el motivo antes de guardar
-            $motivo = $this->formatearMotivo($motivo);
-        } else {
-            // Si es activación, limpiar motivo
-            $motivo = '';
         }
 
-        // Cambiar estado con motivo
+        // Cambiar estado - EL MODELO AHORA CONSERVA EL HISTORIAL
         $adminId = $_SESSION['ID_Usuario'];
         $resultado = $this->usuarioModel->cambiarEstado($id, $estado, $motivo, $adminId);
 
         if ($resultado) {
-            $_SESSION['mensaje'] = $estado ? "✅ Usuario activado correctamente" : "✅ Usuario desactivado correctamente";
+            if ($estado == 0) {
+                $_SESSION['mensaje'] = "Usuario desactivado correctamente. El motivo ha sido registrado en el historial.";
+            } else {
+                $_SESSION['mensaje'] = "Usuario activado correctamente. El historial de desactivaciones se ha conservado.";
+            }
             $_SESSION['mensaje_tipo'] = "success";
+            
+            // Si hay aviso de historial, mostrarlo
+            if (isset($_SESSION['aviso_historial'])) {
+                $_SESSION['mensaje'] .= " " . $_SESSION['aviso_historial'];
+                unset($_SESSION['aviso_historial']);
+            }
         } else {
             $_SESSION['mensaje'] = "❌ Error al cambiar el estado del usuario";
             $_SESSION['mensaje_tipo'] = "danger";
@@ -610,6 +588,319 @@ class UsuarioAdminController {
             'existe' => $existe,
             'usuario' => $usuarioInfo
         ]);
+        exit;
+    }
+
+    public function solicitudesReactivacion() {
+        try {
+            $estado = $_GET['estado'] ?? ''; // CAMBIADO: por defecto vacío para mostrar TODAS
+            $buscar = trim($_GET['buscar'] ?? '');
+            $pagina = (int)($_GET['pagina'] ?? 1);
+            $porPagina = 15;
+            $offset = ($pagina - 1) * $porPagina;
+            
+            // Construir consulta base
+            $countQuery = "SELECT COUNT(*) as total 
+                        FROM solicitudes_reactivacion sr
+                        INNER JOIN usuario u ON sr.ID_Usuario = u.ID_Usuario
+                        WHERE 1=1";
+            
+            $query = "SELECT 
+                        sr.ID_Solicitud,
+                        sr.ID_Usuario,
+                        sr.Correo,
+                        sr.Fecha_Solicitud,
+                        sr.Estado,
+                        sr.Notas,
+                        sr.Motivo_Reactivacion,
+                        sr.Fecha_Procesamiento,
+                        sr.Comentario_Admin,
+                        sr.Fecha_Expiracion,
+                        u.Nombre,
+                        u.Apellido,
+                        u.N_Documento,
+                        u.Celular,
+                        u.Activo as Estado_Usuario,
+                        u.Motivo_Desactivacion,
+                        u.Fecha_Desactivacion,
+                        u.ID_Admin_Desactiva,
+                        admin.Nombre as Admin_Desactiva_Nombre,
+                        admin.Apellido as Admin_Desactiva_Apellido,
+                        admin2.Nombre as Admin_Procesa_Nombre,
+                        admin2.Apellido as Admin_Procesa_Apellido
+                    FROM solicitudes_reactivacion sr
+                    INNER JOIN usuario u ON sr.ID_Usuario = u.ID_Usuario
+                    LEFT JOIN usuario admin ON u.ID_Admin_Desactiva = admin.ID_Usuario
+                    LEFT JOIN usuario admin2 ON sr.ID_Admin_Procesa = admin2.ID_Usuario
+                    WHERE 1=1";
+            
+            $params = [];
+            
+            // Filtro por estado (SOLO si se seleccionó uno específico)
+            if (!empty($estado)) {
+                $countQuery .= " AND sr.Estado = :estado";
+                $query .= " AND sr.Estado = :estado";
+                $params[':estado'] = $estado;
+            }
+            
+            // Filtro por búsqueda
+            if (!empty($buscar)) {
+                $countQuery .= " AND (u.Nombre LIKE :buscar OR u.Apellido LIKE :buscar OR u.N_Documento LIKE :buscar OR u.Correo LIKE :buscar)";
+                $query .= " AND (u.Nombre LIKE :buscar OR u.Apellido LIKE :buscar OR u.N_Documento LIKE :buscar OR u.Correo LIKE :buscar)";
+                $params[':buscar'] = "%$buscar%";
+            }
+            
+            // Contar total
+            $countStmt = $this->db->prepare($countQuery);
+            foreach ($params as $key => $value) {
+                $countStmt->bindValue($key, $value);
+            }
+            $countStmt->execute();
+            $totalSolicitudes = $countStmt->fetch(PDO::FETCH_ASSOC)['total'];
+            $totalPaginas = ceil($totalSolicitudes / $porPagina);
+            
+            // ============================================================
+            // ORDEN ESPECÍFICO: Pendientes → Aprobadas → Rechazadas
+            // ============================================================
+            $query .= " ORDER BY 
+                        CASE sr.Estado 
+                            WHEN 'pendiente' THEN 1 
+                            WHEN 'procesada' THEN 2 
+                            WHEN 'rechazada' THEN 3 
+                            ELSE 4 
+                        END,
+                        sr.Fecha_Solicitud DESC"; // Dentro de cada estado, las más recientes primero
+            
+            $query .= " LIMIT :offset, :limit";
+            
+            $stmt = $this->db->prepare($query);
+            foreach ($params as $key => $value) {
+                $stmt->bindValue($key, $value);
+            }
+            $stmt->bindParam(':offset', $offset, PDO::PARAM_INT);
+            $stmt->bindParam(':limit', $porPagina, PDO::PARAM_INT);
+            $stmt->execute();
+            $solicitudes = $stmt->fetchAll(PDO::FETCH_ASSOC);
+            
+            // Estadísticas (SIEMPRE muestran totales generales)
+            $statsQuery = "SELECT 
+                            SUM(CASE WHEN Estado = 'pendiente' THEN 1 ELSE 0 END) as pendientes,
+                            SUM(CASE WHEN Estado = 'procesada' THEN 1 ELSE 0 END) as procesadas,
+                            SUM(CASE WHEN Estado = 'rechazada' THEN 1 ELSE 0 END) as rechazadas,
+                            COUNT(*) as total
+                        FROM solicitudes_reactivacion";
+            $statsStmt = $this->db->prepare($statsQuery);
+            $statsStmt->execute();
+            $estadisticas = $statsStmt->fetch(PDO::FETCH_ASSOC);
+            
+            include "views/admin/layout_admin.php";
+            
+        } catch (Exception $e) {
+            error_log("Error en solicitudesReactivacion: " . $e->getMessage());
+            $_SESSION['mensaje'] = "❌ Error al cargar las solicitudes";
+            $_SESSION['mensaje_tipo'] = "danger";
+            header("Location: " . BASE_URL . "?c=UsuarioAdmin&a=index");
+            exit;
+        }
+    }
+
+    /**
+     * Ver detalle de una solicitud específica
+     */
+    public function verSolicitudReactivacion() {
+        $id_solicitud = (int)($_GET['id'] ?? 0);
+        
+        if ($id_solicitud <= 0) {
+            $_SESSION['mensaje'] = "❌ ID de solicitud inválido";
+            $_SESSION['mensaje_tipo'] = "danger";
+            header("Location: " . BASE_URL . "?c=UsuarioAdmin&a=solicitudesReactivacion");
+            exit;
+        }
+        
+        try {
+            // Obtener solicitud con todos los detalles
+            $query = "SELECT 
+                        sr.*,
+                        u.Nombre,
+                        u.Apellido,
+                        u.N_Documento,
+                        u.Correo,
+                        u.Celular,
+                        u.Motivo_Desactivacion,
+                        u.Fecha_Desactivacion,
+                        u.Activo as Estado_Usuario,
+                        td.Documento as Tipo_Documento,
+                        admin_desactiva.Nombre as Admin_Desactiva_Nombre,
+                        admin_desactiva.Apellido as Admin_Desactiva_Apellido,
+                        admin_procesa.Nombre as Admin_Procesa_Nombre,
+                        admin_procesa.Apellido as Admin_Procesa_Apellido
+                    FROM solicitudes_reactivacion sr
+                    INNER JOIN usuario u ON sr.ID_Usuario = u.ID_Usuario
+                    LEFT JOIN tipo_documento td ON u.ID_TD = td.ID_TD
+                    LEFT JOIN usuario admin_desactiva ON u.ID_Admin_Desactiva = admin_desactiva.ID_Usuario
+                    LEFT JOIN usuario admin_procesa ON sr.ID_Admin_Procesa = admin_procesa.ID_Usuario
+                    WHERE sr.ID_Solicitud = :id_solicitud";
+            
+            $stmt = $this->db->prepare($query);
+            $stmt->execute([':id_solicitud' => $id_solicitud]);
+            $solicitud = $stmt->fetch(PDO::FETCH_ASSOC);
+            
+            if (!$solicitud) {
+                $_SESSION['mensaje'] = "❌ Solicitud no encontrada";
+                $_SESSION['mensaje_tipo'] = "danger";
+                header("Location: " . BASE_URL . "?c=UsuarioAdmin&a=solicitudesReactivacion");
+                exit;
+            }
+            
+            $expirada = false;
+            if ($solicitud['Estado'] == 'pendiente' && !empty($solicitud['Fecha_Expiracion'])) {
+                $fecha_expiracion = strtotime($solicitud['Fecha_Expiracion']);
+                $ahora = time();
+                $expirada = ($fecha_expiracion < $ahora);
+            }
+            
+            // Obtener historial de solicitudes del mismo usuario
+            $historialQuery = "SELECT ID_Solicitud, Estado, Fecha_Solicitud, Fecha_Procesamiento 
+                            FROM solicitudes_reactivacion 
+                            WHERE ID_Usuario = :id_usuario 
+                            ORDER BY Fecha_Solicitud DESC 
+                            LIMIT 5";
+            $historialStmt = $this->db->prepare($historialQuery);
+            $historialStmt->execute([':id_usuario' => $solicitud['ID_Usuario']]);
+            $historial = $historialStmt->fetchAll(PDO::FETCH_ASSOC);
+
+            include "views/admin/layout_admin.php";
+            
+        } catch (Exception $e) {
+            error_log("Error en verSolicitudReactivacion: " . $e->getMessage());
+            $_SESSION['mensaje'] = "❌ Error al cargar la solicitud";
+            $_SESSION['mensaje_tipo'] = "danger";
+            header("Location: " . BASE_URL . "?c=UsuarioAdmin&a=solicitudesReactivacion");
+            exit;
+        }
+    }
+
+    /**
+     * Procesar solicitud de reactivación (aprobar/rechazar)
+     */
+    public function procesarSolicitudReactivacion() {
+        if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+            header("Location: " . BASE_URL . "?c=UsuarioAdmin&a=solicitudesReactivacion");
+            exit;
+        }
+        
+        try {
+            $id_solicitud = (int)($_POST['id_solicitud'] ?? 0);
+            $accion = $_POST['accion'] ?? '';
+            $comentario = trim($_POST['comentario_admin'] ?? '');
+            $id_admin = $_SESSION['ID_Usuario'];
+            
+            // VALIDACIONES
+            if ($id_solicitud <= 0) {
+                throw new Exception("ID de solicitud inválido");
+            }
+            
+            if (!in_array($accion, ['aprobar', 'rechazar'])) {
+                throw new Exception("Acción no válida");
+            }
+            
+            if ($accion === 'rechazar' && empty($comentario)) {
+                throw new Exception("Debes proporcionar un motivo de rechazo");
+            }
+            
+            if ($accion === 'rechazar' && strlen($comentario) < 20) {
+                throw new Exception("El motivo de rechazo debe tener al menos 20 caracteres");
+            }
+            
+            // Obtener información de la solicitud
+            $query = "SELECT sr.*, u.Activo, u.Nombre, u.Apellido, u.Correo, u.ID_Usuario 
+                    FROM solicitudes_reactivacion sr
+                    INNER JOIN usuario u ON sr.ID_Usuario = u.ID_Usuario
+                    WHERE sr.ID_Solicitud = :id_solicitud";
+            $stmt = $this->db->prepare($query);
+            $stmt->execute([':id_solicitud' => $id_solicitud]);
+            $solicitud = $stmt->fetch(PDO::FETCH_ASSOC);
+            
+            if (!$solicitud) {
+                throw new Exception("Solicitud no encontrada");
+            }
+            
+            if ($solicitud['Estado'] !== 'pendiente') {
+                throw new Exception("Esta solicitud ya fue procesada anteriormente");
+            }
+            
+            // Verificar si la solicitud ha expirado
+            if ($solicitud['Fecha_Expiracion'] && strtotime($solicitud['Fecha_Expiracion']) < time()) {
+                $updateExp = $this->db->prepare("UPDATE solicitudes_reactivacion SET Estado = 'rechazada', Notas = 'Solicitud expirada por tiempo' WHERE ID_Solicitud = ?");
+                $updateExp->execute([$id_solicitud]);
+                throw new Exception("Esta solicitud ha expirado (24 horas). El usuario debe generar una nueva.");
+            }
+            
+            $this->db->beginTransaction();
+            
+            if ($accion === 'aprobar') {
+                $updateUsuario = $this->db->prepare("
+                    UPDATE usuario 
+                    SET Activo = 1 
+                    WHERE ID_Usuario = ?
+                ");
+                
+                $resultadoUsuario = $updateUsuario->execute([$solicitud['ID_Usuario']]);
+                
+                if (!$resultadoUsuario) {
+                    throw new Exception("Error al reactivar usuario");
+                }
+                
+                $nuevoEstado = 'procesada';
+                $mensajeExito = "✅ Usuario reactivado exitosamente";
+            }else {
+                // RECHAZAR SOLICITUD
+                $nuevoEstado = 'rechazada';
+                $mensajeExito = "❌ Solicitud rechazada";
+            }
+            
+            // Actualizar solicitud
+            $updateSolicitud = $this->db->prepare("
+                UPDATE solicitudes_reactivacion 
+                SET Estado = :estado,
+                    Fecha_Procesamiento = NOW(),
+                    ID_Admin_Procesa = :id_admin,
+                    Comentario_Admin = :comentario
+                WHERE ID_Solicitud = :id_solicitud
+            ");
+            
+            $resultadoSolicitud = $updateSolicitud->execute([
+                ':estado' => $nuevoEstado,
+                ':id_admin' => $id_admin,
+                ':comentario' => $comentario,
+                ':id_solicitud' => $id_solicitud
+            ]);
+            
+            if (!$resultadoSolicitud) {
+                throw new Exception("Error al actualizar el estado de la solicitud");
+            }
+            
+            $this->db->commit();
+            
+            $_SESSION['mensaje'] = $mensajeExito;
+            $_SESSION['mensaje_tipo'] = "success";
+            
+        } catch (Exception $e) {
+            if ($this->db->inTransaction()) {
+                $this->db->rollBack();
+            }
+            
+            error_log("❌ Error en procesarSolicitudReactivacion: " . $e->getMessage());
+            $_SESSION['mensaje'] = "❌ " . $e->getMessage();
+            $_SESSION['mensaje_tipo'] = "danger";
+        }
+        
+        // Redirigir
+        if (isset($_POST['redirigir_detalle'])) {
+            header("Location: " . BASE_URL . "?c=UsuarioAdmin&a=verSolicitudReactivacion&id=" . $id_solicitud);
+        } else {
+            header("Location: " . BASE_URL . "?c=UsuarioAdmin&a=solicitudesReactivacion");
+        }
         exit;
     }
 }

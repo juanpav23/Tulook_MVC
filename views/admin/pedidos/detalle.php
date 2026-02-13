@@ -203,7 +203,7 @@ if (!empty($pedido['productos'])) {
                             <td>
                                 <?php if (!empty($pedido['Direccion'])): ?>
                                     <?= htmlspecialchars($pedido['Direccion']) ?><br>
-                                    <?= htmlspecialchars($pedido['Ciudad']) ?>,
+                                    <?= htmlspecialchars($pedido['Ciudad']) ?>, 
                                     <?= htmlspecialchars($pedido['Departamento']) ?><br>
                                     Código Postal: <?= htmlspecialchars($pedido['CodigoPostal']) ?>
                                 <?php else: ?>
@@ -279,106 +279,56 @@ if (!empty($pedido['productos'])) {
                 <h5 class="mb-3 text-primary-dark"><i class="fas fa-sync me-2"></i>Actualizar Estado del Pedido</h5>
 
                 <?php if ($pedido['Estado'] === 'Preparando'): ?>
-
-                    <!-- Botón de Envío Rápido y Cancelar -->
-                    <?php if ($pedido['Estado'] === 'Preparando'): ?>
-                        <div class="row mt-3">
-                            <div class="col-md-8">
-                                <div class="card border-primary">
-                                    <div class="card-header bg-primary-dark text-white">
-                                        <h6 class="mb-0"><i class="fas fa-bolt me-2"></i>Envío Rápido</h6>
-                                    </div>
-                                    <div class="card-body">
-                                        <p class="text-primary-dark mb-3">Marca este pedido como enviado de forma rápida y sencilla:</p>
-                                        <a href="<?= BASE_URL ?>?c=Pedido&a=envioRapido&id=<?= $pedido['ID_Factura'] ?>"
-                                            class="btn btn-primary-dark">
-                                            <i class="fas fa-bolt me-2"></i> Enviar Pedido
-                                        </a>
-                                        <small class="text-muted ms-2">Genera automáticamente número de guía y configura envío con un clic</small>
-                                    </div>
+                    <!-- Botones de acción para estado Preparando -->
+                    <div class="row mt-3">
+                        <div class="col-md-8">
+                            <!-- Botón de Envío Rápido -->
+                            <div class="card border-primary mb-3">
+                                <div class="card-header bg-primary-dark text-white">
+                                    <h6 class="mb-0"><i class="fas fa-bolt me-2"></i>Envío Rápido</h6>
                                 </div>
-                            </div>
-                            <div class="col-md-4">
-                                <div class="card border-danger">
-                                    <div class="card-header bg-danger text-white">
-                                        <h6 class="mb-0"><i class="fas fa-times-circle me-2"></i>Cancelar Proceso</h6>
-                                    </div>
-                                    <div class="card-body">
-                                        <p class="text-primary-dark mb-3">Si necesitas detener el proceso actual:</p>
-                                        <a href="<?= BASE_URL ?>?c=Pedido&a=detalle&id=<?= $pedido['ID_Factura'] ?>" 
-                                           class="btn btn-outline-danger w-100">
-                                            <i class="fas fa-times me-1"></i> Cancelar
-                                        </a>
-                                        <small class="text-muted mt-2 d-block">
-                                            <i class="fas fa-info-circle me-1"></i> Vuelve al detalle sin realizar cambios
-                                        </small>
-                                    </div>
+                                <div class="card-body">
+                                    <p class="text-primary-dark mb-3">Marca este pedido como enviado de forma rápida y sencilla:</p>
+                                    <a href="<?= BASE_URL ?>?c=Pedido&a=envioRapido&id=<?= $pedido['ID_Factura'] ?>"
+                                        class="btn btn-primary-dark">
+                                        <i class="fas fa-bolt me-2"></i> Enviar Pedido
+                                    </a>
+                                    <small class="text-muted ms-2">Genera automáticamente número de guía y configura envío con un clic</small>
                                 </div>
                             </div>
                         </div>
-                    <?php endif; ?>
+                        <div class="col-md-4">
+                            <!-- Botón para Cancelar Proceso (Regresar a Confirmado) -->
+                            <div class="card border-primary mb-3">
+                                <div class="card-header bg-primary text-white">
+                                    <h6 class="mb-0"><i class="fas fa-undo me-2"></i>Cancelar Proceso</h6>
+                                </div>
+                                <div class="card-body">
+                                    <p class="text-primary-dark mb-3">Regresar este pedido a estado Confirmado:</p>
+                                    <button type="button" class="btn btn-primary w-100 mb-2" 
+                                            data-bs-toggle="modal" 
+                                            data-bs-target="#modalCancelarProceso">
+                                        <i class="fas fa-undo me-1"></i> Cancelar Proceso
+                                    </button>
+                                    <small class="text-muted">El pedido volverá a estar en espera para preparación</small>
+                                    
+                                    <!-- Botón para Anular Pedido completamente -->
+                                    <hr class="my-2">
+                                    <button type="button" class="btn btn-outline-danger w-100" 
+                                            data-bs-toggle="modal" 
+                                            data-bs-target="#modalAnulado">
+                                        <i class="fas fa-times me-1"></i> Anular Pedido
+                                    </button>
+                                    <small class="text-muted mt-1 d-block">
+                                        <i class="fas fa-exclamation-triangle me-1"></i> Anular completamente y devolver stock
+                                    </small>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
 
-                    <script>
-                        document.addEventListener('DOMContentLoaded', function() {
-                            const checkbox = document.getElementById('generar_automatico');
-                            const campoPersonalizado = document.getElementById('campo-guia-personalizado');
-                            const ejemploGuia = document.getElementById('ejemplo-guia');
-
-                            // Generar nuevo ejemplo cada vez que se carga la página
-                            function generarEjemploGuia() {
-                                const fecha = new Date().toISOString().slice(0, 10).replace(/-/g, '');
-                                const idFactura = <?= $pedido['ID_Factura'] ?>;
-                                const random = Math.floor(Math.random() * 10000).toString().padStart(4, '0');
-                                const nuevoEjemplo = `TLL-${fecha}-${idFactura}-${random}`;
-                                ejemploGuia.textContent = nuevoEjemplo;
-                            }
-
-                            // Generar ejemplo inicial
-                            generarEjemploGuia();
-
-                            // Actualizar ejemplo cada 30 segundos (por si la página está abierta)
-                            setInterval(generarEjemploGuia, 30000);
-
-                            // Mostrar/ocultar campo personalizado
-                            checkbox.addEventListener('change', function() {
-                                if (this.checked) {
-                                    campoPersonalizado.style.display = 'none';
-                                } else {
-                                    campoPersonalizado.style.display = 'block';
-                                }
-                            });
-
-                            // Validar formulario
-                            document.getElementById('formEnviarPedido').addEventListener('submit', function(e) {
-                                const transportadora = document.getElementById('Transportadora').value.trim();
-                                const generarAuto = document.getElementById('generar_automatico').checked;
-                                const guiaPersonalizada = document.getElementById('Numero_Guia_Personalizado').value.trim();
-
-                                // Validar transportadora
-                                if (!transportadora) {
-                                    e.preventDefault();
-                                    alert('Por favor ingresa el nombre de la transportadora');
-                                    document.getElementById('Transportadora').focus();
-                                    return;
-                                }
-
-                                // Si no es automático, validar guía personalizada
-                                if (!generarAuto && !guiaPersonalizada) {
-                                    e.preventDefault();
-                                    alert('Por favor ingresa un número de guía o selecciona "Generar automáticamente"');
-                                    document.getElementById('Numero_Guia_Personalizado').focus();
-                                    return;
-                                }
-
-                                // Mostrar confirmación
-                                if (!confirm('¿Confirmar envío del pedido <?= $pedido['Codigo_Acceso'] ?>?')) {
-                                    e.preventDefault();
-                                }
-                            });
-                        });
-                    </script>
                 <?php elseif ($pedido['Estado'] === 'Enviado' || $pedido['Estado'] === 'Retrasado'): ?>
-                    <!-- Opciones para pedidos enviados -->
+                    <!-- Opciones para pedidos enviados o retrasados - CORREGIDO -->
                     <div class="row mt-3">
                         <div class="col-md-6">
                             <div class="card h-100">
@@ -406,31 +356,39 @@ if (!empty($pedido['productos'])) {
                         <div class="col-md-6">
                             <div class="card h-100">
                                 <div class="card-header bg-primary-light text-white">
-                                    <h6 class="mb-0"><i class="fas fa-exchange-alt me-2"></i>Otros Estados</h6>
+                                    <h6 class="mb-0"><i class="fas fa-exchange-alt me-2"></i>Gestión del Envío</h6>
                                 </div>
                                 <div class="card-body">
                                     <div class="d-grid gap-2">
+                                        <!-- Botón para regresar a Preparando -->
                                         <button type="button" class="btn btn-outline-primary"
-                                            data-bs-toggle="modal" data-bs-target="#modalRetrasado">
+                                                data-bs-toggle="modal" data-bs-target="#modalRegresarPreparando">
+                                            <i class="fas fa-undo me-1"></i> Cancelar Envío
+                                        </button>
+                                        
+                                        <!-- Botón para Marcar como Retrasado -->
+                                        <button type="button" class="btn btn-outline-primary"
+                                                data-bs-toggle="modal" data-bs-target="#modalRetrasado">
                                             <i class="fas fa-clock me-1"></i> Marcar como Retrasado
                                         </button>
+                                        
+                                        <!-- Botón para Marcar como Devuelto -->
                                         <button type="button" class="btn btn-outline-primary"
-                                            data-bs-toggle="modal" data-bs-target="#modalDevuelto">
+                                                data-bs-toggle="modal" data-bs-target="#modalDevuelto">
                                             <i class="fas fa-undo me-1"></i> Marcar como Devuelto
                                         </button>
-                                        <button type="button" class="btn btn-outline-primary"
-                                            data-bs-toggle="modal" data-bs-target="#modalAnulado">
-                                            <i class="fas fa-times me-1"></i> Anular Pedido
-                                        </button>
+                                        
+                                        <!-- Botón para Anular Pedido -->
                                         <button type="button" class="btn btn-outline-danger"
-                                            onclick="window.location.href='<?= BASE_URL ?>?c=Pedido&a=detalle&id=<?= $pedido['ID_Factura'] ?>'">
-                                            <i class="fas fa-times me-1"></i> Cancelar
+                                                data-bs-toggle="modal" data-bs-target="#modalAnuladoEnviado">
+                                            <i class="fas fa-times me-1"></i> Anular Pedido
                                         </button>
                                     </div>
                                 </div>
                             </div>
                         </div>
                     </div>
+                    
                 <?php else: ?>
                     <!-- Sistema de botones para cambiar estado -->
                     <div class="card mt-3">
@@ -473,12 +431,12 @@ if (!empty($pedido['productos'])) {
                                 <!-- Opciones para pedido Confirmado -->
                                 <div class="row g-3 mb-4">
                                     <div class="col-md-6">
-                                        <div class="card h-100 border-warning">
+                                        <div class="card h-100 border-primary">
                                             <div class="card-body text-center">
                                                 <i class="fas fa-box-open fa-3x text-primary-dark mb-3"></i>
                                                 <h5 class="text-primary-dark">Preparar Pedido</h5>
                                                 <p class="text-muted small">El producto está siendo preparado y empaquetado en nuestras oficinas.</p>
-                                                <button type="button" class="btn btn-warning w-100"
+                                                <button type="button" class="btn btn-primary w-100"
                                                         data-bs-toggle="modal" data-bs-target="#modalPreparando">
                                                     <i class="fas fa-cogs me-1"></i> Iniciar Preparación
                                                 </button>
@@ -504,12 +462,12 @@ if (!empty($pedido['productos'])) {
                                 <!-- Opciones para pedido Devuelto -->
                                 <div class="row g-3 mb-4">
                                     <div class="col-md-6">
-                                        <div class="card h-100 border-warning">
+                                        <div class="card h-100 border-primary">
                                             <div class="card-body text-center">
                                                 <i class="fas fa-redo fa-3x text-primary-dark mb-3"></i>
                                                 <h5 class="text-primary-dark">Preparar Nuevamente</h5>
                                                 <p class="text-muted small">Reiniciar el proceso de preparación para este pedido devuelto.</p>
-                                                <button type="button" class="btn btn-warning w-100"
+                                                <button type="button" class="btn btn-primary w-100"
                                                         data-bs-toggle="modal" data-bs-target="#modalPrepararDevuelto">
                                                     <i class="fas fa-redo me-1"></i> Preparar Nuevamente
                                                 </button>
@@ -551,7 +509,7 @@ if (!empty($pedido['productos'])) {
         </div>
     </div>
 
-    <!-- Productos del Pedido - CORREGIDO -->
+    <!-- Productos del Pedido -->
     <div class="card">
         <div class="card-header bg-primary-light text-white">
             <h5 class="mb-0"><i class="fas fa-boxes me-2"></i>Productos del Pedido</h5>
@@ -615,7 +573,7 @@ if (!empty($pedido['productos'])) {
                                     } elseif (in_array(strtolower($variante), ['xs', 's', 'm', 'l', 'xl', 'xxl', '28', '30', '32', '34', '36', '38', '40', '42'])) {
                                         $variantesDetalladas[] = '<span class="badge bg-primary text-white">Talla: ' . htmlspecialchars($variante) . '</span>';
                                     } elseif (in_array(strtolower($variante), ['19', '20', '28', '30', '32', '34', '36'])) {
-                                        $variantesDetalladas[] = '<span class="badge bg-warning text-white">Medida: ' . htmlspecialchars($variante) . '</span>';
+                                        $variantesDetalladas[] = '<span class="badge bg-primary text-white">Medida: ' . htmlspecialchars($variante) . '</span>';
                                     } else {
                                         $variantesDetalladas[] = '<span class="badge bg-secondary text-white">' . htmlspecialchars($variante) . '</span>';
                                     }
@@ -808,6 +766,331 @@ if (!empty($pedido['productos'])) {
     </div>
 
     <!-- Modales para cambio de estado -->
+
+    <!-- Modal para Cancelar Proceso (Regresar a Confirmado) - Solo para Preparando -->
+    <div class="modal fade" id="modalCancelarProceso" tabindex="-1">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header bg-primary text-white">
+                    <h5 class="modal-title">
+                        <i class="fas fa-undo me-2"></i>Cancelar Proceso de Preparación
+                    </h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <form action="<?= BASE_URL ?>?c=Pedido&a=cancelarProceso" method="post" id="formCancelarProceso">
+                    <input type="hidden" name="ID_Factura" value="<?= $pedido['ID_Factura'] ?>">
+                    <div class="modal-body">
+                        <div class="alert alert-primary-pedidos mb-3">
+                            <i class="fas fa-info-circle me-2"></i>
+                            <strong>Información:</strong> El pedido será regresado al estado "Confirmado" y podrá ser preparado nuevamente en el futuro.
+                        </div>
+                        <p>¿Regresar el pedido <strong class="text-primary-dark"><?= $pedido['Codigo_Acceso'] ?></strong> a estado Confirmado?</p>
+                        <div class="mb-3">
+                            <label for="descripcionCancelarProceso" class="form-label text-primary-dark">
+                                <strong>Motivo de cancelación del proceso:</strong>
+                            </label>
+                            <textarea class="form-control" id="descripcionCancelarProceso" name="Descripcion" rows="3" required
+                                placeholder="Ej: Material insuficiente, personal no disponible, problemas técnicos en el proceso de preparación...">Cancelación del proceso de preparación. Pedido regresado a estado confirmado para ser preparado posteriormente.</textarea>
+                            <div class="mt-2">
+                                <small class="text-primary-dark"><strong>Sugerencias rápidas:</strong></small>
+                                <div class="d-flex flex-wrap gap-2 mt-1">
+                                    <button type="button" class="btn btn-sm btn-outline-primary sugerencia-btn" data-text="Material insuficiente para completar el empaquetado del pedido.">Material insuficiente</button>
+                                    <button type="button" class="btn btn-sm btn-outline-primary sugerencia-btn" data-text="Personal no disponible para continuar con el proceso de preparación.">Personal no disponible</button>
+                                    <button type="button" class="btn btn-sm btn-outline-primary sugerencia-btn" data-text="Problemas técnicos en el área de preparación.">Problemas técnicos</button>
+                                    <button type="button" class="btn btn-sm btn-outline-primary sugerencia-btn" data-text="Revisión pendiente del producto antes de continuar con la preparación.">Revisión pendiente</button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-outline-primary" data-bs-dismiss="modal">Cancelar</button>
+                        <button type="submit" class="btn btn-primary" onclick="return confirmarCancelarProceso()">
+                            <i class="fas fa-undo me-1"></i> Regresar a Confirmado
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal para Regresar a Preparando (desde Enviado) -->
+    <div class="modal fade" id="modalRegresarPreparando" tabindex="-1">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header bg-primary text-white">
+                    <h5 class="modal-title">
+                        <i class="fas fa-undo me-2"></i>Cancelar Envío - Regresar a Preparando
+                    </h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <form action="<?= BASE_URL ?>?c=Pedido&a=regresarAPreparando" method="post" id="formRegresarPreparando">
+                    <input type="hidden" name="ID_Factura" value="<?= $pedido['ID_Factura'] ?>">
+                    <div class="modal-body">
+                        <div class="alert alert-primary-pedidos mb-3">
+                            <i class="fas fa-info-circle me-2"></i>
+                            <strong>Información importante:</strong> El pedido será regresado al estado "Preparando" y los datos de envío (número de guía, transportadora, etc.) serán eliminados.
+                        </div>
+                        <p>¿Cancelar el envío del pedido <strong class="text-primary-dark"><?= $pedido['Codigo_Acceso'] ?></strong> y regresarlo a estado Preparando?</p>
+                        <div class="mb-3">
+                            <label for="descripcionRegresarPreparando" class="form-label text-primary-dark">
+                                <strong>Motivo de cancelación del envío:</strong>
+                            </label>
+                            <textarea class="form-control" id="descripcionRegresarPreparando" name="Descripcion" rows="3" required
+                                placeholder="Ej: Error en la dirección, cambio de transportadora, producto requiere revisión adicional..."></textarea>
+                            <div class="mt-2">
+                                <small class="text-primary-dark"><strong>Sugerencias rápidas:</strong></small>
+                                <div class="d-flex flex-wrap gap-2 mt-1">
+                                    <button type="button" class="btn btn-sm btn-outline-primary sugerencia-btn" data-text="Error en la dirección de envío proporcionada por el cliente.">Error en dirección</button>
+                                    <button type="button" class="btn btn-sm btn-outline-primary sugerencia-btn" data-text="Cambio necesario en la transportadora asignada para el envío.">Cambio de transportadora</button>
+                                    <button type="button" class="btn btn-sm btn-outline-primary sugerencia-btn" data-text="El producto requiere revisión adicional antes del envío.">Revisión adicional</button>
+                                    <button type="button" class="btn btn-sm btn-outline-primary sugerencia-btn" data-text="Cliente solicitó modificación en el pedido antes del envío.">Modificación solicitada</button>
+                                </div>
+                            </div>
+                            <div class="form-text text-primary-dark mt-2">
+                                <i class="fas fa-exclamation-triangle me-1"></i>
+                                <strong>Atención:</strong> Los datos de envío (número de guía, transportadora, fecha estimada) serán eliminados.
+                            </div>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-outline-primary" data-bs-dismiss="modal">Cancelar</button>
+                        <button type="submit" class="btn btn-primary" onclick="return confirmarRegresarPreparando()">
+                            <i class="fas fa-undo me-1"></i> Sí, Cancelar Envío
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal para Anular Pedido Enviado -->
+    <div class="modal fade" id="modalAnuladoEnviado" tabindex="-1">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header bg-danger text-white">
+                    <h5 class="modal-title">
+                        <i class="fas fa-times-circle me-2"></i>Anular Pedido Enviado
+                    </h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <form action="<?= BASE_URL ?>?c=Pedido&a=anularPedidoEnviado" method="post" id="formAnuladoEnviado">
+                    <input type="hidden" name="ID_Factura" value="<?= $pedido['ID_Factura'] ?>">
+                    <div class="modal-body">
+                        <div class="alert alert-primary mb-3">
+                            <i class="fas fa-exclamation-triangle me-2"></i>
+                            <strong>¡ATENCIÓN! Esta acción es crítica.</strong>
+                            <div class="mt-2">
+                                <i class="fas fa-boxes me-2"></i>
+                                <span class="fw-bold">El stock de los productos será devuelto automáticamente.</span>
+                            </div>
+                            <div class="mt-2">
+                                <i class="fas fa-truck me-2"></i>
+                                <span>Los datos de envío serán eliminados completamente.</span>
+                            </div>
+                        </div>
+                        
+                        <!-- Mostrar productos que serán devueltos -->
+                        <?php if (!empty($pedido['productos'])): ?>
+                        <div class="card mb-3 border-danger">
+                            <div class="card-header bg-primary text-white py-2">
+                                <h6 class="mb-0"><i class="fas fa-boxes me-2"></i>Productos a devolver al stock</h6>
+                            </div>
+                            <div class="card-body p-2">
+                                <div class="table-responsive">
+                                    <table class="table table-sm table-borderless mb-0">
+                                        <thead>
+                                            <tr>
+                                                <th class="text-primary small">Producto</th>
+                                                <th class="text-primary small text-center">Cantidad</th>
+                                                <th class="text-primary small text-center">Stock Actual</th>
+                                                <th class="text-primary small text-center">Stock Nuevo</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            <?php 
+                                            $totalUnidades = 0;
+                                            foreach ($pedido['productos'] as $producto): 
+                                                $cantidad = $producto['Cantidad'] ?? 1;
+                                                $stockActual = $producto['StockActual'] ?? 0;
+                                                $stockNuevo = $stockActual + $cantidad;
+                                                $totalUnidades += $cantidad;
+                                            ?>
+                                                <tr class="border-bottom border-light">
+                                                    <td class="small">
+                                                        <span class="text-dark fw-semibold"><?= htmlspecialchars($producto['NombreProducto'] ?? 'Producto') ?></span>
+                                                    </td>
+                                                    <td class="text-center">
+                                                        <span class="badge bg-dark"><?= $cantidad ?></span>
+                                                    </td>
+                                                    <td class="text-center">
+                                                        <span class="badge bg-secondary"><?= $stockActual ?></span> 
+                                                    </td>
+                                                    <td class="text-center">
+                                                        <span class="badge bg-primary-dark text-white"><?= $stockNuevo ?></span>
+                                                    </td>
+                                                </tr>
+                                            <?php endforeach; ?>
+                                        </tbody>
+                                        <tfoot>
+                                            <tr class="border-top border-light">
+                                                <td class="text-dark fw-bold small">Total:</td>
+                                                <td class="text-center">
+                                                    <span class="badge bg-dark"><?= $totalUnidades ?></span>
+                                                </td>
+                                                <td colspan="2" class="text-dark small text-center">
+                                                    <i class="fas fa-info-circle me-1"></i> Todas las unidades serán devueltas
+                                                </td>
+                                            </tr>
+                                        </tfoot>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                        <?php endif; ?>
+                        
+                        <div class="mb-3">
+                            <label for="motivoAnulacionEnviado" class="form-label text-dark">
+                                <strong>Motivo de la anulación (Obligatorio):</strong>
+                            </label>
+                            <textarea class="form-control" id="motivoAnulacionEnviado" name="Descripcion" rows="3" required
+                                placeholder="Ej: Cliente canceló la compra después del envío, producto dañado durante el transporte, dirección incorrecta imposibilita la entrega..."></textarea>
+                            <div class="form-text text-dark">
+                                <i class="fas fa-info-circle me-1"></i> El stock será devuelto y los datos de envío eliminados.
+                            </div>
+                            
+                            <!-- Sugerencias rápidas -->
+                            <div class="mt-2">
+                                <small class="text-dark"><strong>Sugerencias rápidas:</strong></small>
+                                <div class="d-flex flex-wrap gap-2 mt-1">
+                                    <button type="button" class="btn btn-sm btn-outline-dark sugerencia-btn" data-text="Cliente canceló la compra después de que el pedido fue enviado.">Cancelación post-envío</button>
+                                    <button type="button" class="btn btn-sm btn-outline-dark sugerencia-btn" data-text="Producto dañado durante el proceso de transporte.">Producto dañado</button>
+                                    <button type="button" class="btn btn-sm btn-outline-dark sugerencia-btn" data-text="Dirección incorrecta imposibilita la entrega del pedido.">Dirección errónea</button>
+                                    <button type="button" class="btn btn-sm btn-outline-dark sugerencia-btn" data-text="Problemas con la transportadora que imposibilitan la entrega.">Problema transportadora</button>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Casillas de verificación para confirmar anulación -->
+                        <div class="casillas-verificacion-anulacion mb-4 p-3 border rounded bg-light">
+                            <div class="alert alert-primary mb-3">
+                                <i class="fas fa-shield-alt me-2"></i>
+                                <strong>Verificación de seguridad crítica:</strong> Marque las siguientes casillas para confirmar la anulación.
+                            </div>
+                            
+                            <div class="form-check mb-2">
+                                <input class="form-check-input casilla-anulacion-enviado" 
+                                    type="checkbox" 
+                                    value="1" 
+                                    id="casilla1_anulacion_enviado">
+                                <label class="form-check-label text-dark" for="casilla1_anulacion_enviado">
+                                    <strong>Confirmo que deseo anular este pedido enviado permanentemente</strong><br>
+                                    <small class="text-muted">Esta acción no se puede deshacer y eliminará todos los datos de envío.</small>
+                                </label>
+                            </div>
+                            
+                            <div class="form-check mb-2">
+                                <input class="form-check-input casilla-anulacion-enviado" 
+                                    type="checkbox" 
+                                    value="1" 
+                                    id="casilla2_anulacion_enviado">
+                                <label class="form-check-label text-dark" for="casilla2_anulacion_enviado">
+                                    <strong>Entiendo que el stock será devuelto automáticamente</strong><br>
+                                    <small class="text-muted"><?= $totalUnidades ?> unidades serán sumadas al stock de los productos.</small>
+                                </label>
+                            </div>
+                            
+                            <div class="form-check mb-2">
+                                <input class="form-check-input casilla-anulacion-enviado" 
+                                    type="checkbox" 
+                                    value="1" 
+                                    id="casilla3_anulacion_enviado">
+                                <label class="form-check-label text-dark" for="casilla3_anulacion_enviado">
+                                    <strong>Confirmo que los datos de envío serán eliminados</strong><br>
+                                    <small class="text-muted">Número de guía, transportadora, fecha de envío y fecha estimada serán borrados.</small>
+                                </label>
+                            </div>
+                            
+                            <!-- Contador de verificación -->
+                            <div class="verificacion-contador-anulacion mt-3">
+                                <div class="d-flex justify-content-between mb-1">
+                                    <small class="text-dark">Verificación completada:</small>
+                                    <small><span id="contadorCasillasAnulacionEnviado">0</span>/3</small>
+                                </div>
+                                <div class="progress" style="height: 8px;">
+                                    <div id="barraProgresoAnulacionEnviado" 
+                                        class="progress-bar" 
+                                        role="progressbar" 
+                                        style="width: 0%" 
+                                        aria-valuenow="0" 
+                                        aria-valuemin="0" 
+                                        aria-valuemax="100"></div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="text-center mt-3">
+                            <small class="text-muted">El botón de anulación se habilitará cuando marques las tres casillas.</small>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">
+                            <i class="fas fa-times me-1"></i> Cancelar
+                        </button>
+                        <button type="submit" class="btn btn-danger" id="btnAnularPedidoEnviado" disabled>
+                            <i class="fas fa-times me-1"></i> Anular Pedido Enviado
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal para Preparar Nuevamente (Devuelto -> Preparando) -->
+    <div class="modal fade" id="modalPrepararDevuelto" tabindex="-1">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header bg-primary text-white">
+                    <h5 class="modal-title">
+                        <i class="fas fa-redo me-2"></i>Preparar Pedido Devuelto
+                    </h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <form action="<?= BASE_URL ?>?c=Pedido&a=prepararDevuelto" method="post" id="formPrepararDevuelto">
+                    <input type="hidden" name="ID_Factura" value="<?= $pedido['ID_Factura'] ?>">
+                    <div class="modal-body">
+                        <div class="alert alert-primary-pedidos mb-3">
+                            <i class="fas fa-info-circle me-2"></i>
+                            <strong>Información:</strong> Este pedido devuelto será preparado nuevamente. El producto será revisado, empaquetado y listo para un nuevo envío.
+                        </div>
+                        <p>¿Preparar nuevamente el pedido <strong class="text-primary-dark"><?= $pedido['Codigo_Acceso'] ?></strong>?</p>
+                        <div class="mb-3">
+                            <label for="descripcionPrepararDevuelto" class="form-label text-primary-dark">
+                                <strong>Motivo de preparación:</strong>
+                            </label>
+                            <textarea class="form-control" id="descripcionPrepararDevuelto" name="Descripcion" rows="3" required
+                                placeholder="Ej: Producto devuelto en buen estado, listo para reempaquetar y enviar nuevamente...">Producto devuelto verificado. Se procede a reempaquetar y preparar para nuevo envío.</textarea>
+                            <div class="mt-2">
+                                <small class="text-primary-dark"><strong>Sugerencias rápidas:</strong></small>
+                                <div class="d-flex flex-wrap gap-2 mt-1">
+                                    <button type="button" class="btn btn-sm btn-outline-primary sugerencia-btn" data-text="Producto devuelto en perfecto estado. Listo para reempaquetar y enviar nuevamente.">Estado perfecto</button>
+                                    <button type="button" class="btn btn-sm btn-outline-primary sugerencia-btn" data-text="Producto devuelto revisado y aprobado para nueva preparación.">Revisado y aprobado</button>
+                                    <button type="button" class="btn btn-sm btn-outline-primary sugerencia-btn" data-text="Cliente solicitó reenvío del mismo producto.">Reenvío solicitado</button>
+                                    <button type="button" class="btn btn-sm btn-outline-primary sugerencia-btn" data-text="Producto reparado y listo para nueva preparación.">Producto reparado</button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-outline-primary" data-bs-dismiss="modal">Cancelar</button>
+                        <button type="submit" class="btn btn-primary" onclick="return confirmarCambioEstado('preparar_devuelto')">
+                            <i class="fas fa-redo me-1"></i> Preparar Nuevamente
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
     <!-- Modal para Confirmado -->
     <div class="modal fade" id="modalConfirmado" tabindex="-1">
         <div class="modal-dialog modal-dialog-centered">
@@ -875,7 +1158,7 @@ if (!empty($pedido['productos'])) {
                     </div>
                     <div class="modal-footer">
                         <button type="button" class="btn btn-outline-primary" data-bs-dismiss="modal">Cancelar</button>
-                        <button type="submit" class="btn btn-warning" onclick="return confirmarCambioEstado('preparando')">
+                        <button type="submit" class="btn btn-primary" onclick="return confirmarCambioEstado('preparando')">
                             <i class="fas fa-cogs me-1"></i> Iniciar Preparación
                         </button>
                     </div>
@@ -884,44 +1167,7 @@ if (!empty($pedido['productos'])) {
         </div>
     </div>
 
-    <!-- Modal para Preparar Devuelto -->
-    <div class="modal fade" id="modalPrepararDevuelto" tabindex="-1">
-        <div class="modal-dialog modal-dialog-centered">
-            <div class="modal-content">
-                <div class="modal-header bg-primary-dark text-white">
-                    <h5 class="modal-title">
-                        <i class="fas fa-redo me-2"></i>Preparar Nuevamente Pedido Devuelto
-                    </h5>
-                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
-                </div>
-                <form action="<?= BASE_URL ?>?c=Pedido&a=prepararDevuelto" method="post" id="formPrepararDevuelto">
-                    <input type="hidden" name="ID_Factura" value="<?= $pedido['ID_Factura'] ?>">
-                    <div class="modal-body">
-                        <div class="alert alert-primary-light mb-3">
-                            <i class="fas fa-info-circle me-2"></i>
-                            <strong>Información:</strong> Este pedido fue devuelto y será preparado nuevamente para un nuevo envío.
-                        </div>
-                        <p>¿Preparar nuevamente el pedido <strong class="text-primary-dark"><?= $pedido['Codigo_Acceso'] ?></strong>?</p>
-                        <div class="mb-3">
-                            <label for="descripcionPrepararDevuelto" class="form-label text-primary-dark">
-                                <strong>Descripción (Obligatoria):</strong>
-                            </label>
-                            <textarea class="form-control" id="descripcionPrepararDevuelto" name="Descripcion" rows="3" required
-                                placeholder="Ej: Producto devuelto en proceso de re-preparación, verificación de estado, nuevo empaque...">Producto devuelto en proceso de re-preparación. Se verifica el estado del producto y se realiza nuevo empaque para reenvío.</textarea>
-                        </div>
-                    </div>
-                    <div class="modal-footer">
-                        <button type="button" class="btn btn-outline-primary" data-bs-dismiss="modal">Cancelar</button>
-                        <button type="submit" class="btn btn-warning" onclick="return confirmarCambioEstado('preparar_devuelto')">
-                            <i class="fas fa-redo me-1"></i> Preparar Nuevamente
-                        </button>
-                    </div>
-                </form>
-            </div>
-        </div>
-    </div>
-
-    <!-- Modal para retrasado -->
+    <!-- Modal para retrasado (se mantiene igual) -->
     <div class="modal fade" id="modalRetrasado" tabindex="-1">
         <div class="modal-dialog modal-dialog-centered">
             <div class="modal-content">
@@ -959,7 +1205,7 @@ if (!empty($pedido['productos'])) {
                     </div>
                     <div class="modal-footer">
                         <button type="button" class="btn btn-outline-primary" data-bs-dismiss="modal">Cancelar</button>
-                        <button type="submit" class="btn btn-warning" onclick="return confirmarCambioEstado('retrasado')">
+                        <button type="submit" class="btn btn-primary" onclick="return confirmarCambioEstado('retrasado')">
                             <i class="fas fa-clock me-1"></i> Marcar como Retrasado
                         </button>
                     </div>
@@ -968,7 +1214,7 @@ if (!empty($pedido['productos'])) {
         </div>
     </div>
 
-    <!-- Modal para devuelto -->
+    <!-- Modal para devuelto (se mantiene igual) -->
     <div class="modal fade" id="modalDevuelto" tabindex="-1">
         <div class="modal-dialog modal-dialog-centered">
             <div class="modal-content">
@@ -1015,7 +1261,7 @@ if (!empty($pedido['productos'])) {
         </div>
     </div>
 
-    <!-- Modal para anular pedido -->
+    <!-- Modal para anular pedido (para estados no enviados) -->
     <div class="modal fade" id="modalAnulado" tabindex="-1">
         <div class="modal-dialog modal-dialog-centered">
             <div class="modal-content">
@@ -1029,7 +1275,7 @@ if (!empty($pedido['productos'])) {
                     <input type="hidden" name="ID_Factura" value="<?= $pedido['ID_Factura'] ?>">
                     <input type="hidden" name="Estado" value="Anulado">
                     <div class="modal-body">
-                        <div class="alert alert-warning-pedidos mb-3">
+                        <div class="alert alert-primary-pedidos mb-3">
                             <i class="fas fa-exclamation-triangle me-2"></i>
                             <strong>¡Atención! Esta acción no se puede deshacer.</strong>
                             <div class="mt-2">
@@ -1221,7 +1467,9 @@ document.addEventListener('DOMContentLoaded', function() {
         button.addEventListener('click', function() {
             const text = this.getAttribute('data-text');
             const textarea = this.closest('.modal-body').querySelector('textarea');
-            textarea.value = text;
+            if (textarea) {
+                textarea.value = text;
+            }
         });
     });
 
@@ -1275,19 +1523,29 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     });
     
-    // Configurar verificación de casillas para modal de anulación
+    // Configurar verificación de casillas para modal de anulación normal
     configurarVerificacionAnulacion();
     
-    // Configurar reset de casillas al cerrar modal de anulación
+    // Configurar verificación de casillas para modal de anulación enviado
+    configurarVerificacionAnulacionEnviado();
+    
+    // Configurar reset de casillas al cerrar modales
     const modalAnulado = document.getElementById('modalAnulado');
     if (modalAnulado) {
         modalAnulado.addEventListener('hidden.bs.modal', function() {
             resetearCasillasAnulacion();
         });
     }
+    
+    const modalAnuladoEnviado = document.getElementById('modalAnuladoEnviado');
+    if (modalAnuladoEnviado) {
+        modalAnuladoEnviado.addEventListener('hidden.bs.modal', function() {
+            resetearCasillasAnulacionEnviado();
+        });
+    }
 });
 
-// Función para configurar verificación de casillas de anulación
+// Función para configurar verificación de casillas de anulación normal
 function configurarVerificacionAnulacion() {
     const casillas = document.querySelectorAll('.casilla-anulacion');
     const btnAnular = document.getElementById('btnAnularPedido');
@@ -1313,7 +1571,7 @@ function configurarVerificacionAnulacion() {
                 if (porcentaje < 50) {
                     barraProgreso.className = 'progress-bar bg-danger';
                 } else if (porcentaje < 100) {
-                    barraProgreso.className = 'progress-bar bg-warning';
+                    barraProgreso.className = 'progress-bar bg-primary';
                 } else {
                     barraProgreso.className = 'progress-bar bg-success';
                 }
@@ -1325,7 +1583,45 @@ function configurarVerificacionAnulacion() {
     }
 }
 
-// Función para resetear casillas de anulación
+// Función para configurar verificación de casillas de anulación enviado
+function configurarVerificacionAnulacionEnviado() {
+    const casillas = document.querySelectorAll('.casilla-anulacion-enviado');
+    const btnAnular = document.getElementById('btnAnularPedidoEnviado');
+    const contadorSpan = document.getElementById('contadorCasillasAnulacionEnviado');
+    const barraProgreso = document.getElementById('barraProgresoAnulacionEnviado');
+    
+    if (casillas.length && btnAnular && contadorSpan && barraProgreso) {
+        casillas.forEach(casilla => {
+            casilla.addEventListener('change', function() {
+                const casillasMarcadas = document.querySelectorAll('.casilla-anulacion-enviado:checked');
+                const totalCasillas = casillas.length;
+                const marcadas = casillasMarcadas.length;
+                
+                // Actualizar contador
+                contadorSpan.textContent = marcadas;
+                
+                // Actualizar barra de progreso
+                const porcentaje = (marcadas / totalCasillas) * 100;
+                barraProgreso.style.width = `${porcentaje}%`;
+                barraProgreso.setAttribute('aria-valuenow', porcentaje);
+                
+                // Cambiar color de la barra según el progreso
+                if (porcentaje < 50) {
+                    barraProgreso.className = 'progress-bar bg-danger';
+                } else if (porcentaje < 100) {
+                    barraProgreso.className = 'progress-bar bg-primary';
+                } else {
+                    barraProgreso.className = 'progress-bar bg-success';
+                }
+                
+                // Habilitar/deshabilitar botón
+                btnAnular.disabled = marcadas !== totalCasillas;
+            });
+        });
+    }
+}
+
+// Función para resetear casillas de anulación normal
 function resetearCasillasAnulacion() {
     const casillas = document.querySelectorAll('.casilla-anulacion');
     const btnAnular = document.getElementById('btnAnularPedido');
@@ -1355,25 +1651,168 @@ function resetearCasillasAnulacion() {
     }
 }
 
-// Función para confirmar cambio de estado (MODIFICADA PARA ANULACIÓN)
-function confirmarCambioEstado(accion) {
-    // Si es anulación, mostrar el modal de Bootstrap directamente
-    if (accion === 'anulado') {
-        // Primero, verificar que el textarea tenga contenido
-        const motivoAnulacion = document.getElementById('motivoAnulacion');
-        if (motivoAnulacion && !motivoAnulacion.value.trim()) {
-            mostrarMensaje('Por favor ingresa el motivo de la anulación antes de continuar', 'danger');
-            motivoAnulacion.focus();
-            motivoAnulacion.classList.add('is-invalid');
-            return false;
+// Función para resetear casillas de anulación enviado
+function resetearCasillasAnulacionEnviado() {
+    const casillas = document.querySelectorAll('.casilla-anulacion-enviado');
+    const btnAnular = document.getElementById('btnAnularPedidoEnviado');
+    const contadorSpan = document.getElementById('contadorCasillasAnulacionEnviado');
+    const barraProgreso = document.getElementById('barraProgresoAnulacionEnviado');
+    
+    // Resetear todas las casillas
+    casillas.forEach(casilla => {
+        casilla.checked = false;
+    });
+    
+    // Resetear botón
+    if (btnAnular) {
+        btnAnular.disabled = true;
+    }
+    
+    // Resetear contador
+    if (contadorSpan) {
+        contadorSpan.textContent = '0';
+    }
+    
+    // Resetear barra de progreso
+    if (barraProgreso) {
+        barraProgreso.style.width = '0%';
+        barraProgreso.setAttribute('aria-valuenow', '0');
+        barraProgreso.className = 'progress-bar';
+    }
+}
+
+// Función para confirmar regresar a preparando
+function confirmarRegresarPreparando() {
+    const mensaje = "¿Estás seguro de cancelar el envío y regresar este pedido al estado Preparando? Los datos de envío (número de guía, transportadora, fecha estimada) serán eliminados.";
+    
+    // Crear modal de confirmación personalizado
+    const modalId = 'modalConfirmacionRegresarPreparando';
+    let existingModal = document.getElementById(modalId);
+    if (existingModal) {
+        existingModal.remove();
+    }
+
+    const modalHTML = `
+        <div class="modal fade" id="${modalId}" tabindex="-1">
+            <div class="modal-dialog modal-dialog-centered">
+                <div class="modal-content">
+                    <div class="modal-header bg-primary text-white">
+                        <h5 class="modal-title">
+                            <i class="fas fa-undo me-2"></i>Confirmar Cancelación de Envío
+                        </h5>
+                        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                    </div>
+                    <div class="modal-body text-center">
+                        <i class="fas fa-undo fa-4x text-primary mb-3"></i>
+                        <h5 class="text-primary-dark">${mensaje}</h5>
+                        <div class="alert alert-primary mt-3">
+                            <i class="fas fa-exclamation-triangle me-2"></i>
+                            <strong>Datos que se eliminarán:</strong>
+                            <ul class="mt-2 text-start">
+                                <li>Número de guía: <?= $pedido['Numero_Guia'] ?? 'N/A' ?></li>
+                                <li>Transportadora: <?= $pedido['Transportadora'] ?? 'N/A' ?></li>
+                                <li>Fecha de envío: <?= !empty($pedido['Fecha_Envio']) ? date('d/m/Y H:i', strtotime($pedido['Fecha_Envio'])) : 'N/A' ?></li>
+                                <li>Fecha estimada de entrega: <?= !empty($pedido['Fecha_Estimada_Entrega']) ? date('d/m/Y', strtotime($pedido['Fecha_Estimada_Entrega'])) : 'N/A' ?></li>
+                            </ul>
+                        </div>
+                        <p class="text-muted mt-3">Pedido: <strong class="text-primary-dark"><?= $pedido['Codigo_Acceso'] ?></strong></p>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-outline-primary" data-bs-dismiss="modal">Cancelar</button>
+                        <button type="button" class="btn btn-primary" id="btnConfirmarRegresarPreparando">
+                            <i class="fas fa-undo me-1"></i> Sí, Cancelar Envío
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    `;
+
+    document.body.insertAdjacentHTML('beforeend', modalHTML);
+    
+    const modal = new bootstrap.Modal(document.getElementById(modalId));
+    modal.show();
+
+    // Manejar confirmación
+    document.getElementById('btnConfirmarRegresarPreparando').addEventListener('click', function() {
+        modal.hide();
+        
+        // Enviar el formulario de regresar a preparando
+        const form = document.getElementById('formRegresarPreparando');
+        if (form) {
+            form.submit();
         }
+    });
+
+    return false; // Prevenir envío directo
+}
+
+// Función para confirmar cancelar proceso (regresar a Confirmado)
+function confirmarCancelarProceso() {
+    const mensaje = "¿Estás seguro de regresar este pedido al estado Confirmado? El proceso de preparación será cancelado y el pedido volverá a estar pendiente para preparación.";
+    
+    // Crear modal de confirmación personalizado
+    const modalId = 'modalConfirmacionCancelarProceso';
+    let existingModal = document.getElementById(modalId);
+    if (existingModal) {
+        existingModal.remove();
+    }
+
+    const modalHTML = `
+        <div class="modal fade" id="${modalId}" tabindex="-1">
+            <div class="modal-dialog modal-dialog-centered">
+                <div class="modal-content">
+                    <div class="modal-header bg-primary text-white">
+                        <h5 class="modal-title">
+                            <i class="fas fa-undo me-2"></i>Confirmar Cancelación de Proceso
+                        </h5>
+                        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                    </div>
+                    <div class="modal-body text-center">
+                        <i class="fas fa-undo fa-4x text-primary mb-3"></i>
+                        <h5 class="text-primary-dark">${mensaje}</h5>
+                        <p class="text-muted mt-3">Pedido: <strong class="text-primary-dark"><?= $pedido['Codigo_Acceso'] ?></strong></p>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-outline-primary" data-bs-dismiss="modal">Cancelar</button>
+                        <button type="button" class="btn btn-primary" id="btnConfirmarCancelarProceso">
+                            <i class="fas fa-undo me-1"></i> Sí, Cancelar Proceso
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    `;
+
+    document.body.insertAdjacentHTML('beforeend', modalHTML);
+    
+    const modal = new bootstrap.Modal(document.getElementById(modalId));
+    modal.show();
+
+    // Manejar confirmación
+    document.getElementById('btnConfirmarCancelarProceso').addEventListener('click', function() {
+        modal.hide();
         
+        // Enviar el formulario de cancelar proceso
+        const form = document.getElementById('formCancelarProceso');
+        if (form) {
+            form.submit();
+        }
+    });
+
+    return false; // Prevenir envío directo
+}
+
+// Función para confirmar cambio de estado
+function confirmarCambioEstado(accion) {
+    // Para anulación desde enviado, usar modal específico
+    if (accion === 'anulado_enviado') {
         // Resetear casillas antes de mostrar
-        resetearCasillasAnulacion();
+        resetearCasillasAnulacionEnviado();
         
-        // Mostrar modal de anulación
-        const modalAnulado = new bootstrap.Modal(document.getElementById('modalAnulado'));
-        modalAnulado.show();
+        // Mostrar modal de anulación enviado
+        const modalAnuladoEnviado = new bootstrap.Modal(document.getElementById('modalAnuladoEnviado'));
+        modalAnuladoEnviado.show();
         
         return false; // Prevenir envío directo
     }
@@ -1401,10 +1840,10 @@ function confirmarCambioEstado(accion) {
 
     const colores = {
         'confirmado': 'primary-dark',
-        'preparando': 'warning',
-        'preparar_devuelto': 'warning',
-        'entregado': 'success',
-        'retrasado': 'warning',
+        'preparando': 'primary',
+        'preparar_devuelto': 'primary',
+        'entregado': 'secondary',
+        'retrasado': 'primary',
         'devuelto': 'primary-dark',
         'anulado': 'danger'
     };
@@ -1472,6 +1911,9 @@ function confirmarCambioEstado(accion) {
                 break;
             case 'devuelto':
                 formId = 'formDevuelto';
+                break;
+            case 'anulado':
+                formId = 'formAnulado';
                 break;
             default:
                 formId = 'form' + accion.charAt(0).toUpperCase() + accion.slice(1);

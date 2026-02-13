@@ -575,7 +575,7 @@ class CheckoutController {
 
         // Verificar permisos
         if (isset($factura['ID_Usuario']) && $factura['ID_Usuario'] != $_SESSION['ID_Usuario'] && !isset($_SESSION['es_admin'])) {
-            $_SESSION['mensaje_error'] = "❌ No tienes permiso para ver esta factura.";
+            $_SESSION['mensaje_error'] = "No tienes permiso para ver esta factura.";
             header("Location: " . BASE_URL);
             exit;
         }
@@ -662,7 +662,7 @@ class CheckoutController {
         }
 
         if ($factura['ID_Usuario'] != $_SESSION['ID_Usuario'] && !isset($_SESSION['es_admin'])) {
-            $_SESSION['mensaje_error'] = "❌ No tienes permiso para ver esta factura.";
+            $_SESSION['mensaje_error'] = "No tienes permiso para ver esta factura.";
             header("Location: " . BASE_URL);
             exit;
         }

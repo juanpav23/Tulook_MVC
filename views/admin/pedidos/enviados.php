@@ -19,11 +19,36 @@ foreach ($pedidos as $pedido) {
         if ($diasFaltantes >= 0 && $diasFaltantes <= 2) $proximosVencer++;
     }
     
-    // Prioridad alta (retraso >7 días)
+    // Prioridad alta (retraso >5 días)
     if (isset($pedido['dias_retraso']) && $pedido['dias_retraso'] > 5) {
         $prioridadAlta++;
     }
 }
+
+// Transportadoras populares predefinidas
+$transportadorasPopulares = [
+    'Servientrega' => 'primary-dark',
+    'Interrapidisimo' => 'primary-dark',
+    'DHL' => 'primary-dark',
+    'Coordinadora' => 'primary-dark',
+    'Envía' => 'primary-dark',
+    'Deprisa' => 'primary-dark',
+    'FedEx' => 'primary-dark',
+    'TCC' => 'primary-dark',
+    'Otro' => 'primary-light'
+];
+
+// Obtener transportadoras únicas de la base de datos
+$transportadorasUnicas = [];
+foreach ($pedidos as $pedido) {
+    if (!empty($pedido['Transportadora']) && !in_array($pedido['Transportadora'], $transportadorasUnicas)) {
+        $transportadorasUnicas[] = $pedido['Transportadora'];
+    }
+}
+
+// Combinar transportadoras de la base de datos con las populares
+$todasTransportadoras = array_unique(array_merge(array_keys($transportadorasPopulares), $transportadorasUnicas));
+sort($todasTransportadoras);
 ?>
 
 <div class="container-fluid">
@@ -51,7 +76,7 @@ foreach ($pedidos as $pedido) {
         <?php unset($_SESSION['mensaje'], $_SESSION['mensaje_tipo']); ?>
     <?php endif; ?>
 
-    <!-- Barra de Búsqueda y Filtros (igual que index.php) -->
+    <!-- Barra de Búsqueda y Filtros MEJORADA -->
     <div class="card mb-4">
         <div class="card-header bg-primary-dark">
             <h5 class="mb-0 text-white"><i class="fas fa-search me-2"></i>Buscar y Filtrar Pedidos en Seguimiento</h5>
@@ -80,21 +105,25 @@ foreach ($pedidos as $pedido) {
                     <label for="transportadora" class="form-label">Transportadora</label>
                     <select class="form-select" id="transportadora" name="transportadora">
                         <option value="">Todas</option>
-                        <?php
-                        // Obtener transportadoras únicas
-                        $transportadorasUnicas = [];
-                        foreach ($pedidos as $pedido) {
-                            if (!empty($pedido['Transportadora']) && !in_array($pedido['Transportadora'], $transportadorasUnicas)) {
-                                $transportadorasUnicas[] = $pedido['Transportadora'];
-                            }
-                        }
-                        sort($transportadorasUnicas);
-                        foreach ($transportadorasUnicas as $transp):
+                        <?php foreach ($todasTransportadoras as $transp): 
+                            $colorClase = $transportadorasPopulares[$transp] ?? 'primary-light';
                         ?>
-                            <option value="<?= htmlspecialchars($transp) ?>" <?= ($_GET['transportadora'] ?? '') === $transp ? 'selected' : '' ?>>
+                            <option value="<?= htmlspecialchars($transp) ?>" 
+                                    <?= ($_GET['transportadora'] ?? '') === $transp ? 'selected' : '' ?>
+                                    data-color="<?= $colorClase ?>">
                                 <?= htmlspecialchars($transp) ?>
                             </option>
                         <?php endforeach; ?>
+                    </select>
+                </div>
+                
+                <div class="col-md-2">
+                    <label for="estado_filtro" class="form-label">Estado de seguimiento</label>
+                    <select class="form-select" id="estado_filtro" name="estado_filtro">
+                        <option value="">Todos</option>
+                        <option value="retrasados" <?= ($_GET['estado_filtro'] ?? '') === 'retrasados' ? 'selected' : '' ?>>Solo Retrasados</option>
+                        <option value="en_transito" <?= ($_GET['estado_filtro'] ?? '') === 'en_transito' ? 'selected' : '' ?>>Solo En Tránsito</option>
+                        <option value="proximos_vencer" <?= ($_GET['estado_filtro'] ?? '') === 'proximos_vencer' ? 'selected' : '' ?>>Próximos a Vencer</option>
                     </select>
                 </div>
                 
@@ -128,7 +157,7 @@ foreach ($pedidos as $pedido) {
         </div>
     </div>
 
-    <!-- Estadísticas de Seguimiento Mejoradas -->
+    <!-- Estadísticas de Seguimiento Mejoradas - CORREGIDAS -->
     <div class="row mb-4">
         <!-- Estadística General de Seguimiento -->
         <div class="col-md-3">
@@ -162,11 +191,11 @@ foreach ($pedidos as $pedido) {
         </div>
         
         <div class="col-md-3">
-            <div class="card stats-card-pedido estadistica-atrasados">
+            <div class="card stats-card-pedido estadistica-proximos-vencer">
                 <div class="card-body">
-                    <h5 class="card-title text-primary-dark">Atrasados</h5>
-                    <h3 class="card-text"><?= count($pedidosAtrasados ?? []) ?></h3>
-                    <small><i class="fas fa-exclamation-triangle text-primary-dark"></i> >3 días enviados</small>
+                    <h5 class="card-title text-primary-dark">Próximos a Vencer</h5>
+                    <h3 class="card-text"><?= $proximosVencer ?></h3>
+                    <small><i class="fas fa-calendar-exclamation text-primary-dark"></i> ≤2 días para entrega</small>
                 </div>
             </div>
         </div>
@@ -192,7 +221,7 @@ foreach ($pedidos as $pedido) {
                 <?php endif; ?>
             </div>
         </div>
-        <div class="card-body">
+        <div class="card-body p-0">
             <?php if (empty($pedidos)): ?>
                 <div class="no-results text-center py-5">
                     <i class="fas fa-truck fa-4x text-primary mb-3"></i>
@@ -204,18 +233,18 @@ foreach ($pedidos as $pedido) {
                 </div>
             <?php else: ?>
                 <div class="table-responsive">
-                    <table class="table table-striped table-hover">
+                    <table class="table table-striped table-hover mb-0">
                         <thead class="table-primary-dark">
                             <tr>
-                                <th width="5%">#</th>
-                                <th width="12%">Código</th>
-                                <th width="20%">Cliente</th>
-                                <th width="12%">Fecha Envío</th>
-                                <th width="10%">Tiempo</th>
-                                <th width="15%">Fecha Estimada</th>
-                                <th width="10%">Estado</th>
-                                <th width="16%">Transportadora</th>
-                                <th width="10%">Acciones</th>
+                                <th width="50px">#</th>
+                                <th width="110px">Código</th>
+                                <th width="160px">Cliente</th>
+                                <th width="110px">Fecha Envío</th>
+                                <th width="90px">Tiempo</th>
+                                <th width="130px">Fecha Estimada</th>
+                                <th width="120px">Estado</th>
+                                <th width="140px">Transportadora</th>
+                                <th width="100px" class="text-center">Acciones</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -255,7 +284,7 @@ foreach ($pedidos as $pedido) {
                                         $colorPrioridad = 'danger';
                                     } elseif ($diasRetraso > 3) {
                                         $nivelPrioridad = 'Media';
-                                        $colorPrioridad = 'warning';
+                                        $colorPrioridad = 'primary';
                                     } else {
                                         $nivelPrioridad = 'Baja';
                                         $colorPrioridad = 'primary-light';
@@ -280,22 +309,28 @@ foreach ($pedidos as $pedido) {
                                         <strong class="text-primary-dark"><?= $pedido['Codigo_Acceso'] ?></strong>
                                         <?php if ($nivelPrioridad): ?>
                                             <br>
-                                            <small class="badge bg-<?= $colorPrioridad ?>">
+                                            <small class="badge bg-<?= $colorPrioridad ?> mt-1">
                                                 <i class="fas fa-flag me-1"></i><?= $nivelPrioridad ?>
                                             </small>
                                         <?php endif; ?>
                                     </td>
                                     <td>
-                                        <strong><?= htmlspecialchars($pedido['Nombre'] . ' ' . $pedido['Apellido']) ?></strong>
-                                        <br>
-                                        <small class="text-muted"><?= htmlspecialchars($pedido['Correo']) ?></small>
+                                        <div class="cliente-info">
+                                            <strong class="d-block text-truncate" style="max-width: 150px;" title="<?= htmlspecialchars($pedido['Nombre'] . ' ' . $pedido['Apellido']) ?>">
+                                                <?= htmlspecialchars($pedido['Nombre'] . ' ' . $pedido['Apellido']) ?>
+                                            </strong>
+                                            <small class="text-muted text-truncate d-block" style="max-width: 150px;" title="<?= htmlspecialchars($pedido['Correo']) ?>">
+                                                <?= htmlspecialchars($pedido['Correo']) ?>
+                                            </small>
+                                        </div>
                                     </td>
                                     <td>
                                         <?= !empty($pedido['Fecha_Envio']) ? date('d/m/Y', strtotime($pedido['Fecha_Envio'])) : 'N/A' ?>
-                                        <br>
-                                        <small class="text-muted">
-                                            <?= !empty($pedido['NombreEnvio']) ? 'Por: ' . $pedido['NombreEnvio'] : '' ?>
-                                        </small>
+                                        <?php if (!empty($pedido['NombreEnvio'])): ?>
+                                            <small class="d-block text-muted text-truncate" style="max-width: 100px;" title="Por: <?= $pedido['NombreEnvio'] ?>">
+                                                <?= 'Por: ' . $pedido['NombreEnvio'] ?>
+                                            </small>
+                                        <?php endif; ?>
                                     </td>
                                     <td>
                                         <?php if ($diasTranscurridos > 0): ?>
@@ -307,8 +342,7 @@ foreach ($pedidos as $pedido) {
                                         <?php endif; ?>
                                         
                                         <?php if ($pedido['Estado'] === 'Retrasado' && $diasRetraso > 0): ?>
-                                            <br>
-                                            <small class="text-danger">
+                                            <small class="d-block text-danger mt-1">
                                                 <i class="fas fa-clock"></i> <?= $diasRetraso ?> día<?= $diasRetraso != 1 ? 's' : '' ?> retraso
                                             </small>
                                         <?php endif; ?>
@@ -330,7 +364,7 @@ foreach ($pedidos as $pedido) {
                                                     <?php elseif ($diasFaltantes == 0): ?>
                                                         <i class="fas fa-exclamation-circle text-primary"></i> Hoy vence
                                                     <?php else: ?>
-                                                        <i class="fas fa-exclamation-triangle text-danger"></i> Vencido hace <?= abs($diasFaltantes) ?> días
+                                                        <i class="fas fa-exclamation-triangle text-primary"></i> Vencido hace <?= abs($diasFaltantes) ?> días
                                                     <?php endif; ?>
                                                 </small>
                                             </div>
@@ -343,12 +377,16 @@ foreach ($pedidos as $pedido) {
                                     </td>
                                     <td>
                                         <?php if (!empty($pedido['Transportadora'])): ?>
-                                            <div class="d-flex flex-column">
-                                                <strong class="text-primary-dark small">
-                                                    <i class="fas fa-truck me-1"></i> <?= $pedido['Transportadora'] ?>
+                                            <div class="transporte-info">
+                                                <?php 
+                                                $transpColor = $transportadorasPopulares[$pedido['Transportadora']] ?? 'primary-light';
+                                                ?>
+                                                <strong class="small d-block">
+                                                    <span class="badge-transportadora bg-<?= $transpColor ?> me-1" style="width: 8px; height: 8px; display: inline-block; border-radius: 50%;"></span>
+                                                    <?= $pedido['Transportadora'] ?>
                                                 </strong>
                                                 <?php if (!empty($pedido['Numero_Guia'])): ?>
-                                                    <small class="text-muted">
+                                                    <small class="text-muted text-truncate d-block" style="max-width: 130px;" title="Guía: <?= $pedido['Numero_Guia'] ?>">
                                                         <i class="fas fa-barcode me-1"></i> <?= $pedido['Numero_Guia'] ?>
                                                     </small>
                                                 <?php endif; ?>
@@ -358,7 +396,7 @@ foreach ($pedidos as $pedido) {
                                         <?php endif; ?>
                                     </td>
                                     <td>
-                                        <div class="btn-group btn-group-sm btn-group-pedidos">
+                                        <div class="btn-group btn-group-sm btn-group-pedidos d-flex justify-content-center">
                                             <a href="<?= BASE_URL ?>?c=Pedido&a=detalle&id=<?= $pedido['ID_Factura'] ?>" 
                                                class="btn btn-outline-primary" title="Ver detalle">
                                                 <i class="fas fa-eye"></i>
@@ -754,7 +792,7 @@ foreach ($pedidos as $pedido) {
                 </div>
                 
                 <!-- Resumen y estadísticas -->
-                <div class="row mt-4">
+                <div class="row mt-4 p-3">
                     <div class="col-md-8">
                         <div class="card border-primary">
                             <div class="card-header bg-primary text-white">
@@ -793,11 +831,19 @@ foreach ($pedidos as $pedido) {
                                                 <td class="text-end"><?= $retrasados ?></td>
                                             </tr>
                                             <tr>
-                                                <th>Atrasados (>3 días):</th>
-                                                <td class="text-end"><?= count($pedidosAtrasados ?? []) ?></td>
+                                                <th>Con guía de envío:</th>
+                                                <td class="text-end">
+                                                    <?php
+                                                    $conGuia = 0;
+                                                    foreach ($pedidos as $p) {
+                                                        if (!empty($p['Numero_Guia'])) $conGuia++;
+                                                    }
+                                                    echo $conGuia;
+                                                    ?>
+                                                </td>
                                             </tr>
                                             <tr>
-                                                <th>Proximos a vencer (≤2 días):</th>
+                                                <th>Próximos a vencer (≤2 días):</th>
                                                 <td class="text-end"><?= $proximosVencer ?></td>
                                             </tr>
                                         </table>
@@ -827,7 +873,7 @@ foreach ($pedidos as $pedido) {
                                     </li>
                                     <li>
                                         <i class="fas fa-truck text-primary-dark me-2"></i>
-                                        <span class="text-primary-dark">Atrasado:</span> >3 días enviado sin fecha estimada
+                                        <span class="text-primary-dark">Retrasado:</span> Fecha estimada de entrega vencida
                                     </li>
                                 </ul>
                                 <hr class="my-2">
@@ -847,478 +893,8 @@ foreach ($pedidos as $pedido) {
 <!-- CSS -->
 <link rel="stylesheet" href="assets/css/usuario.css">
 <link rel="stylesheet" href="assets/css/pedido.css">
+<link rel="stylesheet" href="assets/css/enviados.css">
 
 <!-- JS -->
 <script src="assets/js/pedido.js"></script>
-
-<!-- Script específico para seguimiento de pedidos enviados -->
-<script>
-// Función para añadir estilos dinámicos
-function agregarEstilosEnviados() {
-    // Verificar si ya existe un estilo con estos selectores para evitar duplicados
-    const estilosExistentes = document.querySelectorAll('style[data-enviados-styles]');
-    if (estilosExistentes.length > 0) return;
-    
-    const styleElement = document.createElement('style');
-    styleElement.setAttribute('data-enviados-styles', 'true');
-    styleElement.textContent = `
-        @keyframes pulse-high-priority {
-            0% { 
-                background-color: rgba(220, 53, 69, 0.05);
-                box-shadow: 0 0 0 0 rgba(220, 53, 69, 0.3);
-            }
-            70% { 
-                background-color: rgba(220, 53, 69, 0.15);
-                box-shadow: 0 0 0 10px rgba(220, 53, 69, 0);
-            }
-            100% { 
-                background-color: rgba(220, 53, 69, 0.05);
-                box-shadow: 0 0 0 0 rgba(220, 53, 69, 0);
-            }
-        }
-        
-        /* Colores de estados usando la paleta de root */
-        .badge-estado-emitido {
-            background: linear-gradient(135deg, var(--primary-dark), var(--primary)) !important;
-            color: white !important;
-        }
-        
-        .badge-estado-confirmado {
-            background: linear-gradient(135deg, var(--primary-light), var(--secondary)) !important;
-            color: white !important;
-        }
-        
-        .badge-estado-preparando {
-            background: linear-gradient(135deg, var(--warning), #2d3138) !important;
-            color: white !important;
-        }
-        
-        .badge-estado-enviado {
-            background: linear-gradient(135deg, var(--primary), var(--primary-light)) !important;
-            color: white !important;
-        }
-        
-        .badge-estado-retrasado {
-            background: linear-gradient(135deg, var(--danger), #433766) !important;
-            color: white !important;
-        }
-        
-        .badge-estado-devuelto {
-            background: linear-gradient(135deg, var(--light), var(--secondary)) !important;
-            color: white !important;
-        }
-        
-        .badge-estado-entregado {
-            background: linear-gradient(135deg, var(--success), #273050) !important;
-            color: white !important;
-        }
-        
-        .badge-estado-anulado {
-            background: linear-gradient(135deg, var(--gray-dark), #5a6268) !important;
-            color: white !important;
-            text-decoration: line-through;
-        }
-        
-        /* Estadísticas específicas */
-        .stats-card-pedido.estadistica-seguimiento {
-            border-left: 4px solid var(--primary-dark) !important;
-        }
-        
-        .stats-card-pedido.estadistica-enviados {
-            border-left: 4px solid var(--primary) !important;
-        }
-        
-        .stats-card-pedido.estadistica-retrasados {
-            border-left: 4px solid var(--danger) !important;
-        }
-        
-        .stats-card-pedido.estadistica-atrasados {
-            border-left: 4px solid var(--warning) !important;
-        }
-        
-        /* Hover effects */
-        .hover-shadow-pedido:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 4px 15px rgba(27, 32, 45, 0.1);
-            transition: all 0.3s ease;
-            background-color: rgba(27, 32, 45, 0.02) !important;
-        }
-        
-        /* Botón deshabilitado para retrasados */
-        .btn-outline-primary:disabled {
-            opacity: 0.5;
-            cursor: not-allowed;
-            border-color: #6c757d !important;
-            color: #6c757d !important;
-        }
-        
-        /* Icono de check para entregado */
-        .btn-outline-primary .fa-check-circle {
-            color: var(--primary);
-        }
-        
-        .btn-outline-primary:hover .fa-check-circle {
-            color: white;
-        }
-        
-        /* Avatar circle en modal */
-        .avatar-circle-sm {
-            width: 50px;
-            height: 50px;
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            background: linear-gradient(135deg, var(--primary), var(--primary-light));
-            color: white;
-            font-size: 1.2rem;
-        }
-        
-        /* Table styles */
-        .table-warning {
-            background-color: rgba(255, 193, 7, 0.05) !important;
-            border-left: 2px solid var(--warning) !important;
-        }
-        
-        .table-danger {
-            border-left: 3px solid var(--danger) !important;
-            background-color: rgba(52, 42, 86, 0.05) !important;
-        }
-        
-        /* Estilos para casillas de verificación */
-        .casillas-verificacion-entregado .form-check-input:checked,
-        .casillas-verificacion-fecha .form-check-input:checked,
-        .casillas-verificacion-retrasado .form-check-input:checked {
-            background-color: var(--primary-dark);
-            border-color: var(--primary-dark);
-        }
-        
-        .casillas-verificacion-entregado .form-check-input:focus,
-        .casillas-verificacion-fecha .form-check-input:focus,
-        .casillas-verificacion-retrasado .form-check-input:focus {
-            box-shadow: 0 0 0 0.25rem rgba(27, 32, 45, 0.25);
-        }
-        
-        /* Barra de progreso de verificación */
-        .verificacion-contador-entregado .progress-bar,
-        .verificacion-contador-fecha .progress-bar,
-        .verificacion-contador-retrasado .progress-bar {
-            transition: width 0.3s ease;
-        }
-        
-        .verificacion-contador-entregado .progress-bar {
-            background-color: var(--primary-dark);
-        }
-        
-        .verificacion-contador-fecha .progress-bar {
-            background-color: var(--primary);
-        }
-        
-        .verificacion-contador-retrasado .progress-bar {
-            background-color: var(--danger);
-        }
-        
-        /* Botón deshabilitado en modales */
-        .modal-footer .btn:disabled {
-            opacity: 0.5;
-            cursor: not-allowed;
-        }
-        
-        /* Estilo para las casillas de verificación en listas */
-        .casillas-verificacion-entregado .form-check-label,
-        .casillas-verificacion-fecha .form-check-label,
-        .casillas-verificacion-retrasado .form-check-label {
-            cursor: pointer;
-            user-select: none;
-        }
-    `;
-    document.head.appendChild(styleElement);
-}
-
-// Función para manejar la verificación de casillas
-function configurarVerificacionCasillas() {
-    // Configurar para cada modal de entregado
-    document.querySelectorAll('.modal[id^="modalEntregado"]').forEach(modal => {
-        const idFactura = modal.id.replace('modalEntregado', '');
-        const casillas = modal.querySelectorAll(`.casilla-entregado-${idFactura}`);
-        const btnConfirmar = document.getElementById(`btnConfirmarEntregado${idFactura}`);
-        const contadorSpan = document.getElementById(`contadorCasillasEntregado${idFactura}`);
-        const barraProgreso = document.getElementById(`barraProgresoEntregado${idFactura}`);
-        
-        if (casillas.length && btnConfirmar && contadorSpan && barraProgreso) {
-            casillas.forEach(casilla => {
-                casilla.addEventListener('change', function() {
-                    const casillasMarcadas = modal.querySelectorAll(`.casilla-entregado-${idFactura}:checked`);
-                    const totalCasillas = casillas.length;
-                    const marcadas = casillasMarcadas.length;
-                    
-                    // Actualizar contador
-                    contadorSpan.textContent = marcadas;
-                    
-                    // Actualizar barra de progreso
-                    const porcentaje = (marcadas / totalCasillas) * 100;
-                    barraProgreso.style.width = `${porcentaje}%`;
-                    barraProgreso.setAttribute('aria-valuenow', porcentaje);
-                    
-                    // Cambiar color de la barra según el progreso
-                    if (porcentaje < 50) {
-                        barraProgreso.className = 'progress-bar bg-danger';
-                    } else if (porcentaje < 100) {
-                        barraProgreso.className = 'progress-bar bg-warning';
-                    } else {
-                        barraProgreso.className = 'progress-bar bg-success';
-                    }
-                    
-                    // Habilitar/deshabilitar botón
-                    btnConfirmar.disabled = marcadas !== totalCasillas;
-                });
-            });
-        }
-    });
-    
-    // Configurar para cada modal de actualizar fecha
-    document.querySelectorAll('.modal[id^="modalActualizarFecha"]').forEach(modal => {
-        const idFactura = modal.id.replace('modalActualizarFecha', '');
-        const casillas = modal.querySelectorAll(`.casilla-fecha-${idFactura}`);
-        const btnConfirmar = document.getElementById(`btnConfirmarFecha${idFactura}`);
-        const contadorSpan = document.getElementById(`contadorCasillasFecha${idFactura}`);
-        const barraProgreso = document.getElementById(`barraProgresoFecha${idFactura}`);
-        
-        if (casillas.length && btnConfirmar && contadorSpan && barraProgreso) {
-            casillas.forEach(casilla => {
-                casilla.addEventListener('change', function() {
-                    const casillasMarcadas = modal.querySelectorAll(`.casilla-fecha-${idFactura}:checked`);
-                    const totalCasillas = casillas.length;
-                    const marcadas = casillasMarcadas.length;
-                    
-                    // Actualizar contador
-                    contadorSpan.textContent = marcadas;
-                    
-                    // Actualizar barra de progreso
-                    const porcentaje = (marcadas / totalCasillas) * 100;
-                    barraProgreso.style.width = `${porcentaje}%`;
-                    barraProgreso.setAttribute('aria-valuenow', porcentaje);
-                    
-                    // Cambiar color de la barra según el progreso
-                    if (porcentaje < 50) {
-                        barraProgreso.className = 'progress-bar bg-danger';
-                    } else if (porcentaje < 100) {
-                        barraProgreso.className = 'progress-bar bg-warning';
-                    } else {
-                        barraProgreso.className = 'progress-bar bg-success';
-                    }
-                    
-                    // Habilitar/deshabilitar botón
-                    btnConfirmar.disabled = marcadas !== totalCasillas;
-                });
-            });
-        }
-    });
-    
-    // Configurar para cada modal de retrasado
-    document.querySelectorAll('.modal[id^="modalRetrasado"]').forEach(modal => {
-        const idFactura = modal.id.replace('modalRetrasado', '');
-        const casillas = modal.querySelectorAll(`.casilla-retrasado-${idFactura}`);
-        const btnConfirmar = document.getElementById(`btnConfirmarRetrasado${idFactura}`);
-        const contadorSpan = document.getElementById(`contadorCasillasRetrasado${idFactura}`);
-        const barraProgreso = document.getElementById(`barraProgresoRetrasado${idFactura}`);
-        
-        if (casillas.length && btnConfirmar && contadorSpan && barraProgreso) {
-            casillas.forEach(casilla => {
-                casilla.addEventListener('change', function() {
-                    const casillasMarcadas = modal.querySelectorAll(`.casilla-retrasado-${idFactura}:checked`);
-                    const totalCasillas = casillas.length;
-                    const marcadas = casillasMarcadas.length;
-                    
-                    // Actualizar contador
-                    contadorSpan.textContent = marcadas;
-                    
-                    // Actualizar barra de progreso
-                    const porcentaje = (marcadas / totalCasillas) * 100;
-                    barraProgreso.style.width = `${porcentaje}%`;
-                    barraProgreso.setAttribute('aria-valuenow', porcentaje);
-                    
-                    // Cambiar color de la barra según el progreso
-                    if (porcentaje < 50) {
-                        barraProgreso.className = 'progress-bar bg-danger';
-                    } else if (porcentaje < 100) {
-                        barraProgreso.className = 'progress-bar bg-warning';
-                    } else {
-                        barraProgreso.className = 'progress-bar bg-success';
-                    }
-                    
-                    // Habilitar/deshabilitar botón
-                    btnConfirmar.disabled = marcadas !== totalCasillas;
-                });
-            });
-        }
-    });
-}
-
-// Función para resetear casillas al cerrar modal
-function configurarResetCasillas() {
-    document.querySelectorAll('.modal').forEach(modal => {
-        modal.addEventListener('hidden.bs.modal', function() {
-            // Resetear todas las casillas dentro de este modal
-            const casillas = modal.querySelectorAll('.form-check-input');
-            casillas.forEach(casilla => {
-                casilla.checked = false;
-            });
-            
-            // Resetear botones de confirmación
-            const botones = modal.querySelectorAll('button[type="submit"]');
-            botones.forEach(boton => {
-                boton.disabled = true;
-            });
-            
-            // Resetear contadores
-            const contadores = modal.querySelectorAll('[id*="contadorCasillas"]');
-            contadores.forEach(contador => {
-                contador.textContent = '0';
-            });
-            
-            // Resetear barras de progreso
-            const barras = modal.querySelectorAll('[id*="barraProgreso"]');
-            barras.forEach(barra => {
-                barra.style.width = '0%';
-                barra.setAttribute('aria-valuenow', '0');
-                barra.className = 'progress-bar';
-            });
-        });
-    });
-}
-
-document.addEventListener('DOMContentLoaded', function() {
-    // Añadir estilos dinámicos
-    agregarEstilosEnviados();
-    
-    // Configurar verificación de casillas
-    configurarVerificacionCasillas();
-    
-    // Configurar reset de casillas al cerrar modales
-    configurarResetCasillas();
-    
-    // Auto-ocultar mensajes globales después de 5 segundos
-    setTimeout(function() {
-        const mensajeGlobal = document.getElementById('mensajeGlobal');
-        if (mensajeGlobal) {
-            mensajeGlobal.style.display = 'none';
-        }
-    }, 5000);
-    
-    // Configurar fechas mínimas en los modales y filtros
-    const today = new Date().toISOString().split('T')[0];
-    
-    // Configurar filtros de fecha
-    const fechaInicioInput = document.getElementById('fecha_inicio');
-    const fechaFinInput = document.getElementById('fecha_fin');
-    
-    if (fechaInicioInput && !fechaInicioInput.value) {
-        // Establecer fecha de inicio como hace 30 días
-        const fecha = new Date();
-        fecha.setDate(fecha.getDate() - 30);
-        fechaInicioInput.value = fecha.toISOString().split('T')[0];
-    }
-    
-    if (fechaFinInput && !fechaFinInput.value) {
-        fechaFinInput.value = today;
-    }
-    
-    // Configurar fechas mínimas en los modales
-    document.querySelectorAll('input[type="date"]').forEach(input => {
-        if (!input.value) {
-            input.value = today;
-        }
-    });
-    
-    // Resaltar filas según prioridad
-    document.querySelectorAll('tr[data-prioridad]').forEach(row => {
-        const prioridad = row.getAttribute('data-prioridad');
-        const diasRetraso = parseInt(row.getAttribute('data-dias-retraso') || 0);
-        
-        if (prioridad === 'Alta' || diasRetraso > 7) {
-            row.style.animation = 'pulse-high-priority 2s infinite';
-        } else if (prioridad === 'Media') {
-            row.classList.add('table-warning');
-        }
-    });
-    
-    // Tooltips para botones
-    const tooltipTriggerList = [].slice.call(document.querySelectorAll('[title]'));
-    const tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
-        return new bootstrap.Tooltip(tooltipTriggerEl);
-    });
-    
-    // Botones deshabilitados para retrasados
-    document.querySelectorAll('.btn[disabled][title*="Ya está marcado como retrasado"]').forEach(btn => {
-        btn.addEventListener('mouseenter', function() {
-            this.setAttribute('data-bs-toggle', 'tooltip');
-            this.setAttribute('data-bs-placement', 'top');
-            this.setAttribute('data-bs-title', 'Este pedido ya está marcado como retrasado');
-        });
-    });
-    
-    // Actualizar automáticamente los contadores de días cada hora
-    function actualizarContadoresDias() {
-        document.querySelectorAll('td:nth-child(5)').forEach(td => {
-            const badge = td.querySelector('.badge');
-            if (badge) {
-                const texto = badge.textContent.trim();
-                const match = texto.match(/(\d+)/);
-                if (match) {
-                    const dias = parseInt(match[1]);
-                    if (texto.includes('Hoy')) {
-                        // Después de medianoche, actualizar a "1 día"
-                        const ahora = new Date();
-                        if (ahora.getHours() === 0 && ahora.getMinutes() < 5) {
-                            badge.textContent = '1 día';
-                            badge.className = 'badge bg-primary';
-                        }
-                    }
-                }
-            }
-        });
-    }
-    
-    // Verificar fechas vencidas cada minuto
-    setInterval(function() {
-        const hoy = new Date().toISOString().split('T')[0];
-        document.querySelectorAll('td:nth-child(6)').forEach(td => {
-            const fechaText = td.querySelector('strong')?.textContent;
-            if (fechaText) {
-                const [dia, mes, ano] = fechaText.split('/');
-                const fechaEstimada = `${ano}-${mes}-${dia}`;
-                
-                if (fechaEstimada < hoy && !td.classList.contains('table-danger')) {
-                    td.classList.add('table-danger');
-                    
-                    // Actualizar estado visualmente
-                    const estadoBadge = td.parentElement.querySelector('.badge-estado-enviado');
-                    if (estadoBadge) {
-                        estadoBadge.className = 'badge badge-estado-retrasado d-flex align-items-center justify-content-center gap-1';
-                        estadoBadge.innerHTML = '<i class="fas fa-exclamation-triangle"></i> Retrasado';
-                    }
-                }
-            }
-        });
-    }, 60000); // Cada minuto
-    
-    // Inicializar contadores
-    actualizarContadoresDias();
-    
-    // Validación de fechas en filtros
-    if (fechaInicioInput && fechaFinInput) {
-        fechaInicioInput.addEventListener('change', function() {
-            if (this.value && fechaFinInput.value && this.value > fechaFinInput.value) {
-                fechaFinInput.value = this.value;
-            }
-        });
-        
-        fechaFinInput.addEventListener('change', function() {
-            if (this.value && fechaInicioInput.value && this.value < fechaInicioInput.value) {
-                fechaInicioInput.value = this.value;
-            }
-        });
-    }
-});
-</script>
+<script src="assets/js/enviados.js"></script>

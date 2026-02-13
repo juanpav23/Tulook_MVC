@@ -9,35 +9,25 @@
 <link rel="stylesheet" href="<?= BASE_URL ?>assets/css/AdminFavoritos.css">
 
 <div class="dashboard-body">
-    <!-- HEADER MODERNO -->
-    <div class="dashboard-header">
-        <div class="container">
-            <div class="row align-items-center">
-                <div class="col-md-8">
-                    <div class="user-info">
-                        <div class="user-avatar">
-                            <i class="fas fa-heart"></i>
-                        </div>
-                        <div class="welcome-text">
-                            <h1>Análisis de Favoritos</h1>
-                            <p>
-                                Estadísticas y tendencias de productos favoritos
-                                <span class="badge badge-custom ms-2 bg-dark">
-                                    <?= $_SESSION['rol'] == 1 ? 'Administrador' : 'Editor' ?>
-                                </span>
-                            </p>
-                        </div>
-                    </div>
-                </div>
-                <div class="col-md-4 text-md-end">
-                    <div class="current-time">
-                        <small>ID: <?php echo htmlspecialchars($_SESSION['ID_Usuario'] ?? '-'); ?></small><br>
-                        <small><?php echo date('d/m/Y H:i:s'); ?></small>
-                    </div>
-                </div>
+    <div class="card mb-4" style="border: none; border-bottom: 3px solid var(--primary); border-radius: 16px 16px 0 0; box-shadow: var(--card-shadow);">
+    <div class="card-body d-flex flex-wrap justify-content-between align-items-center py-3">
+        <div class="d-flex align-items-center gap-3">
+            <div style="background-color: var(--primary-dark); width: 55px; height: 55px; border-radius: 14px; display: flex; align-items: center; justify-content: center;">
+                <i class="fas fa-heart" style="font-size: 2rem; color: white;"></i>
+            </div>
+            <div>
+                <h1 style="color: var(--primary-dark); font-weight: 700; margin-bottom: 2px; font-size: 1.7rem;">
+                    Análisis de Favoritos
+                </h1>
             </div>
         </div>
+        <div class="d-flex gap-2 mt-2 mt-lg-0">
+            <span style="background: linear-gradient(145deg, var(--primary-dark), var(--primary)); color: white; padding: 10px 20px; border-radius: 12px; font-weight: 600; box-shadow: var(--card-shadow);">
+                <i class="fas fa-calendar-alt me-2"></i> <?= date('d/m/Y') ?>
+            </span>
+        </div>
     </div>
+</div>
 
     <!-- CONTENIDO PRINCIPAL -->
     <div class="container">
@@ -114,11 +104,6 @@
                 <div class="quick-access-section">
                     <div class="section-header">
                         <h3><i class="fas fa-bolt me-2"></i>Navegación Rápida</h3>
-                        <div class="section-actions">
-                            <a href="#productos-destacados" class="btn btn-sm btn-outline-dark">
-                                <i class="fas fa-star me-1"></i>Ir a Destacados
-                            </a>
-                        </div>
                     </div>
                     <div class="quick-actions-grid">
                         <a href="#productos-destacados" class="quick-action-btn">
@@ -164,15 +149,6 @@
                             <div class="action-text">
                                 <h6>Filtros</h6>
                                 <small>Buscar y filtrar</small>
-                            </div>
-                        </a>
-                        <a href="<?= BASE_URL ?>?c=Admin&a=dashboard" class="quick-action-btn">
-                            <div class="action-icon" style="background: rgba(149, 165, 166, 0.1); color: #95a5a6;">
-                                <i class="fas fa-tachometer-alt"></i>
-                            </div>
-                            <div class="action-text">
-                                <h6>Dashboard</h6>
-                                <small>Volver al panel principal</small>
                             </div>
                         </a>
                         <a href="<?= BASE_URL ?>" class="quick-action-btn">

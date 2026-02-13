@@ -1,0 +1,621 @@
+/* assets/css/reporte.css - Estilos específicos para reportes */
+:root {
+    --primary-dark: #1B202D;
+    --primary: #2A3448;
+    --primary-light: #3A4A6B;
+    --secondary: #4A5B7D;
+    --light: #5B6E8F;
+    --gray-light: #f8f9fa;
+    --gray-medium: #e9ecef;
+    --gray-dark: #6c757d;
+    --success: #2A3448;
+    --danger: #1B202D;
+    --warning: #4A5B7D;
+    --info: #4A5B7D;
+    --pink: #4A5B7D;
+    --border-radius: 12px;
+    --card-shadow: 0 4px 12px rgba(27, 32, 45, 0.08);
+    --hover-shadow: 0 6px 20px rgba(27, 32, 45, 0.12);
+    --transition: all 0.3s ease;
+}
+
+/* ======================
+   ESTILOS PARA TABLAS DE 100% DE ANCHO
+   UNA DEBAJO DE LA OTRA
+   ====================== */
+
+/* Contenedor principal para tablas - 100% de ancho */
+.table-container {
+    width: 100%;
+    display: block;
+    overflow-x: visible !important;
+}
+
+.table-container table {
+    width: 100% !important;
+    min-width: 100% !important;
+    margin-bottom: 0;
+    border-collapse: separate;
+    border-spacing: 0;
+    table-layout: auto;
+}
+
+/* Eliminar cualquier scroll */
+.card-body.p-0 {
+    overflow: visible !important;
+}
+
+/* Estilos para la tabla */
+.table-container table thead th {
+    background-color: var(--primary-dark);
+    color: white;
+    font-weight: 600;
+    text-transform: uppercase;
+    font-size: 0.85rem;
+    letter-spacing: 0.5px;
+    border: none;
+    padding: 1rem 0.75rem;
+    border-bottom: 1px solid var(--primary-light);
+    white-space: nowrap;
+}
+
+.table-container table tbody td {
+    padding: 0.75rem;
+    vertical-align: middle;
+    border-color: var(--gray-medium);
+    word-wrap: break-word;
+    overflow-wrap: break-word;
+}
+
+.table-container table tbody tr {
+    transition: var(--transition);
+}
+
+.table-container table tbody tr:hover {
+    background-color: rgba(58, 74, 107, 0.05) !important;
+}
+
+/* Padding específico para primera y última columna */
+.table-container table th:first-child,
+.table-container table td:first-child {
+    padding-left: 1.5rem !important;
+}
+
+.table-container table th:last-child,
+.table-container table td:last-child {
+    padding-right: 1.5rem !important;
+}
+
+/* Estilos para pie de tabla */
+.table-container table tfoot {
+    background-color: var(--gray-light);
+    border-top: 2px solid var(--primary-light);
+}
+
+.table-container table tfoot td {
+    font-weight: bold;
+    color: var(--primary-dark);
+    padding-top: 1rem !important;
+    padding-bottom: 1rem !important;
+}
+
+/* Efecto de highlight para tarjetas */
+.card-highlight {
+    animation: highlightCard 2s ease;
+    box-shadow: 0 0 0 3px rgba(58, 74, 107, 0.3) !important;
+}
+
+@keyframes highlightCard {
+    0% { box-shadow: 0 0 0 0 rgba(58, 74, 107, 0.7); }
+    70% { box-shadow: 0 0 0 10px rgba(58, 74, 107, 0); }
+    100% { box-shadow: 0 0 0 3px rgba(58, 74, 107, 0.3); }
+}
+
+/* ======================
+   ESTILOS EXISTENTES
+   ====================== */
+
+/* Tarjetas de métricas */
+.stats-card-pedido {
+    background: white;
+    border: 1px solid var(--gray-medium);
+    border-radius: var(--border-radius);
+    border-left: 4px solid var(--primary);
+    transition: var(--transition);
+    height: 100%;
+}
+
+.stats-card-pedido:hover {
+    transform: translateY(-3px);
+    box-shadow: var(--hover-shadow);
+}
+
+.stats-card-pedido .card-body {
+    padding: 1.25rem;
+}
+
+.stats-card-pedido .card-title {
+    font-size: 0.9rem;
+    color: var(--primary-dark);
+    font-weight: 600;
+    margin-bottom: 0.5rem;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.stats-card-pedido .card-text {
+    font-size: 1.8rem;
+    font-weight: 700;
+    color: var(--primary);
+    margin-bottom: 0.5rem;
+    line-height: 1.2;
+}
+
+.stats-card-pedido small {
+    font-size: 0.8rem;
+    color: var(--gray-dark);
+    display: block;
+}
+
+/* Badges */
+.badge.bg-pink {
+    background-color: var(--pink) !important;
+}
+
+.badge.bg-primary {
+    background-color: var(--primary) !important;
+}
+
+.badge.bg-success {
+    background-color: var(--success) !important;
+}
+
+.badge.bg-danger {
+    background-color: var(--danger) !important;
+}
+
+.badge.bg-warning {
+    background-color: var(--warning) !important;
+    color: #212529 !important;
+}
+
+.badge.bg-info {
+    background-color: var(--info) !important;
+}
+
+.badge.bg-secondary {
+    background-color: var(--secondary) !important;
+}
+
+/* Botones */
+.btn-primary-dark {
+    background-color: var(--primary-dark) !important;
+    border-color: var(--primary-dark) !important;
+    color: white !important;
+}
+
+.btn-primary-dark:hover {
+    background-color: #151a24 !important;
+    border-color: #151a24 !important;
+}
+
+/* Menú de navegación rápida */
+#menu-navegacion-rapida .btn {
+    margin: 0.25rem;
+    padding: 0.5rem 1rem;
+    font-size: 0.85rem;
+    transition: var(--transition);
+    border-width: 2px;
+    color: var(--gray-dark);
+    border-color: var(--gray-dark);
+}
+
+#menu-navegacion-rapida .btn:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--card-shadow);
+    background-color: var(--gray-dark);
+    color: white;
+    border-color: var(--gray-dark);
+}
+
+#menu-navegacion-rapida .btn.active {
+    background-color: var(--gray-dark) !important;
+    border-color: var(--gray-dark) !important;
+    color: white !important;
+    box-shadow: 0 3px 10px rgba(108, 117, 125, 0.15);
+}
+
+/* Cards */
+.card {
+    border: 1px solid var(--gray-medium);
+    border-radius: var(--border-radius);
+    box-shadow: var(--card-shadow);
+    transition: var(--transition);
+}
+
+.card:hover {
+    box-shadow: var(--hover-shadow);
+}
+
+.card-header.bg-primary-dark {
+    background-color: var(--primary-dark) !important;
+    color: white !important;
+    border-bottom: 1px solid var(--primary-light);
+}
+
+/* ======================
+   RESPONSIVE
+   ====================== */
+
+/* Para pantallas grandes - tablas completas */
+@media (min-width: 992px) {
+    .table-container {
+        overflow-x: visible !important;
+    }
+    
+    .table-container table {
+        table-layout: auto;
+    }
+}
+
+/* Para pantallas medianas */
+@media (max-width: 1199px) and (min-width: 768px) {
+    .table-container table th,
+    .table-container table td {
+        font-size: 0.9rem;
+        padding: 0.6rem 0.5rem;
+    }
+    
+    .table-container table th:first-child,
+    .table-container table td:first-child {
+        padding-left: 1rem !important;
+    }
+    
+    .table-container table th:last-child,
+    .table-container table td:last-child {
+        padding-right: 1rem !important;
+    }
+}
+
+/* Para pantallas pequeñas (móviles) */
+@media (max-width: 767px) {
+    /* En móviles, permitir scroll horizontal si es necesario */
+    .table-container {
+        overflow-x: auto !important;
+    }
+    
+    .table-container table {
+        min-width: 700px;
+        font-size: 0.85rem;
+    }
+    
+    .table-container table th,
+    .table-container table td {
+        padding: 0.5rem 0.4rem;
+    }
+    
+    .table-container table th:first-child,
+    .table-container table td:first-child {
+        padding-left: 0.75rem !important;
+    }
+    
+    .table-container table th:last-child,
+    .table-container table td:last-child {
+        padding-right: 0.75rem !important;
+    }
+    
+    /* Menú de navegación en columna en móviles */
+    #menu-navegacion-rapida {
+        flex-direction: column;
+        gap: 0.25rem;
+    }
+    
+    #menu-navegacion-rapida .btn {
+        width: 100%;
+        text-align: center;
+        margin: 0.1rem 0;
+        padding: 0.4rem 0.8rem;
+        font-size: 0.8rem;
+    }
+    
+    /* Ajustar métricas */
+    .stats-card-pedido .card-text {
+        font-size: 1.5rem;
+    }
+    
+    .stats-card-pedido .card-title {
+        font-size: 0.8rem;
+    }
+}
+
+/* Para móviles muy pequeños */
+@media (max-width: 576px) {
+    .table-container table {
+        min-width: 600px;
+        font-size: 0.8rem;
+    }
+    
+    #menu-navegacion-rapida .btn {
+        font-size: 0.75rem;
+        padding: 0.3rem 0.6rem;
+    }
+    
+    .stats-card-pedido .card-text {
+        font-size: 1.3rem;
+    }
+}
+
+/* Asegurar que las tablas tengan buen contraste */
+.table-container table tbody tr:nth-child(even) {
+    background-color: rgba(0, 0, 0, 0.02);
+}
+
+.table-container table tbody tr:hover {
+    background-color: rgba(58, 74, 107, 0.05) !important;
+}
+
+/* Estilos para texto en celdas */
+.table-container table td small {
+    font-size: 0.75rem;
+    line-height: 1.2;
+    display: block;
+    margin-top: 0.25rem;
+}
+
+/* assets/css/reporte.css - Agregar al final del archivo */
+
+/* Estilos para la tarjeta de ganancia destacada */
+.card.estadistica-ganancia {
+    position: relative;
+    overflow: hidden;
+    transition: all 0.3s ease;
+}
+
+.card.estadistica-ganancia::before {
+    content: '';
+    position: absolute;
+    top: -50%;
+    right: -50%;
+    width: 200px;
+    height: 200px;
+    background: radial-gradient(circle, rgba(40, 167, 69, 0.1) 0%, rgba(40, 167, 69, 0) 70%);
+    border-radius: 50%;
+    pointer-events: none;
+}
+
+.card.estadistica-ganancia:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 15px 30px rgba(40, 167, 69, 0.2) !important;
+}
+
+.card.estadistica-ganancia .card-text {
+    animation: pulseGanancia 2s infinite;
+}
+
+@keyframes pulseGanancia {
+    0% {
+        text-shadow: 0 0 0 rgba(40, 167, 69, 0.2);
+    }
+    50% {
+        text-shadow: 0 0 10px rgba(40, 167, 69, 0.4);
+    }
+    100% {
+        text-shadow: 0 0 0 rgba(40, 167, 69, 0.2);
+    }
+}
+
+/* Badge de período mejorado */
+.badge-periodo {
+    background: linear-gradient(145deg, #1B202D, #2A3448);
+    color: white;
+    padding: 5px 12px;
+    border-radius: 30px;
+    font-weight: 500;
+    letter-spacing: 0.5px;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+}
+
+/* Estilo para métricas con iconos circulares */
+.metric-circle {
+    width: 60px;
+    height: 60px;
+    background: rgba(58, 74, 107, 0.1);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 10px;
+}
+
+.metric-circle i {
+    font-size: 1.8rem;
+    color: var(--primary-dark);
+}
+
+/* Responsive para la tarjeta de ganancia */
+@media (max-width: 768px) {
+    .card.estadistica-ganancia .card-text {
+        font-size: 2rem !important;
+    }
+    
+    .card.estadistica-ganancia .d-none.d-lg-block {
+        display: none !important;
+    }
+}
+
+/* Animación de brillo para la ganancia */
+@keyframes shine {
+    0% {
+        background-position: -100px;
+    }
+    40%, 100% {
+        background-position: 300px;
+    }
+}
+
+.card.estadistica-ganancia .badge.bg-success {
+    background: linear-gradient(90deg, #28a745, #34ce57, #28a745) !important;
+    background-size: 200% 100%;
+    animation: shine 3s infinite;
+}
+
+/* Asegurar que las cards no se desborden */
+.card {
+    width: 100%;
+    max-width: 100%;
+    overflow: hidden;
+}
+
+.card-body {
+    padding: 1.25rem;
+    word-wrap: break-word;
+    overflow-wrap: break-word;
+    width: 100%;
+}
+
+/* Corregir textos largos en métricas */
+.card-text {
+    word-break: break-word;
+    hyphens: auto;
+    max-width: 100%;
+    line-height: 1.2;
+}
+
+/* Ajustar tamaños responsivos */
+@media (max-width: 1200px) {
+    .card-text {
+        font-size: 1.6rem !important;
+    }
+    
+    .stats-card-pedido .card-text {
+        font-size: 1.5rem;
+    }
+}
+
+@media (max-width: 992px) {
+    .card-text {
+        font-size: 1.4rem !important;
+    }
+    
+    .stats-card-pedido .card-text {
+        font-size: 1.3rem;
+    }
+    
+    .col-lg-6 .card-text {
+        font-size: 2rem !important;
+    }
+}
+
+@media (max-width: 768px) {
+    .card-body {
+        padding: 1rem;
+    }
+    
+    .card-text {
+        font-size: 1.3rem !important;
+    }
+    
+    .stats-card-pedido .card-text {
+        font-size: 1.2rem;
+    }
+    
+    .col-lg-6 .card-text {
+        font-size: 1.8rem !important;
+    }
+}
+
+@media (max-width: 576px) {
+    .card-body {
+        padding: 0.9rem;
+    }
+    
+    .card-text {
+        font-size: 1.2rem !important;
+    }
+    
+    .stats-card-pedido .card-text {
+        font-size: 1.1rem;
+    }
+    
+    .col-lg-6 .card-text {
+        font-size: 1.6rem !important;
+    }
+    
+    .badge {
+        font-size: 0.65rem !important;
+        padding: 4px 8px !important;
+    }
+}
+
+/* Corregir círculos decorativos */
+.rounded-circle {
+    flex-shrink: 0;
+}
+
+/* Asegurar que los badges no se salgan */
+.badge {
+    display: inline-flex;
+    align-items: center;
+    white-space: nowrap;
+    max-width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+/* Para el contenido de la tarjeta de ganancia */
+@media (max-width: 1200px) {
+    .d-xl-block {
+        display: none !important;
+    }
+}
+
+/* Asegurar que las filas no tengan desbordamiento horizontal */
+.row {
+    margin-left: -12px;
+    margin-right: -12px;
+    width: calc(100% + 24px);
+}
+
+.container-fluid {
+    padding-left: 15px;
+    padding-right: 15px;
+    width: 100%;
+    overflow-x: hidden;
+}
+
+/* Corregir colores usando las variables CSS */
+.bg-success {
+    background-color: var(--success) !important;
+}
+
+.bg-danger {
+    background-color: var(--danger) !important;
+}
+
+.bg-warning {
+    background-color: var(--warning) !important;
+}
+
+.bg-info {
+    background-color: var(--info) !important;
+}
+
+.text-success {
+    color: var(--success) !important;
+}
+
+.text-danger {
+    color: var(--danger) !important;
+}
+
+.text-warning {
+    color: var(--warning) !important;
+}
+
+.text-primary {
+    color: var(--primary) !important;
+}
+
+.text-primary-dark {
+    color: var(--primary-dark) !important;
+}

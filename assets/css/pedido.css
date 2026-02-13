@@ -145,3 +145,20 @@
     align-items: center;
     justify-content: center;
 }
+
+/* Estilos para el modal de cancelar proceso */
+.modal-header.bg-warning {
+    background: linear-gradient(135deg, var(--warning), #2d3138) !important;
+}
+
+/* Botón cancelar proceso */
+.btn-cancelar-proceso {
+    background: linear-gradient(135deg, #6c757d, #5a6268) !important;
+    border-color: #6c757d !important;
+    color: white !important;
+}
+
+.btn-cancelar-proceso:hover {
+    background: linear-gradient(135deg, #5a6268, #6c757d) !important;
+    border-color: #5a6268 !important;
+}

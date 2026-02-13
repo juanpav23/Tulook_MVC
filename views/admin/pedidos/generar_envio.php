@@ -1,6 +1,8 @@
 <?php
 // Acceder al helper desde el controlador
 $getEstadoBadge = $getEstadoBadge ?? 'getEstadoBadgePedido';
+// Obtener fecha por defecto desde el controlador - DÍA SIGUIENTE
+$fechaPorDefecto = $fechaPorDefecto ?? date('Y-m-d', strtotime('+1 day'));
 ?>
 
 <div class="container-fluid">
@@ -185,18 +187,18 @@ $getEstadoBadge = $getEstadoBadge ?? 'getEstadoBadgePedido';
                                     <i class="fas fa-calendar-check text-white"></i>
                                 </span>
                                 <input type="date" 
-                                       class="form-control" 
-                                       id="fecha_estimada_entrega" 
-                                       name="fecha_estimada_entrega" 
-                                       min="<?= date('Y-m-d', strtotime('+1 day')) ?>"
-                                       value="<?= date('Y-m-d', strtotime('+3 days')) ?>"
-                                       required>
+                                    class="form-control" 
+                                    id="fecha_estimada_entrega" 
+                                    name="fecha_estimada_entrega" 
+                                    min="<?= date('Y-m-d', strtotime('+1 day')) ?>"
+                                    value="<?= $fechaPorDefecto ?>"
+                                    required>
                             </div>
                             <div class="form-text text-primary-dark">
-                                <i class="fas fa-info-circle me-1"></i> Selecciona la fecha en la que estimas que el pedido será entregado.
+                                <i class="fas fa-info-circle me-1"></i> Selecciona la fecha en la que estimas que el pedido será entregado. Solo se permiten fechas a partir de mañana.
                             </div>
                             <div id="fecha-error" class="invalid-feedback d-none">
-                                Por favor selecciona una fecha estimada de entrega
+                                Por favor selecciona una fecha estimada de entrega (mañana o futura)
                             </div>
                         </div>
                         <div class="col-md-6">
@@ -204,6 +206,7 @@ $getEstadoBadge = $getEstadoBadge ?? 'getEstadoBadgePedido';
                                 <div class="card-body">
                                     <h6 class="text-primary-dark"><i class="fas fa-lightbulb me-2"></i>Sugerencias rápidas:</h6>
                                     <div class="d-flex flex-wrap gap-2 mt-2">
+                                        <!-- ELIMINADO: Botón "Hoy" -->
                                         <button type="button" class="btn btn-sm btn-outline-primary fecha-sugerencia" data-dias="1">
                                             Mañana
                                         </button>
@@ -229,7 +232,7 @@ $getEstadoBadge = $getEstadoBadge ?? 'getEstadoBadgePedido';
                         <i class="fas fa-sticky-note me-1"></i> Notas del Envío
                     </label>
                     
-                    <!-- Notas esenciales (no editables) -->
+                    <!-- Notas esenciales (dinámicas según fecha) -->
                     <div class="card mb-3 border-primary">
                         <div class="card-header bg-primary text-white py-2">
                             <h6 class="mb-0"><i class="fas fa-check-circle me-2"></i>Notas Esenciales del Envío</h6>
@@ -238,8 +241,8 @@ $getEstadoBadge = $getEstadoBadge ?? 'getEstadoBadgePedido';
                             <div class="notas-esenciales">
                                 <div class="nota-item d-flex align-items-start mb-2">
                                     <i class="fas fa-check text-success mt-1 me-2"></i>
-                                    <span>Se entregó a transportadora, tiempo estimado 3 días.</span>
-                                    <input type="hidden" name="notas_esenciales[]" value="Se entregó a transportadora, tiempo estimado 3 días.">
+                                    <span id="nota-tiempo-estimado">Se entregó a transportadora, entrega estimada según fecha seleccionada.</span>
+                                    <input type="hidden" name="notas_esenciales[]" id="nota-tiempo-estimado-input" value="Se entregó a transportadora, entrega estimada según fecha seleccionada.">
                                 </div>
                                 <div class="nota-item d-flex align-items-start mb-2">
                                     <i class="fas fa-check text-success mt-1 me-2"></i>
@@ -253,7 +256,7 @@ $getEstadoBadge = $getEstadoBadge ?? 'getEstadoBadgePedido';
                                 </div>
                             </div>
                             <small class="text-primary-dark mt-2 d-block">
-                                <i class="fas fa-info-circle me-1"></i> Estas notas se incluirán automáticamente en el historial.
+                                <i class="fas fa-info-circle me-1"></i> Por defecto se usa la fecha de hoy. La nota se actualizará según la fecha seleccionada.
                             </small>
                         </div>
                     </div>
@@ -408,6 +411,76 @@ $getEstadoBadge = $getEstadoBadge ?? 'getEstadoBadgePedido';
 let transportadoraSeleccionada = 'Servientrega';
 let procesandoEnvio = false;
 
+// FUNCIÓN PARA ACTUALIZAR NOTA DE TIEMPO ESTIMADO - CORREGIDA CON MANEJO DE ZONA HORARIA
+function actualizarNotaTiempoEstimado() {
+    const fechaInput = document.getElementById('fecha_estimada_entrega');
+    const notaElement = document.getElementById('nota-tiempo-estimado');
+    const notaInput = document.getElementById('nota-tiempo-estimado-input');
+    
+    if (!fechaInput.value || !notaElement || !notaInput) return;
+    
+    // Obtener fecha seleccionada del input (formato YYYY-MM-DD)
+    const fechaSeleccionadaStr = fechaInput.value;
+    
+    // Crear fecha LOCAL correctamente
+    const [year, month, day] = fechaSeleccionadaStr.split('-').map(Number);
+    const fechaSeleccionada = new Date(year, month - 1, day);
+    
+    // Crear fecha de mañana LOCAL
+    const fechaManana = new Date();
+    fechaManana.setDate(fechaManana.getDate() + 1);
+    fechaManana.setHours(0, 0, 0, 0);
+    fechaSeleccionada.setHours(0, 0, 0, 0);
+    
+    // Calcular diferencia de días CORRECTAMENTE (desde mañana)
+    const diferenciaMs = fechaSeleccionada.getTime() - fechaManana.getTime();
+    const diferenciaDias = Math.round(diferenciaMs / (1000 * 60 * 60 * 24));
+    
+    let textoNota = '';
+    if (diferenciaDias === 0) {
+        textoNota = 'Se entregó a transportadora, entrega estimada para mañana';
+    } else if (diferenciaDias === 1) {
+        textoNota = 'Se entregó a transportadora, entrega estimada en 2 días';
+    } else if (diferenciaDias > 1) {
+        textoNota = `Se entregó a transportadora, entrega estimada en ${diferenciaDias + 1} días`;
+    } else {
+        textoNota = 'Se entregó a transportadora, entrega estimada según fecha seleccionada';
+    }
+    
+    // Formatear fecha para mostrar en formato local
+    const fechaFormateada = fechaSeleccionada.toLocaleDateString('es-ES', {
+        day: '2-digit',
+        month: '2-digit',
+        year: 'numeric'
+    });
+    
+    // Actualizar elementos
+    const notaCompleta = `${textoNota} (${fechaFormateada})`;
+    notaElement.textContent = notaCompleta;
+    notaInput.value = notaCompleta;
+}
+
+// FUNCIÓN PARA FORMATEAR FECHA EN FORMATO DD/MM/YYYY (LOCAL)
+function formatearFechaLocal(fechaStr) {
+    // fechaStr viene como "YYYY-MM-DD" del input
+    const [year, month, day] = fechaStr.split('-').map(Number);
+    const fecha = new Date(year, month - 1, day);
+    
+    return fecha.toLocaleDateString('es-ES', {
+        day: '2-digit',
+        month: '2-digit',
+        year: 'numeric'
+    });
+}
+
+function obtenerFechaActualLocal() {
+    const hoy = new Date();
+    const year = hoy.getFullYear();
+    const month = String(hoy.getMonth() + 1).padStart(2, '0');
+    const day = String(hoy.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+}
+
 // FUNCIÓN PRINCIPAL QUE SIEMPRE FUNCIONA
 function initEnvioRapido() {
     // Elementos principales
@@ -420,6 +493,15 @@ function initEnvioRapido() {
     
     // Si no existe el botón, salir
     if (!btnConfirmarEnvio) return;
+    
+    // Inicializar nota de tiempo estimado
+    actualizarNotaTiempoEstimado();
+    
+    // Actualizar nota cuando cambie la fecha
+    if (fechaEstimadaInput) {
+        fechaEstimadaInput.addEventListener('change', actualizarNotaTiempoEstimado);
+        fechaEstimadaInput.addEventListener('input', actualizarNotaTiempoEstimado);
+    }
     
     // 1. CONFIGURAR BOTÓN PRINCIPAL (SIMPLE Y DIRECTA)
     btnConfirmarEnvio.onclick = function(e) {
@@ -438,14 +520,10 @@ function initEnvioRapido() {
         document.getElementById('modalNumeroGuia').textContent = 
             document.getElementById('numero-guia-generado').textContent;
         
-        // Mostrar fecha estimada en modal
-        if (fechaEstimadaInput) {
-            const fecha = new Date(fechaEstimadaInput.value);
-            const fechaFormateada = fecha.toLocaleDateString('es-ES', {
-                day: '2-digit',
-                month: '2-digit',
-                year: 'numeric'
-            });
+        // Mostrar fecha estimada en modal - CORREGIDO
+        if (fechaEstimadaInput && fechaEstimadaInput.value) {
+            // Usar la función formatearFechaLocal para mostrar correctamente
+            const fechaFormateada = formatearFechaLocal(fechaEstimadaInput.value);
             document.getElementById('modalFechaEstimada').textContent = fechaFormateada;
         }
         
@@ -514,12 +592,17 @@ function initEnvioRapido() {
             const nuevaFecha = new Date();
             nuevaFecha.setDate(nuevaFecha.getDate() + dias);
             
-            // Formatear como YYYY-MM-DD
-            const fechaFormateada = nuevaFecha.toISOString().split('T')[0];
+            // Formatear como YYYY-MM-DD LOCAL
+            const year = nuevaFecha.getFullYear();
+            const month = String(nuevaFecha.getMonth() + 1).padStart(2, '0');
+            const day = String(nuevaFecha.getDate()).padStart(2, '0');
+            const fechaFormateada = `${year}-${month}-${day}`;
             
             if (fechaEstimadaInput) {
                 fechaEstimadaInput.value = fechaFormateada;
-                mostrarMensaje(`✓ Fecha estimada establecida: ${dias} día(s)`, 'success');
+                mostrarMensaje(`✓ Fecha estimada establecida: ${dias === 1 ? 'para mañana' : `en ${dias} día(s)`}`, 'success');
+                // Actualizar nota después de cambiar fecha
+                actualizarNotaTiempoEstimado();
             }
         });
     });
@@ -598,7 +681,7 @@ function configurarTransportadoras() {
     }
 }
 
-// FUNCIÓN PARA VALIDAR FORMULARIO
+// FUNCIÓN PARA VALIDAR FORMULARIO - CORREGIDA CON ZONA HORARIA LOCAL
 function validarFormulario() {
     const transportadoraPersonalizada = document.getElementById('TransportadoraPersonalizada');
     const radiosTransportadora = document.querySelectorAll('.transportadora-radio');
@@ -625,18 +708,35 @@ function validarFormulario() {
     
     // Validar fecha estimada
     let fechaValida = false;
+    let mensajeError = '';
+    
     if (fechaInput && fechaInput.value) {
-        const fechaSeleccionada = new Date(fechaInput.value);
-        const fechaHoy = new Date();
-        fechaHoy.setHours(0, 0, 0, 0);
+        // Verificar que la fecha sea mañana o futura
+        const fechaSeleccionadaStr = fechaInput.value;
+        const [year, month, day] = fechaSeleccionadaStr.split('-').map(Number);
+        const fechaSeleccionada = new Date(year, month - 1, day);
+        fechaSeleccionada.setHours(0, 0, 0, 0);
         
-        fechaValida = fechaSeleccionada >= fechaHoy;
+        // Fecha de mañana
+        const fechaManana = new Date();
+        fechaManana.setDate(fechaManana.getDate() + 1);
+        fechaManana.setHours(0, 0, 0, 0);
+        
+        fechaValida = fechaSeleccionada >= fechaManana;
+        
+        if (!fechaValida) {
+            mensajeError = 'La fecha estimada debe ser mañana o una fecha futura';
+        }
+    } else {
+        mensajeError = 'Por favor selecciona una fecha estimada de entrega';
+        fechaValida = false;
     }
     
     // Mostrar/ocultar errores
     if (errorElement) {
         if (!tieneTransportadora) {
             errorElement.classList.remove('d-none');
+            errorElement.textContent = 'Por favor selecciona o ingresa una transportadora';
             mostrarMensaje('Por favor selecciona o ingresa una transportadora', 'danger');
         } else {
             errorElement.classList.add('d-none');
@@ -644,9 +744,10 @@ function validarFormulario() {
     }
     
     if (fechaError) {
-        if (!fechaInput.value || !fechaValida) {
+        if (!fechaValida) {
             fechaError.classList.remove('d-none');
-            mostrarMensaje('Por favor selecciona una fecha estimada de entrega válida (futura)', 'danger');
+            fechaError.textContent = mensajeError;
+            mostrarMensaje(mensajeError, 'danger');
             if (fechaInput) fechaInput.focus();
         } else {
             fechaError.classList.add('d-none');
@@ -686,13 +787,16 @@ function procesarEnvio() {
     hiddenInput.value = transportadoraSeleccionada;
     form.appendChild(hiddenInput);
     
-    // Combinar notas esenciales y adicionales
-    const notasAdicionales = document.getElementById('Notas_Adicionales')?.value.trim() || '';
+    // Obtener notas esenciales actualizadas
+    const notaTiempoInput = document.getElementById('nota-tiempo-estimado-input');
     const notasEsenciales = [
-        'Se entregó a transportadora, tiempo estimado 3 días.',
+        notaTiempoInput ? notaTiempoInput.value : 'Se entregó a transportadora, entrega estimada según fecha seleccionada.',
         'Cliente notificado por correo electrónico.',
         'Seguro incluido en el envío.'
     ];
+    
+    // Obtener notas adicionales
+    const notasAdicionales = document.getElementById('Notas_Adicionales')?.value.trim() || '';
     
     let todasLasNotas = notasEsenciales;
     if (notasAdicionales) {

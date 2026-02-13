@@ -2,11 +2,13 @@
 require_once "models/Database.php";
 require_once "models/Pedido.php";
 require_once "models/Usuario.php";
+require_once "services/Mailer.php";
 
 class PedidoController {
     private $db;
     private $pedidoModel;
     private $usuarioModel;
+    private $mailer;
 
     public function __construct($db = null) {
         if ($db) {
@@ -17,6 +19,7 @@ class PedidoController {
         }
         $this->pedidoModel = new Pedido($this->db);
         $this->usuarioModel = new Usuario($this->db);
+        $this->mailer = new Mailer(); // Inicializar Mailer
 
         if (session_status() === PHP_SESSION_NONE) session_start();
         $this->ensureAdmin();
@@ -95,13 +98,32 @@ class PedidoController {
         $fechaInicio = $_GET['fecha_inicio'] ?? '';
         $fechaFin = $_GET['fecha_fin'] ?? '';
 
+        // CORRECCIÓN: Validar y procesar fechas correctamente
+        $fechaInicio = !empty($fechaInicio) ? $fechaInicio : '';
+        $fechaFin = !empty($fechaFin) ? $fechaFin : '';
+
         if (!empty($termino)) {
             $pedidos = $this->pedidoModel->buscar($termino);
             $modoBusqueda = true;
         } elseif (!empty($estado)) {
             $pedidos = $this->pedidoModel->obtenerPorEstado($estado);
             $modoBusqueda = true;
-        } elseif (!empty($fechaInicio) && !empty($fechaFin)) {
+        } elseif (!empty($fechaInicio) || !empty($fechaFin)) {
+            // CORRECCIÓN: Si solo una fecha está presente, usar la misma para ambas
+            if (!empty($fechaInicio) && empty($fechaFin)) {
+                $fechaFin = $fechaInicio;
+            } elseif (empty($fechaInicio) && !empty($fechaFin)) {
+                $fechaInicio = $fechaFin;
+            }
+            
+            // Validar que las fechas sean válidas
+            if (strtotime($fechaInicio) > strtotime($fechaFin)) {
+                // Si la fecha inicio es mayor que la fin, intercambiarlas
+                $temp = $fechaInicio;
+                $fechaInicio = $fechaFin;
+                $fechaFin = $temp;
+            }
+            
             $pedidos = $this->pedidoModel->obtenerPorFecha($fechaInicio, $fechaFin);
             $modoBusqueda = true;
         } else {
@@ -122,8 +144,109 @@ class PedidoController {
 
     // 🚚 PEDIDOS ENVIADOS (PARA SEGUIMIENTO)
     public function enviados() {
+        // Obtener parámetros de filtro
+        $buscar = $_GET['buscar'] ?? '';
+        $transportadora = $_GET['transportadora'] ?? '';
+        $estadoFiltro = $_GET['estado_filtro'] ?? '';
+        $fechaInicio = $_GET['fecha_inicio'] ?? '';
+        $fechaFin = $_GET['fecha_fin'] ?? '';
+        
+        // Obtener todos los pedidos enviados primero
         $pedidos = $this->pedidoModel->obtenerEnviados();
-        $pedidosAtrasados = $this->pedidoModel->obtenerAtrasados();
+        
+        // Aplicar filtros si existen
+        $pedidosFiltrados = [];
+        
+        foreach ($pedidos as $pedido) {
+            $cumpleFiltros = true;
+            
+            // Filtro de búsqueda
+            if (!empty($buscar)) {
+                $termino = strtolower($buscar);
+                $cumpleBusqueda = false;
+                
+                // Buscar en código de acceso
+                if (stripos($pedido['Codigo_Acceso'], $termino) !== false) {
+                    $cumpleBusqueda = true;
+                }
+                
+                // Buscar en nombre del cliente
+                $nombreCompleto = strtolower($pedido['Nombre'] . ' ' . $pedido['Apellido']);
+                if (stripos($nombreCompleto, $termino) !== false) {
+                    $cumpleBusqueda = true;
+                }
+                
+                // Buscar en email
+                if (stripos($pedido['Correo'], $termino) !== false) {
+                    $cumpleBusqueda = true;
+                }
+                
+                if (!$cumpleBusqueda) {
+                    $cumpleFiltros = false;
+                }
+            }
+            
+            // Filtro de transportadora
+            if (!empty($transportadora) && $cumpleFiltros) {
+                if ($pedido['Transportadora'] !== $transportadora) {
+                    $cumpleFiltros = false;
+                }
+            }
+            
+            // Filtro de estado de seguimiento
+            if (!empty($estadoFiltro) && $cumpleFiltros) {
+                switch ($estadoFiltro) {
+                    case 'retrasados':
+                        if ($pedido['Estado'] !== 'Retrasado') {
+                            $cumpleFiltros = false;
+                        }
+                        break;
+                        
+                    case 'en_transito':
+                        if ($pedido['Estado'] !== 'Enviado') {
+                            $cumpleFiltros = false;
+                        }
+                        break;
+                        
+                    case 'proximos_vencer':
+                        if (!empty($pedido['Fecha_Estimada_Entrega'])) {
+                            $diasFaltantes = floor((strtotime($pedido['Fecha_Estimada_Entrega']) - strtotime(date('Y-m-d'))) / (60 * 60 * 24));
+                            if ($diasFaltantes > 2 || $diasFaltantes < 0) {
+                                $cumpleFiltros = false;
+                            }
+                        } else {
+                            $cumpleFiltros = false;
+                        }
+                        break;
+                }
+            }
+            
+            // Filtro de fecha de envío
+            if (!empty($fechaInicio) && $cumpleFiltros && !empty($pedido['Fecha_Envio'])) {
+                $fechaEnvio = date('Y-m-d', strtotime($pedido['Fecha_Envio']));
+                if ($fechaEnvio < $fechaInicio) {
+                    $cumpleFiltros = false;
+                }
+            }
+            
+            if (!empty($fechaFin) && $cumpleFiltros && !empty($pedido['Fecha_Envio'])) {
+                $fechaEnvio = date('Y-m-d', strtotime($pedido['Fecha_Envio']));
+                if ($fechaEnvio > $fechaFin) {
+                    $cumpleFiltros = false;
+                }
+            }
+            
+            if ($cumpleFiltros) {
+                $pedidosFiltrados[] = $pedido;
+            }
+        }
+        
+        // Usar pedidos filtrados o todos si no hay filtros
+        $pedidosMostrar = !empty($buscar) || !empty($transportadora) || !empty($estadoFiltro) || !empty($fechaInicio) || !empty($fechaFin) 
+            ? $pedidosFiltrados 
+            : $pedidos;
+        
+        // Obtener estadísticas de retrasos (ya no usamos atrasados)
         $estadisticasRetrasos = $this->pedidoModel->obtenerEstadisticasRetrasos();
         
         // Verificar y marcar automáticamente pedidos retrasados
@@ -132,7 +255,61 @@ class PedidoController {
         // Pasar el helper a la vista
         $getEstadoBadge = [$this, 'getEstadoBadge'];
         
+        // Pasar pedidos filtrados a la vista
+        $pedidos = $pedidosMostrar;
+        
         include "views/admin/layout_admin.php";
+    }
+
+    private function enviarNotificacionCorreo($idFactura, $estadoAnterior, $estadoNuevo, $motivo = '', $datosAdicionales = []) {
+        try {
+            // Obtener datos del pedido y cliente
+            $pedido = $this->pedidoModel->obtenerPorId($idFactura);
+            
+            if (!$pedido) {
+                error_log("Pedido no encontrado para notificación: {$idFactura}");
+                return false;
+            }
+
+            // Preparar datos del cliente
+            $cliente = [
+                'nombre' => $pedido['Nombre'] . ' ' . $pedido['Apellido'],
+                'email' => $pedido['Correo']
+            ];
+
+            // Preparar datos de la factura
+            $factura = [
+                'ID_Factura' => $pedido['ID_Factura'],
+                'Codigo_Acceso' => $pedido['Codigo_Acceso']
+            ];
+
+            // Agregar más datos del pedido a la factura
+            foreach (['Fecha_Factura', 'Monto_Total', 'Metodo_Pago', 'Direccion_Completa'] as $campo) {
+                if (isset($pedido[$campo])) {
+                    $factura[$campo] = $pedido[$campo];
+                }
+            }
+
+            // Enviar notificación
+            $resultado = $this->mailer->enviarNotificacionEstado(
+                $cliente,
+                $factura,
+                $estadoAnterior,
+                $estadoNuevo,
+                $motivo,
+                $datosAdicionales
+            );
+
+            if (!$resultado['success']) {
+                error_log("Error enviando notificación: " . $resultado['message']);
+            }
+
+            return $resultado['success'];
+
+        } catch (Exception $e) {
+            error_log("Excepción al enviar notificación: " . $e->getMessage());
+            return false;
+        }
     }
 
     // 👁 VER DETALLE DE PEDIDO CON SEGUIMIENTO
@@ -183,7 +360,7 @@ class PedidoController {
                 exit;
             }
 
-            // Validar que el pedido no esté anulado
+            // Obtener el pedido actual para conocer el estado anterior
             $pedido = $this->pedidoModel->obtenerPorId($id);
             if ($pedido['Estado'] === 'Anulado') {
                 $_SESSION['mensaje'] = "❌ No se puede modificar un pedido anulado";
@@ -191,6 +368,8 @@ class PedidoController {
                 header("Location: " . BASE_URL . "?c=Pedido&a=detalle&id=" . $id);
                 exit;
             }
+
+            $estadoAnterior = $pedido['Estado'];
 
             // Validar transición de estado
             if (!$this->pedidoModel->puedeCambiarEstado($id, $estado)) {
@@ -201,7 +380,7 @@ class PedidoController {
             }
 
             // Validar descripción para ciertos estados
-            if (in_array($estado, ['Retrasado', 'Devuelto', 'Anulado']) && empty($descripcion)) {
+            if (in_array($estado, ['Retrasado', 'Devuelto', 'Anulado', 'Preparando']) && empty($descripcion)) {
                 $_SESSION['mensaje'] = "❌ Debes proporcionar una descripción para este cambio de estado";
                 $_SESSION['mensaje_tipo'] = "danger";
                 header("Location: " . BASE_URL . "?c=Pedido&a=detalle&id=" . $id);
@@ -211,27 +390,126 @@ class PedidoController {
             // Preparar datos adicionales
             $datosAdicionales = [];
             if ($estado === 'Retrasado' && !empty($nuevaFechaEstimada)) {
-                $datosAdicionales['nueva_fecha_estimada'] = $nuevaFechaEstimada;
+                $datosAdicionales['fecha_estimada'] = $nuevaFechaEstimada;
+            }
+
+            // Si estamos regresando a Preparando desde Enviado, limpiar datos de envío
+            if ($estado === 'Preparando' && in_array($pedido['Estado'], ['Enviado', 'Retrasado'])) {
+                $datosAdicionales['limpiar_envio'] = true;
+            }
+
+            // Si estamos anulando desde Enviado, limpiar datos de envío
+            if ($estado === 'Anulado' && in_array($pedido['Estado'], ['Enviado', 'Retrasado'])) {
+                $datosAdicionales['limpiar_envio'] = true;
             }
 
             // Ejecutar el cambio de estado con devolución de stock si es anulado
             $resultado = $this->pedidoModel->actualizarEstado($id, $estado, $descripcion, $usuarioId, $datosAdicionales);
 
-            // Si se anuló el pedido, devolver el stock
-            if ($estado === 'Anulado' && $resultado) {
-                $stockDevuelto = $this->pedidoModel->devolverStockPedidoAnulado($id);
-                if ($stockDevuelto) {
-                    $_SESSION['mensaje'] = "✅ Estado del pedido actualizado correctamente y stock devuelto";
-                    $_SESSION['mensaje_tipo'] = "success";
+            if ($resultado) {
+                // ============================================
+                // ENVIAR NOTIFICACIÓN POR CORREO CON PRODUCTOS
+                // ============================================
+                
+                // Obtener los productos para adjuntar al correo si es necesario
+                $pedidoCompleto = $this->pedidoModel->obtenerPorId($id);
+                $datosAdicionales['items'] = $pedidoCompleto['productos'] ?? [];
+                
+                // También agregar datos de envío si están disponibles
+                $datosAdicionales['transportadora'] = $pedidoCompleto['Transportadora'] ?? '';
+                $datosAdicionales['numero_guia'] = $pedidoCompleto['Numero_Guia'] ?? '';
+                $datosAdicionales['fecha_estimada'] = $pedidoCompleto['Fecha_Estimada_Entrega'] ?? '';
+                
+                $this->enviarNotificacionCorreo($id, $estadoAnterior, $estado, $descripcion, $datosAdicionales);
+                // ============================================
+
+                // Si se anuló el pedido, devolver el stock
+                if ($estado === 'Anulado') {
+                    $stockDevuelto = $this->pedidoModel->devolverStockPedidoAnulado($id);
+                    if ($stockDevuelto) {
+                        $_SESSION['mensaje'] = "✅ Estado del pedido actualizado correctamente y stock devuelto";
+                        $_SESSION['mensaje_tipo'] = "success";
+                    } else {
+                        $_SESSION['mensaje'] = "✅ Estado del pedido actualizado correctamente. ❌ Error al devolver stock";
+                        $_SESSION['mensaje_tipo'] = "warning";
+                    }
                 } else {
-                    $_SESSION['mensaje'] = "✅ Estado del pedido actualizado correctamente. ❌ Error al devolver stock";
-                    $_SESSION['mensaje_tipo'] = "warning";
+                    $_SESSION['mensaje'] = "✅ Estado del pedido actualizado correctamente";
+                    $_SESSION['mensaje_tipo'] = "success";
                 }
-            } elseif ($resultado) {
-                $_SESSION['mensaje'] = "✅ Estado del pedido actualizado correctamente";
-                $_SESSION['mensaje_tipo'] = "success";
             } else {
                 $_SESSION['mensaje'] = "❌ Error al actualizar el estado del pedido";
+                $_SESSION['mensaje_tipo'] = "danger";
+            }
+
+            header("Location: " . BASE_URL . "?c=Pedido&a=detalle&id=" . $id);
+            exit;
+
+        } catch (Exception $e) {
+            $_SESSION['mensaje'] = "⚠ Error: " . $e->getMessage();
+            $_SESSION['mensaje_tipo'] = "danger";
+            header("Location: " . BASE_URL . "?c=Pedido&a=detalle&id=" . $id);
+            exit;
+        }
+    }
+
+    // NUEVO MÉTODO: CANCELAR PROCESO (Regresar a Confirmado)
+    public function cancelarProceso() {
+        try {
+            $id = (int)($_POST['ID_Factura'] ?? 0);
+            $descripcion = trim($_POST['Descripcion'] ?? '');
+            $usuarioId = $_SESSION['ID_Usuario'] ?? null;
+
+            if ($id <= 0) {
+                $_SESSION['mensaje'] = "❌ ID de pedido inválido";
+                $_SESSION['mensaje_tipo'] = "danger";
+                header("Location: " . BASE_URL . "?c=Pedido&a=index");
+                exit;
+            }
+
+            // Obtener el pedido actual
+            $pedido = $this->pedidoModel->obtenerPorId($id);
+            if (!$pedido) {
+                $_SESSION['mensaje'] = "❌ Pedido no encontrado";
+                $_SESSION['mensaje_tipo'] = "danger";
+                header("Location: " . BASE_URL . "?c=Pedido&a=index");
+                exit;
+            }
+
+            $estadoAnterior = $pedido['Estado'];
+
+            // Verificar que el pedido esté en estado "Preparando"
+            if ($pedido['Estado'] !== 'Preparando') {
+                $_SESSION['mensaje'] = "❌ Solo se puede cancelar el proceso de pedidos en estado 'Preparando'";
+                $_SESSION['mensaje_tipo'] = "danger";
+                header("Location: " . BASE_URL . "?c=Pedido&a=detalle&id=" . $id);
+                exit;
+            }
+
+            // Validar descripción
+            if (empty($descripcion)) {
+                $_SESSION['mensaje'] = "❌ Debes proporcionar una descripción para cancelar el proceso";
+                $_SESSION['mensaje_tipo'] = "danger";
+                header("Location: " . BASE_URL . "?c=Pedido&a=detalle&id=" . $id);
+                exit;
+            }
+
+            // Actualizar el estado a "Confirmado"
+            $resultado = $this->pedidoModel->actualizarEstado($id, 'Confirmado', $descripcion, $usuarioId);
+
+            if ($resultado) {
+                // ENVIAR NOTIFICACIÓN POR CORREO CON DATOS COMPLETOS
+                $pedidoCompleto = $this->pedidoModel->obtenerPorId($id);
+                $datosAdicionales = [
+                    'items' => $pedidoCompleto['productos'] ?? []
+                ];
+                
+                $this->enviarNotificacionCorreo($id, $estadoAnterior, 'Confirmado', $descripcion, $datosAdicionales);
+                
+                $_SESSION['mensaje'] = "✅ Proceso de preparación cancelado. Pedido regresado a estado Confirmado";
+                $_SESSION['mensaje_tipo'] = "success";
+            } else {
+                $_SESSION['mensaje'] = "❌ Error al cancelar el proceso de preparación";
                 $_SESSION['mensaje_tipo'] = "danger";
             }
 
@@ -274,6 +552,10 @@ class PedidoController {
                 exit;
             }
 
+            // Obtener el pedido actual
+            $pedido = $this->pedidoModel->obtenerPorId($id);
+            $estadoAnterior = $pedido['Estado'];
+
             // Validar que la fecha estimada sea en el futuro
             if (strtotime($fechaEstimadaEntrega) < strtotime(date('Y-m-d'))) {
                 $_SESSION['mensaje'] = "La fecha estimada de entrega debe ser una fecha futura";
@@ -300,10 +582,173 @@ class PedidoController {
             );
 
             if ($resultado) {
+                // Preparar datos adicionales para la notificación
+                $datosAdicionales = [
+                    'fecha_estimada' => $fechaEstimadaEntrega,
+                    'transportadora' => $transportadora
+                ];
+                
+                // Obtener número de guía si existe
+                $pedidoActualizado = $this->pedidoModel->obtenerPorId($id);
+                if (!empty($pedidoActualizado['Numero_Guia'])) {
+                    $datosAdicionales['numero_guia'] = $pedidoActualizado['Numero_Guia'];
+                }
+                
+                // ENVIAR NOTIFICACIÓN POR CORREO
+                $descripcion = "Tu pedido ha sido enviado. " . (!empty($notas) ? "Notas: {$notas}" : "");
+                $this->enviarNotificacionCorreo($id, $estadoAnterior, 'Enviado', $descripcion, $datosAdicionales);
+                
                 $_SESSION['mensaje'] = "Pedido marcado como enviado correctamente. Entrega estimada: " . date('d/m/Y', strtotime($fechaEstimadaEntrega));
                 $_SESSION['mensaje_tipo'] = "success";
             } else {
                 $_SESSION['mensaje'] = "Error al marcar el pedido como enviado";
+                $_SESSION['mensaje_tipo'] = "danger";
+            }
+
+            header("Location: " . BASE_URL . "?c=Pedido&a=detalle&id=" . $id);
+            exit;
+
+        } catch (Exception $e) {
+            $_SESSION['mensaje'] = "⚠ Error: " . $e->getMessage();
+            $_SESSION['mensaje_tipo'] = "danger";
+            header("Location: " . BASE_URL . "?c=Pedido&a=detalle&id=" . $id);
+            exit;
+        }
+    }
+
+    // CANCELAR ENVÍO (Regresar a Preparando)
+    public function regresarAPreparando() {
+        try {
+            $id = (int)($_POST['ID_Factura'] ?? 0);
+            $descripcion = trim($_POST['Descripcion'] ?? '');
+            $usuarioId = $_SESSION['ID_Usuario'] ?? null;
+
+            if ($id <= 0) {
+                $_SESSION['mensaje'] = "❌ ID de pedido inválido";
+                $_SESSION['mensaje_tipo'] = "danger";
+                header("Location: " . BASE_URL . "?c=Pedido&a=index");
+                exit;
+            }
+
+            // Obtener el pedido actual
+            $pedido = $this->pedidoModel->obtenerPorId($id);
+            if (!$pedido) {
+                $_SESSION['mensaje'] = "❌ Pedido no encontrado";
+                $_SESSION['mensaje_tipo'] = "danger";
+                header("Location: " . BASE_URL . "?c=Pedido&a=index");
+                exit;
+            }
+
+            $estadoAnterior = $pedido['Estado'];
+
+            // Verificar que el pedido esté en estado "Enviado" o "Retrasado"
+            if (!in_array($pedido['Estado'], ['Enviado', 'Retrasado'])) {
+                $_SESSION['mensaje'] = "❌ Solo se puede cancelar el envío de pedidos en estado 'Enviado' o 'Retrasado'";
+                $_SESSION['mensaje_tipo'] = "danger";
+                header("Location: " . BASE_URL . "?c=Pedido&a=detalle&id=" . $id);
+                exit;
+            }
+
+            // Validar descripción
+            if (empty($descripcion)) {
+                $_SESSION['mensaje'] = "❌ Debes proporcionar una descripción para cancelar el envío";
+                $_SESSION['mensaje_tipo'] = "danger";
+                header("Location: " . BASE_URL . "?c=Pedido&a=detalle&id=" . $id);
+                exit;
+            }
+
+            // Usar el nuevo método del modelo
+            $resultado = $this->pedidoModel->regresarAPreparando($id, $descripcion, $usuarioId);
+
+            if ($resultado) {
+                // ENVIAR NOTIFICACIÓN POR CORREO CON DATOS COMPLETOS
+                $pedidoCompleto = $this->pedidoModel->obtenerPorId($id);
+                $datosAdicionales = [
+                    'items' => $pedidoCompleto['productos'] ?? [],
+                    'transportadora' => $pedidoCompleto['Transportadora'] ?? '',
+                    'numero_guia' => $pedidoCompleto['Numero_Guia'] ?? '',
+                    'fecha_estimada' => $pedidoCompleto['Fecha_Estimada_Entrega'] ?? ''
+                ];
+                
+                $this->enviarNotificacionCorreo($id, $estadoAnterior, 'Preparando', $descripcion, $datosAdicionales);
+                
+                $_SESSION['mensaje'] = "✅ Envío cancelado. Pedido regresado a estado Preparando";
+                $_SESSION['mensaje_tipo'] = "success";
+            } else {
+                $_SESSION['mensaje'] = "❌ Error al cancelar el envío";
+                $_SESSION['mensaje_tipo'] = "danger";
+            }
+
+            header("Location: " . BASE_URL . "?c=Pedido&a=detalle&id=" . $id);
+            exit;
+
+        } catch (Exception $e) {
+            $_SESSION['mensaje'] = "⚠ Error: " . $e->getMessage();
+            $_SESSION['mensaje_tipo'] = "danger";
+            header("Location: " . BASE_URL . "?c=Pedido&a=detalle&id=" . $id);
+            exit;
+        }
+    }
+
+    // Anular pedido enviado (con devolución de stock y eliminación de datos de envío)
+    public function anularPedidoEnviado() {
+        try {
+            $id = (int)($_POST['ID_Factura'] ?? 0);
+            $descripcion = trim($_POST['Descripcion'] ?? '');
+            $usuarioId = $_SESSION['ID_Usuario'] ?? null;
+
+            if ($id <= 0) {
+                $_SESSION['mensaje'] = "❌ ID de pedido inválido";
+                $_SESSION['mensaje_tipo'] = "danger";
+                header("Location: " . BASE_URL . "?c=Pedido&a=index");
+                exit;
+            }
+
+            // Obtener el pedido actual
+            $pedido = $this->pedidoModel->obtenerPorId($id);
+            if (!$pedido) {
+                $_SESSION['mensaje'] = "❌ Pedido no encontrado";
+                $_SESSION['mensaje_tipo'] = "danger";
+                header("Location: " . BASE_URL . "?c=Pedido&a=index");
+                exit;
+            }
+
+            $estadoAnterior = $pedido['Estado'];
+
+            // Verificar que el pedido esté en estado "Enviado" o "Retrasado"
+            if (!in_array($pedido['Estado'], ['Enviado', 'Retrasado'])) {
+                $_SESSION['mensaje'] = "❌ Solo se puede anular pedidos en estado 'Enviado' o 'Retrasado'";
+                $_SESSION['mensaje_tipo'] = "danger";
+                header("Location: " . BASE_URL . "?c=Pedido&a=detalle&id=" . $id);
+                exit;
+            }
+
+            // Validar descripción
+            if (empty($descripcion)) {
+                $_SESSION['mensaje'] = "❌ Debes proporcionar una descripción para anular el pedido";
+                $_SESSION['mensaje_tipo'] = "danger";
+                header("Location: " . BASE_URL . "?c=Pedido&a=detalle&id=" . $id);
+                exit;
+            }
+
+            // Usar el nuevo método del modelo
+            $resultado = $this->pedidoModel->anularPedidoEnviado($id, $descripcion, $usuarioId);
+
+            if ($resultado) {
+                // ENVIAR NOTIFICACIÓN POR CORREO
+                $this->enviarNotificacionCorreo($id, $estadoAnterior, 'Anulado', $descripcion);
+                
+                // Devolver el stock
+                $stockDevuelto = $this->pedidoModel->devolverStockPedidoAnulado($id);
+                if ($stockDevuelto) {
+                    $_SESSION['mensaje'] = "✅ Pedido anulado correctamente, stock devuelto y datos de envío eliminados";
+                    $_SESSION['mensaje_tipo'] = "success";
+                } else {
+                    $_SESSION['mensaje'] = "✅ Pedido anulado correctamente. ❌ Error al devolver stock";
+                    $_SESSION['mensaje_tipo'] = "warning";
+                }
+            } else {
+                $_SESSION['mensaje'] = "❌ Error al anular el pedido";
                 $_SESSION['mensaje_tipo'] = "danger";
             }
 
@@ -332,6 +777,10 @@ class PedidoController {
                 exit;
             }
 
+            // Obtener el pedido actual
+            $pedido = $this->pedidoModel->obtenerPorId($id);
+            $estadoAnterior = $pedido['Estado'];
+
             // Validar que el pedido pueda ser entregado
             if (!$this->pedidoModel->puedeCambiarEstado($id, 'Entregado')) {
                 $_SESSION['mensaje'] = "Solo se pueden marcar como entregados los pedidos enviados o retrasados";
@@ -343,6 +792,9 @@ class PedidoController {
             $resultado = $this->pedidoModel->actualizarEstado($id, 'Entregado', $descripcion, $usuarioId);
 
             if ($resultado) {
+                // ENVIAR NOTIFICACIÓN POR CORREO
+                $this->enviarNotificacionCorreo($id, $estadoAnterior, 'Entregado', $descripcion);
+                
                 $_SESSION['mensaje'] = "Pedido marcado como entregado correctamente";
                 $_SESSION['mensaje_tipo'] = "success";
             } else {
@@ -377,12 +829,7 @@ class PedidoController {
 
             // Obtener el pedido actual
             $pedido = $this->pedidoModel->obtenerPorId($id);
-            if (!$pedido) {
-                $_SESSION['mensaje'] = "❌ Pedido no encontrado";
-                $_SESSION['mensaje_tipo'] = "danger";
-                header("Location: " . BASE_URL . "?c=Pedido&a=index");
-                exit;
-            }
+            $estadoAnterior = $pedido['Estado'];
 
             // Verificar que el pedido esté en estado "Devuelto"
             if ($pedido['Estado'] !== 'Devuelto') {
@@ -404,6 +851,14 @@ class PedidoController {
             $resultado = $this->pedidoModel->actualizarEstado($id, 'Preparando', $descripcion, $usuarioId);
 
             if ($resultado) {
+                // ENVIAR NOTIFICACIÓN POR CORREO CON DATOS COMPLETOS
+                $pedidoCompleto = $this->pedidoModel->obtenerPorId($id);
+                $datosAdicionales = [
+                    'items' => $pedidoCompleto['productos'] ?? []
+                ];
+                
+                $this->enviarNotificacionCorreo($id, $estadoAnterior, 'Preparando', $descripcion, $datosAdicionales);
+                
                 $_SESSION['mensaje'] = "✅ Pedido devuelto preparado nuevamente correctamente";
                 $_SESSION['mensaje_tipo'] = "success";
             } else {
@@ -486,7 +941,7 @@ class PedidoController {
         }
 
         // Redirigir al controlador de PDF existente
-        header("Location: " . BASE_URL . "?c=FacturaPDF&a=generarFactura&id=" . $id);
+        header("Location: " . BASE_URL . "?c=FacturaPDF&a=generar&id=" . $id);
         exit;
     }
 
@@ -524,8 +979,14 @@ class PedidoController {
         // Generar número de guía de ejemplo
         $ejemploNumeroGuia = $this->pedidoModel->generarNumeroGuia($id);
         
-        // Pasar el helper a la vista
+        // Obtener la fecha del DÍA SIGUIENTE para mostrar por defecto
+        $fechaManana = date('Y-m-d', strtotime('+1 day'));
+        
+        // Pasar el helper a la vista junto con la fecha por defecto
         $getEstadoBadge = [$this, 'getEstadoBadge'];
+        
+        // Variables adicionales para la vista
+        $fechaPorDefecto = $fechaManana;
         
         include "views/admin/layout_admin.php";
     }
@@ -574,6 +1035,29 @@ class PedidoController {
                 exit;
             }
 
+            // ============================================
+            // OBTENER FECHA ANTERIOR ANTES DE ACTUALIZAR
+            // ============================================
+            $pedidoAntes = $this->pedidoModel->obtenerPorId($id);
+            if (!$pedidoAntes) {
+                $_SESSION['mensaje'] = "❌ Pedido no encontrado";
+                $_SESSION['mensaje_tipo'] = "danger";
+                header("Location: " . BASE_URL . "?c=Pedido&a=detalle&id=" . $id);
+                exit;
+            }
+            
+            // Obtener fecha anterior (si no tiene, usar fecha por defecto)
+            $fechaAnterior = $pedidoAntes['Fecha_Estimada_Entrega'] ?? null;
+            if (!$fechaAnterior) {
+                // Si no tenía fecha estimada, calcular una basada en la fecha de envío
+                if (!empty($pedidoAntes['Fecha_Envio'])) {
+                    $fechaAnterior = date('Y-m-d', strtotime($pedidoAntes['Fecha_Envio'] . ' + 3 days'));
+                } else {
+                    $fechaAnterior = date('Y-m-d', strtotime('+3 days'));
+                }
+            }
+            // ============================================
+
             $resultado = $this->pedidoModel->actualizarFechaEstimada($id, $fechaEstimada);
 
             if ($resultado) {
@@ -585,6 +1069,40 @@ class PedidoController {
                 }
                 
                 $this->pedidoModel->registrarSeguimiento($id, 'Enviado', $descripcion, $usuarioId);
+                
+                // ============================================
+                // ENVIAR NOTIFICACIÓN DE CAMBIO DE FECHA POR CORREO
+                // ============================================
+                $pedido = $this->pedidoModel->obtenerPorId($id);
+                if ($pedido) {
+                    $cliente = [
+                        'nombre' => $pedido['Nombre'] . ' ' . $pedido['Apellido'],
+                        'email' => $pedido['Correo']
+                    ];
+                    
+                    // Preparar datos adicionales
+                    $datosAdicionales = [
+                        'transportadora' => $pedido['Transportadora'] ?? '',
+                        'numero_guia' => $pedido['Numero_Guia'] ?? '',
+                        'items' => $pedido['productos'] ?? [] // Agregar productos para el PDF
+                    ];
+                    
+                    // Enviar notificación de cambio de fecha
+                    $resultadoCorreo = $this->mailer->enviarNotificacionCambioFecha(
+                        $cliente,
+                        $pedido,
+                        $fechaAnterior, // Usar la fecha anterior que guardamos ANTES del update
+                        $fechaEstimada, // La nueva fecha
+                        $motivo,
+                        $datosAdicionales
+                    );
+                    
+                    if (!$resultadoCorreo['success']) {
+                        error_log("Error enviando notificación de cambio de fecha: " . $resultadoCorreo['message']);
+                        // No mostrar error al usuario, solo log
+                    }
+                }
+                // ============================================
                 
                 $_SESSION['mensaje'] = "✅ Fecha estimada de entrega actualizada correctamente";
                 $_SESSION['mensaje_tipo'] = "success";

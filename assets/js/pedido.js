@@ -73,3 +73,8 @@ style.textContent = `
     }
 `;
 document.head.appendChild(style);
+
+// Función para confirmar cancelación de proceso
+function confirmarCancelarProceso() {
+    return confirm("¿Estás seguro de cancelar el proceso de preparación? El pedido regresará al estado Confirmado.");
+}

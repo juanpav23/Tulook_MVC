@@ -1,10 +1,29 @@
 <div class="container-fluid">
     <!-- Encabezado -->
     <div class="d-flex justify-content-between align-items-center mb-4">
-        <h2><i class="fas fa-users me-2"></i>Gestión de Usuarios</h2>
-        <a href="<?= BASE_URL ?>?c=UsuarioAdmin&a=crear" class="btn btn-primary-dark">
-            <i class="fas fa-user-plus me-1"></i> Nuevo Usuario
-        </a>
+        <h2 class="mb-0"><i class="fas fa-users me-2"></i>Gestión de Usuarios</h2>
+        <div class="d-flex gap-2">
+            <a href="<?= BASE_URL ?>?c=UsuarioAdmin&a=solicitudesReactivacion" class="btn btn-outline-primary d-flex align-items-center">
+                <i class="fas fa-inbox me-2"></i> Solicitudes
+                <?php
+                if (class_exists('Database')) {
+                    try {
+                        $dbObj = new Database();
+                        $db = $dbObj->getConnection();
+                        $stmt = $db->prepare("SELECT COUNT(*) as pendientes FROM solicitudes_reactivacion WHERE Estado = 'pendiente' AND (Fecha_Expiracion IS NULL OR Fecha_Expiracion > NOW())");
+                        $stmt->execute();
+                        $pendientes = $stmt->fetch(PDO::FETCH_ASSOC)['pendientes'];
+                        if ($pendientes > 0): ?>
+                            <span class="badge bg-danger text-dark ms-2"><?= $pendientes ?></span>
+                        <?php endif;
+                    } catch (Exception $e) {}
+                }
+                ?>
+            </a>
+            <a href="<?= BASE_URL ?>?c=UsuarioAdmin&a=crear" class="btn btn-primary-dark d-flex align-items-center">
+                <i class="fas fa-user-plus me-2"></i> Nuevo Usuario
+            </a>
+        </div>
     </div>
 
     <!-- Mensajes Globales -->
