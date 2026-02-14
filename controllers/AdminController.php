@@ -177,6 +177,168 @@ class AdminController {
         include "views/admin/layout_admin.php";
     }
 
+    // ==================================
+    // Reseñas - Panel de administración
+    // ==================================
+    public function resenas() {
+        // Filtros
+        $where = [];
+        $params = [];
+
+        if (!empty($_GET['usuario'])) {
+            $where[] = ' (u.Nombre LIKE ? OR u.Apellido LIKE ? OR u.Correo LIKE ?) ';
+            $term = '%' . trim($_GET['usuario']) . '%';
+            $params[] = $term; $params[] = $term; $params[] = $term;
+        }
+        if (!empty($_GET['articulo'])) {
+            $where[] = ' a.N_Articulo LIKE ? ';
+            $params[] = '%' . trim($_GET['articulo']) . '%';
+        }
+        if (!empty($_GET['calificacion'])) {
+            $where[] = ' r.Calificacion = ? ';
+            $params[] = (int)$_GET['calificacion'];
+        }
+        if (!empty($_GET['fecha_from'])) {
+            $where[] = ' r.Fecha_Resena >= ? ';
+            $params[] = $_GET['fecha_from'];
+        }
+        if (!empty($_GET['fecha_to'])) {
+            $where[] = ' r.Fecha_Resena <= ? ';
+            $params[] = $_GET['fecha_to'];
+        }
+
+        $whereSql = '';
+        if (!empty($where)) $whereSql = ' WHERE ' . implode(' AND ', $where);
+
+        // Paginación
+        $page = max(1, (int)($_GET['page'] ?? 1));
+        $perPage = max(10, min(100, (int)($_GET['per_page'] ?? 25)));
+        $offset = ($page - 1) * $perPage;
+
+        // Total
+        $countSql = "SELECT COUNT(*) FROM resena r LEFT JOIN usuario u ON r.ID_Usuario = u.ID_Usuario LEFT JOIN articulo a ON r.ID_Articulo = a.ID_Articulo " . $whereSql;
+        $countStmt = $this->db->prepare($countSql);
+        $countStmt->execute($params);
+        $total = (int)$countStmt->fetchColumn();
+
+        // Algunos controladores/versión de PDO no permiten bind en LIMIT/OFFSET; inyectar valores enteros seguros
+        $limit = (int)$perPage;
+        $off = (int)$offset;
+
+        $sql = "SELECT r.*, u.Nombre, u.Apellido, u.Correo, a.N_Articulo,
+                   COALESCE(r.Util_Positivo,0) AS util_positivo, COALESCE(r.Util_Negativo,0) AS util_negativo,
+                   (SELECT COUNT(*) FROM resena_reporte rr WHERE rr.ID_Resena = r.ID_Resena) AS reportes_count
+            FROM resena r
+            LEFT JOIN usuario u ON r.ID_Usuario = u.ID_Usuario
+            LEFT JOIN articulo a ON r.ID_Articulo = a.ID_Articulo
+            " . $whereSql . "
+            ORDER BY r.Fecha_Resena DESC
+            LIMIT {$limit} OFFSET {$off}";
+
+        $stmt = $this->db->prepare($sql);
+        $stmt->execute($params);
+        $resenas = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+        // Datos para la vista
+        $pagination = [
+            'total' => $total,
+            'page' => $page,
+            'per_page' => $perPage,
+            'last_page' => (int)ceil($total / $perPage)
+        ];
+
+        include "views/admin/layout_admin.php";
+    }
+
+    public function resenaVer() {
+        $id = (int)($_GET['id'] ?? 0);
+        if (!$id) {
+            $_SESSION['msg'] = 'ID de reseña inválido';
+            $_SESSION['msg_type'] = 'warning';
+            header('Location: ' . BASE_URL . '?c=Admin&a=resenas');
+            exit;
+        }
+
+        $sql = "SELECT r.*, u.Nombre, u.Apellido, u.Correo, a.N_Articulo
+                FROM resena r
+                LEFT JOIN usuario u ON r.ID_Usuario = u.ID_Usuario
+                LEFT JOIN articulo a ON r.ID_Articulo = a.ID_Articulo
+                WHERE r.ID_Resena = ? LIMIT 1";
+        $stmt = $this->db->prepare($sql);
+        $stmt->execute([$id]);
+        $resena = $stmt->fetch(PDO::FETCH_ASSOC);
+
+        // Obtener fotos
+        $fotos = [];
+        if ($resena) {
+            $stmt2 = $this->db->prepare("SELECT * FROM resena_foto WHERE ID_Resena = ? AND (Activo = 1 OR Activo IS NULL) ORDER BY Orden ASC, ID_Foto ASC");
+            $stmt2->execute([$id]);
+            $fotos = $stmt2->fetchAll(PDO::FETCH_ASSOC);
+        }
+
+        // Obtener reportes
+        $stmt3 = $this->db->prepare("SELECT * FROM resena_reporte WHERE ID_Resena = ? ORDER BY Fecha_Reporte DESC");
+        $stmt3->execute([$id]);
+        $reportes = $stmt3->fetchAll(PDO::FETCH_ASSOC);
+
+        // Obtener respuestas
+        $stmtR = $this->db->prepare("SELECT rr.*, u.Nombre, u.Apellido FROM resena_respuesta rr LEFT JOIN usuario u ON rr.ID_Usuario = u.ID_Usuario WHERE rr.ID_Resena = ? ORDER BY rr.Fecha_Respuesta ASC");
+        $stmtR->execute([$id]);
+        $respuestas = $stmtR->fetchAll(PDO::FETCH_ASSOC);
+
+        include "views/admin/layout_admin.php";
+    }
+
+    public function resenaEliminar() {
+        $id = (int)($_POST['id_resena'] ?? 0);
+        if (!$id) {
+            header('Location: ' . BASE_URL . '?c=Admin&a=resenas'); exit;
+        }
+        $this->db->prepare("UPDATE resena SET Activo = 0 WHERE ID_Resena = ?")->execute([$id]);
+        $_SESSION['msg'] = 'Reseña eliminada (oculta) correctamente.';
+        $_SESSION['msg_type'] = 'success';
+        header('Location: ' . BASE_URL . '?c=Admin&a=resenas');
+        exit;
+    }
+
+    public function resenaMarcarReporte() {
+        $idReporte = (int)($_POST['id_reporte'] ?? 0);
+        $accion = $_POST['accion'] ?? '';
+        if ($idReporte) {
+            if ($accion === 'revisado') {
+                $this->db->prepare("UPDATE resena_reporte SET Estado = 'Revisado' WHERE ID_Reporte = ?")->execute([$idReporte]);
+            } elseif ($accion === 'descartar') {
+                $this->db->prepare("UPDATE resena_reporte SET Estado = 'Descartado' WHERE ID_Reporte = ?")->execute([$idReporte]);
+            }
+        }
+        header('Location: ' . ($_SERVER['HTTP_REFERER'] ?? BASE_URL . '?c=Admin&a=resenas'));
+        exit;
+    }
+
+    // Responder reseña (desde admin)
+    public function resenaResponder() {
+        if (empty($_POST['id_resena']) || empty($_POST['respuesta'])) {
+            header('Location: ' . ($_SERVER['HTTP_REFERER'] ?? BASE_URL . '?c=Admin&a=resenas'));
+            exit;
+        }
+        $idResena = (int)$_POST['id_resena'];
+        $texto = trim($_POST['respuesta']);
+        $idUsuario = (int)($_SESSION['ID_Usuario'] ?? 0);
+        if (!$idUsuario) {
+            $_SESSION['msg'] = 'Usuario no autenticado';
+            $_SESSION['msg_type'] = 'danger';
+            header('Location: ' . BASE_URL . '?c=Admin&a=resenas'); exit;
+        }
+
+        $stmt = $this->db->prepare("INSERT INTO resena_respuesta (ID_Resena, ID_Usuario, Respuesta, Fecha_Respuesta, Activo) VALUES (?, ?, ?, NOW(), 1)");
+        $stmt->execute([$idResena, $idUsuario, $texto]);
+
+        $_SESSION['msg'] = 'Respuesta añadida correctamente.';
+        $_SESSION['msg_type'] = 'success';
+        header('Location: ' . ($_SERVER['HTTP_REFERER'] ?? BASE_URL . '?c=Admin&a=resenas'));
+        exit;
+    }
+
     // =======================================================
     // 🎯 OBTENER ATRIBUTOS POR SUBCATEGORÍA (AJAX)
     // =======================================================

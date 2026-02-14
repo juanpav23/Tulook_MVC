@@ -747,6 +747,13 @@ $fechaHoraActual = date('d/m/Y H:i:s');
               </li>
 
               <li class="nav-item mb-1">
+                  <a class="nav-link <?php echo (($_GET['c'] ?? '') === 'Admin' && ($_GET['a'] ?? '') === 'resenas') ? 'active' : ''; ?>" 
+                    href="<?php echo BASE_URL; ?>?c=Admin&a=resenas">
+                      <i class="fas fa-comments me-2"></i> Reseñas
+                  </a>
+              </li>
+
+              <li class="nav-item mb-1">
                   <a class="nav-link <?php echo ($_GET['c'] ?? '') === 'Atributo' ? 'active' : ''; ?>" 
                     href="<?php echo BASE_URL; ?>?c=Atributo&a=index">
                       <i class="fas fa-list-alt me-2"></i> Gestión de Atributos
@@ -873,6 +880,10 @@ $fechaHoraActual = date('d/m/Y H:i:s');
           $viewMap = [
               'Admin' => [
                   'index' => 'dashboard.php',
+                  'resenas' => 'resenas/index.php',
+                  'resenaVer' => 'resenas/ver.php',
+                  'resenaEliminar' => 'resenas/index.php',
+                  'resenaMarcarReporte' => 'resenas/ver.php',
                   'productos' => 'productos.php', 
                   'productoForm' => 'producto_form.php',
                   'detalleProducto' => 'detalle_producto.php',

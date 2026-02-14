@@ -896,7 +896,7 @@ private function obtenerMensajes() {
                         'port' => 465,
                         'smtp_secure' => 'ssl',
                         'username' => 'looktu541@gmail.com', // Tu correo
-                        'password' => 'tu_contraseña', // Tu contraseña
+                        'password' => 'odrfsblkyzqfbfyt', // Tu contraseña
                         'from_email' => 'looktu541@gmail.com',
                         'from_name' => 'TuLook'
                     ];

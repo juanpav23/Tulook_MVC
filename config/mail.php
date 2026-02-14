@@ -4,7 +4,7 @@ return [
     'port' => 465,
     'smtp_secure' => 'ssl',
     'username' => 'looktu541@gmail.com', // Cambia esto
-    'password' => 'tadntwyjvtynuftr', // Cambia esto
+    'password' => 'odrfsblkyzqfbfyt', // Cambia esto
     'from_email' => 'looktu541@gmail.com',
     'from_name' => 'TuLook'
 ];

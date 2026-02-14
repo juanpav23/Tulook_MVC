@@ -92,7 +92,7 @@ unset($_SESSION['form_data']);
         <div class="d-flex justify-content-between align-items-center">
             <div>
                 <h2 class="mb-1">
-                    <i class="fas fa-plus-circle text-warning me-2"></i>
+                    <i class="fas fa-plus-circle text-primary me-2"></i>
                     Crear Nuevo Descuento
                 </h2>
                 <p class="text-muted mb-0">Registra un nuevo descuento para productos o categorías</p>
@@ -168,8 +168,8 @@ unset($_SESSION['form_data']);
                                         <?php endif; ?>
                                     </div>
                                     <div class="form-text mt-2">
-                                        <i class="fas fa-lightbulb text-warning me-1"></i>
-                                        Usa un código único y descriptivo. Solo mayúsculas, números y _
+                                        <i class="fas fa-lightbulb text-primary me-1"></i>
+                                        Usa un código único y descriptivo. Solo mayúsculas, números y guiones bajos.
                                     </div>
                                 </div>
                                 <div class="col-md-6">
@@ -303,7 +303,7 @@ unset($_SESSION['form_data']);
                                 
                                 <div class="col-md-4">
                                     <label class="form-label">
-                                        <i class="fas fa-user text-warning me-1"></i>Máximo Usos por Usuario
+                                        <i class="fas fa-user text-primary me-1"></i>Máximo Usos por Usuario
                                     </label>
                                     <div class="input-group">
                                         <span class="input-group-text bg-primary">

@@ -17,7 +17,7 @@ class Mailer {
             'port' => 465,
             'smtp_secure' => 'ssl',
             'username' => 'looktu541@gmail.com',
-            'password' => 'tadntwyjvtynuftr',
+            'password' => 'odrfsblkyzqfbfyt',
             'from_email' => 'looktu541@gmail.com',
             'from_name' => 'TuLook'
         ], $this->cfg);

@@ -21,15 +21,20 @@ if (isset($_SERVER['HTTP_CACHE_CONTROL']) && $_SERVER['HTTP_CACHE_CONTROL'] === 
 } elseif (isset($_SERVER['HTTP_REFERER'])) {
     // Viene de otra página, verificar si necesitamos forzar actualización de UI
     if (isset($_SESSION['ID_Usuario']) && !isset($_GET['fresh'])) {
-        // Redirigir a la misma página con parámetro fresh para forzar actualización
-        $currentUrl = $_SERVER['REQUEST_URI'];
-        if (strpos($currentUrl, '?') === false) {
-            $currentUrl .= '?fresh=1';
-        } else {
-            $currentUrl .= '&fresh=1';
+        // Sólo forzar redirección para navegaciones normales (GET) — evitar afectar AJAX/POST
+        $isAjax = !empty($_SERVER['HTTP_X_REQUESTED_WITH']) && strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) === 'xmlhttprequest';
+        $method = $_SERVER['REQUEST_METHOD'] ?? 'GET';
+        if ($method === 'GET' && !$isAjax) {
+            // Redirigir a la misma página con parámetro fresh para forzar actualización
+            $currentUrl = $_SERVER['REQUEST_URI'];
+            if (strpos($currentUrl, '?') === false) {
+                $currentUrl .= '?fresh=1';
+            } else {
+                $currentUrl .= '&fresh=1';
+            }
+            header("Location: " . $currentUrl);
+            exit;
         }
-        header("Location: " . $currentUrl);
-        exit;
     }
 }
 
@@ -93,7 +98,8 @@ require_once "controllers/CheckoutController.php";
 require_once "controllers/FacturaPDFController.php";
 require_once "controllers/AtributoController.php";
 require_once "controllers/ColorController.php";
-require_once "controllers/ReporteVentaController.php";
+require_once "controllers/ResenaController.php";
+
 
 // =============================================
 // 🔹 Determinar controlador y acción por URL
@@ -150,8 +156,8 @@ switch ($controlador) {
     case 'Color':
         $controller = new ColorController($db);
         break;
-    case 'ReporteVenta':
-        $controller = new ReporteVentaController($db);
+    case 'Resena':
+        $controller = new ResenaController($db);
         break;
     default:
         $controller = new ProductoController($db);
@@ -178,9 +184,17 @@ if (!method_exists($controller, $accion)) {
 try {
     $controller->$accion();
 } catch (Throwable $e) {
-    http_response_code(500);
-    echo "<h2 style='color:red;text-align:center;margin-top:50px;'>⚠ Error interno del servidor</h2>";
-    echo "<pre style='color:#333;text-align:center;font-size:14px;'>
+    $isAjax = (isset($_REQUEST['ajax']) && $_REQUEST['ajax'] == '1') || (!empty($_SERVER['HTTP_X_REQUESTED_WITH']) && strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) === 'xmlhttprequest');
+    
+    if ($isAjax) {
+        http_response_code(500);
+        header('Content-Type: application/json; charset=utf-8');
+        echo json_encode(['success' => false, 'error' => $e->getMessage()]);
+    } else {
+        http_response_code(500);
+        echo "<h2 style='color:red;text-align:center;margin-top:50px;'>⚠ Error interno del servidor</h2>";
+        echo "<pre style='color:#333;text-align:center;font-size:14px;'>
 " . $e->getMessage() . "
 </pre>";
+    }
 }
