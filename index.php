@@ -98,8 +98,6 @@ require_once "controllers/CheckoutController.php";
 require_once "controllers/FacturaPDFController.php";
 require_once "controllers/AtributoController.php";
 require_once "controllers/ColorController.php";
-require_once "controllers/ResenaController.php";
-
 
 // =============================================
 // 🔹 Determinar controlador y acción por URL
@@ -155,9 +153,6 @@ switch ($controlador) {
         break;
     case 'Color':
         $controller = new ColorController($db);
-        break;
-    case 'Resena':
-        $controller = new ResenaController($db);
         break;
     default:
         $controller = new ProductoController($db);

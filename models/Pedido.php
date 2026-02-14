@@ -70,7 +70,7 @@ class Pedido
         return $pedido;
     }
 
-    // OBTENER TODOS LOS PEDIDOS CON NUEVA LÓGICA DE PRIORIDAD
+    // OBTENER TODOS LOS PEDIDOS CON NUEVA LÓGICA DE PRIORIDAD Y ALERTAS MODIFICADAS
     public function obtenerTodos()
     {
         $query = "SELECT 
@@ -82,35 +82,90 @@ class Pedido
                     mp.T_Pago as MetodoPago,
                     ue.Nombre as NombreEnvio,
                     uent.Nombre as NombreEntrega,
-                    -- Calcular horas desde la creación del pedido (solo para pedidos activos)
+                    -- CORRECCIÓN: Calcular horas desde la creación del pedido correctamente
                     CASE 
                         WHEN f.Estado IN ('Entregado', 'Anulado') THEN 0
                         ELSE TIMESTAMPDIFF(HOUR, f.Fecha_Factura, NOW())
                     END as horas_desde_creacion,
-                    -- Calcular tiempo para alertas (solo para pedidos activos)
+                    -- CORRECCIÓN: Calcular días de retraso para pedidos enviados
+                    CASE 
+                        WHEN f.Estado = 'Enviado' AND f.Fecha_Estimada_Entrega IS NOT NULL AND CURDATE() > f.Fecha_Estimada_Entrega THEN 
+                            DATEDIFF(CURDATE(), f.Fecha_Estimada_Entrega)
+                        ELSE 0
+                    END as dias_retraso,
+                    -- CORRECCIÓN: Calcular días desde el envío
+                    CASE 
+                        WHEN f.Estado IN ('Enviado', 'Retrasado') AND f.Fecha_Envio IS NOT NULL THEN 
+                            DATEDIFF(CURDATE(), f.Fecha_Envio)
+                        ELSE 0
+                    END as dias_desde_envio,
+                    -- NUEVA LÓGICA DE ALERTAS MODIFICADA:
+                    -- 1. Confirmado: alerta después de 3 horas, mega alerta después de 5 horas
+                    -- 2. Preparando: alerta después de 3 días (72 horas)
+                    -- 3. Enviado: alerta solo si fecha estimada de entrega pasó
+                    -- 4. Otros estados: sin alerta
                     CASE 
                         WHEN f.Estado IN ('Entregado', 'Anulado') THEN 'normal'
-                        WHEN TIMESTAMPDIFF(HOUR, f.Fecha_Factura, NOW()) >= 24 THEN 'mega_alerta'
-                        WHEN TIMESTAMPDIFF(HOUR, f.Fecha_Factura, NOW()) >= 5 THEN 'alerta'
+                        -- Confirmado: mega alerta después de 5 horas
+                        WHEN f.Estado = 'Confirmado' AND TIMESTAMPDIFF(HOUR, f.Fecha_Factura, NOW()) >= 5 THEN 'mega_alerta'
+                        -- Confirmado: alerta después de 3 horas
+                        WHEN f.Estado = 'Confirmado' AND TIMESTAMPDIFF(HOUR, f.Fecha_Factura, NOW()) >= 3 THEN 'alerta'
+                        -- Preparando: alerta después de 3 días (72 horas)
+                        WHEN f.Estado = 'Preparando' AND TIMESTAMPDIFF(HOUR, f.Fecha_Factura, NOW()) >= 72 THEN 'alerta'
+                        -- Enviado con fecha estimada pasada
+                        WHEN f.Estado = 'Enviado' AND f.Fecha_Estimada_Entrega IS NOT NULL AND CURDATE() > f.Fecha_Estimada_Entrega THEN 'alerta'
+                        -- Enviado sin fecha estimada y más de 3 días
+                        WHEN f.Estado = 'Enviado' AND f.Fecha_Estimada_Entrega IS NULL AND DATEDIFF(CURDATE(), f.Fecha_Envio) > 3 THEN 'alerta'
                         ELSE 'normal'
                     END as estado_alerta,
-                    -- Prioridad para ordenamiento
+                    -- NUEVO ORDEN DE PRIORIDAD
                     CASE 
+                        -- Prioridad 1: Retrasados
                         WHEN f.Estado = 'Retrasado' THEN 1
-                        WHEN f.Estado = 'Devuelto' THEN 2
-                        WHEN f.Estado = 'Confirmado' THEN 3
-                        WHEN f.Estado = 'Preparando' THEN 4
-                        WHEN f.Estado = 'Enviado' THEN 5
-                        WHEN f.Estado = 'Entregado' THEN 6
-                        WHEN f.Estado = 'Anulado' THEN 7
-                        ELSE 8
-                    END as prioridad_orden
+                        -- Prioridad 2: Confirmados con MEGA ALERTA (> 5 horas) - más horas primero
+                        WHEN f.Estado = 'Confirmado' AND TIMESTAMPDIFF(HOUR, f.Fecha_Factura, NOW()) >= 5 THEN 2
+                        -- Prioridad 3: Confirmados con ALERTA (3-5 horas) - más horas primero
+                        WHEN f.Estado = 'Confirmado' AND TIMESTAMPDIFF(HOUR, f.Fecha_Factura, NOW()) >= 3 THEN 3
+                        -- Prioridad 4: Confirmados normales - más horas primero
+                        WHEN f.Estado = 'Confirmado' THEN 4
+                        -- Prioridad 5: Preparando con alerta (> 72 horas) - más horas primero
+                        WHEN f.Estado = 'Preparando' AND TIMESTAMPDIFF(HOUR, f.Fecha_Factura, NOW()) >= 72 THEN 5
+                        -- Prioridad 6: Preparando normales - más horas primero
+                        WHEN f.Estado = 'Preparando' THEN 6
+                        -- Prioridad 7: Enviados con alerta (fecha pasada o sin fecha > 3 días) - más días primero
+                        WHEN f.Estado = 'Enviado' AND (
+                            (f.Fecha_Estimada_Entrega IS NOT NULL AND CURDATE() > f.Fecha_Estimada_Entrega) OR
+                            (f.Fecha_Estimada_Entrega IS NULL AND DATEDIFF(CURDATE(), f.Fecha_Envio) > 3)
+                        ) THEN 7
+                        -- Prioridad 8: Enviados normales - más días primero
+                        WHEN f.Estado = 'Enviado' THEN 8
+                        -- Prioridad 9: Devueltos
+                        WHEN f.Estado = 'Devuelto' THEN 9
+                        -- Prioridad 10: Entregados
+                        WHEN f.Estado = 'Entregado' THEN 10
+                        -- Prioridad 11: Anulados
+                        WHEN f.Estado = 'Anulado' THEN 11
+                        ELSE 12
+                    END as prioridad_orden,
+                    -- Campo adicional para ordenar por tiempo dentro de cada prioridad
+                    CASE 
+                        WHEN f.Estado = 'Confirmado' THEN TIMESTAMPDIFF(HOUR, f.Fecha_Factura, NOW())
+                        WHEN f.Estado = 'Preparando' THEN TIMESTAMPDIFF(HOUR, f.Fecha_Factura, NOW())
+                        WHEN f.Estado = 'Enviado' AND f.Fecha_Envio IS NOT NULL THEN 
+                            CASE 
+                                WHEN f.Fecha_Estimada_Entrega IS NOT NULL AND CURDATE() > f.Fecha_Estimada_Entrega THEN 
+                                    DATEDIFF(CURDATE(), f.Fecha_Estimada_Entrega)
+                                ELSE 
+                                    DATEDIFF(CURDATE(), f.Fecha_Envio)
+                            END
+                        ELSE 0
+                    END as tiempo_orden_secundario
                   FROM " . $this->table_name . " f
                   LEFT JOIN usuario u ON f.ID_Usuario = u.ID_Usuario
                   LEFT JOIN metodo_pago mp ON f.ID_Metodo_Pago = mp.ID_Metodo_Pago
                   LEFT JOIN usuario ue ON f.Usuario_Envio = ue.ID_Usuario
                   LEFT JOIN usuario uent ON f.Usuario_Entrega = uent.ID_Usuario
-                  ORDER BY prioridad_orden ASC, f.Fecha_Factura ASC";
+                  ORDER BY prioridad_orden ASC, tiempo_orden_secundario DESC, f.Fecha_Factura ASC";
 
         $stmt = $this->conn->prepare($query);
         $stmt->execute();
@@ -118,13 +173,36 @@ class Pedido
     }
 
     // OBTENER PEDIDOS CON ALERTAS ACTIVAS (para estadísticas) - EXCLUIR ENTREGADOS Y ANULADOS
-    public function obtenerPedidosConAlertas()
+     public function obtenerPedidosConAlertas()
     {
         $query = "SELECT 
                     COUNT(*) as total_pedidos,
-                    SUM(CASE WHEN TIMESTAMPDIFF(HOUR, Fecha_Factura, NOW()) >= 24 THEN 1 ELSE 0 END) as mega_alerta_count,
-                    SUM(CASE WHEN TIMESTAMPDIFF(HOUR, Fecha_Factura, NOW()) >= 5 
-                              AND TIMESTAMPDIFF(HOUR, Fecha_Factura, NOW()) < 24 THEN 1 ELSE 0 END) as alerta_count
+                    -- Confirmado con mega alerta (más de 5 horas)
+                    SUM(CASE 
+                        WHEN Estado = 'Confirmado' AND TIMESTAMPDIFF(HOUR, Fecha_Factura, NOW()) >= 5 THEN 1 
+                        ELSE 0 
+                    END) as confirmado_mega_alerta_count,
+                    -- Confirmado con alerta (más de 3 horas, menos de 5)
+                    SUM(CASE 
+                        WHEN Estado = 'Confirmado' AND TIMESTAMPDIFF(HOUR, Fecha_Factura, NOW()) >= 3 
+                             AND TIMESTAMPDIFF(HOUR, Fecha_Factura, NOW()) < 5 THEN 1 
+                        ELSE 0 
+                    END) as confirmado_alerta_count,
+                    -- Preparando con más de 3 días (72 horas)
+                    SUM(CASE 
+                        WHEN Estado = 'Preparando' AND TIMESTAMPDIFF(HOUR, Fecha_Factura, NOW()) >= 72 THEN 1 
+                        ELSE 0 
+                    END) as preparando_alerta_count,
+                    -- Enviado con fecha estimada pasada
+                    SUM(CASE 
+                        WHEN Estado = 'Enviado' AND Fecha_Estimada_Entrega IS NOT NULL AND CURDATE() > Fecha_Estimada_Entrega THEN 1 
+                        ELSE 0 
+                    END) as enviado_alerta_count,
+                    -- Enviado sin fecha estimada y más de 3 días
+                    SUM(CASE 
+                        WHEN Estado = 'Enviado' AND Fecha_Estimada_Entrega IS NULL AND DATEDIFF(CURDATE(), Fecha_Envio) > 3 THEN 1 
+                        ELSE 0 
+                    END) as enviado_sin_fecha_alerta_count
                   FROM " . $this->table_name . "
                   WHERE Estado NOT IN ('Entregado', 'Anulado')";
 
@@ -134,18 +212,30 @@ class Pedido
     }
 
     // OBTENER PEDIDOS POR ESTADO CON PRIORIDAD Y ORDEN CRONOLÓGICO
-    public function obtenerPorEstado($estado)
-    {
+    public function obtenerPorEstado($estado) {
         $query = "SELECT 
                     f.*, 
                     u.Nombre, 
                     u.Apellido, 
                     u.Correo,
                     mp.T_Pago as MetodoPago,
+                    -- Calcular horas desde la creación
                     CASE 
                         WHEN f.Estado IN ('Entregado', 'Anulado') THEN 0
                         ELSE TIMESTAMPDIFF(HOUR, f.Fecha_Factura, NOW())
-                    END as horas_desde_creacion
+                    END as horas_desde_creacion,
+                    -- Calcular días de retraso
+                    CASE 
+                        WHEN f.Estado = 'Enviado' AND f.Fecha_Estimada_Entrega IS NOT NULL AND CURDATE() > f.Fecha_Estimada_Entrega THEN 
+                            DATEDIFF(CURDATE(), f.Fecha_Estimada_Entrega)
+                        ELSE 0
+                    END as dias_retraso,
+                    -- Calcular días desde el envío
+                    CASE 
+                        WHEN f.Estado IN ('Enviado', 'Retrasado') AND f.Fecha_Envio IS NOT NULL THEN 
+                            DATEDIFF(CURDATE(), f.Fecha_Envio)
+                        ELSE 0
+                    END as dias_desde_envio
                   FROM " . $this->table_name . " f
                   LEFT JOIN usuario u ON f.ID_Usuario = u.ID_Usuario
                   LEFT JOIN metodo_pago mp ON f.ID_Metodo_Pago = mp.ID_Metodo_Pago
@@ -233,16 +323,50 @@ class Pedido
                         u.Apellido, 
                         u.Correo,
                         mp.T_Pago as MetodoPago,
-                        -- Prioridad para ordenamiento
+                        -- Calcular horas desde la creación
+                        CASE 
+                            WHEN f.Estado IN ('Entregado', 'Anulado') THEN 0
+                            ELSE TIMESTAMPDIFF(HOUR, f.Fecha_Factura, NOW())
+                        END as horas_desde_creacion,
+                        -- Calcular días de retraso
+                        CASE 
+                            WHEN f.Estado = 'Enviado' AND f.Fecha_Estimada_Entrega IS NOT NULL AND CURDATE() > f.Fecha_Estimada_Entrega THEN 
+                                DATEDIFF(CURDATE(), f.Fecha_Estimada_Entrega)
+                            ELSE 0
+                        END as dias_retraso,
+                        -- Calcular días desde el envío
+                        CASE 
+                            WHEN f.Estado IN ('Enviado', 'Retrasado') AND f.Fecha_Envio IS NOT NULL THEN 
+                                DATEDIFF(CURDATE(), f.Fecha_Envio)
+                            ELSE 0
+                        END as dias_desde_envio,
+                        -- Lógica de alertas
+                        CASE 
+                            WHEN f.Estado IN ('Entregado', 'Anulado') THEN 'normal'
+                            WHEN f.Estado = 'Confirmado' AND TIMESTAMPDIFF(HOUR, f.Fecha_Factura, NOW()) >= 5 THEN 'mega_alerta'
+                            WHEN f.Estado = 'Confirmado' AND TIMESTAMPDIFF(HOUR, f.Fecha_Factura, NOW()) >= 3 THEN 'alerta'
+                            WHEN f.Estado = 'Preparando' AND TIMESTAMPDIFF(HOUR, f.Fecha_Factura, NOW()) >= 72 THEN 'alerta'
+                            WHEN f.Estado = 'Enviado' AND f.Fecha_Estimada_Entrega IS NOT NULL AND CURDATE() > f.Fecha_Estimada_Entrega THEN 'alerta'
+                            WHEN f.Estado = 'Enviado' AND f.Fecha_Estimada_Entrega IS NULL AND DATEDIFF(CURDATE(), f.Fecha_Envio) > 3 THEN 'alerta'
+                            ELSE 'normal'
+                        END as estado_alerta,
+                        -- Orden de prioridad
                         CASE 
                             WHEN f.Estado = 'Retrasado' THEN 1
-                            WHEN f.Estado = 'Devuelto' THEN 2
-                            WHEN f.Estado = 'Confirmado' THEN 3
-                            WHEN f.Estado = 'Preparando' THEN 4
-                            WHEN f.Estado = 'Enviado' THEN 5
-                            WHEN f.Estado = 'Entregado' THEN 6
-                            WHEN f.Estado = 'Anulado' THEN 7
-                            ELSE 8
+                            WHEN f.Estado = 'Confirmado' AND TIMESTAMPDIFF(HOUR, f.Fecha_Factura, NOW()) >= 5 THEN 2
+                            WHEN f.Estado = 'Confirmado' AND TIMESTAMPDIFF(HOUR, f.Fecha_Factura, NOW()) >= 3 THEN 3
+                            WHEN f.Estado = 'Confirmado' THEN 4
+                            WHEN f.Estado = 'Preparando' AND TIMESTAMPDIFF(HOUR, f.Fecha_Factura, NOW()) >= 72 THEN 5
+                            WHEN f.Estado = 'Preparando' THEN 6
+                            WHEN f.Estado = 'Enviado' AND (
+                                (f.Fecha_Estimada_Entrega IS NOT NULL AND CURDATE() > f.Fecha_Estimada_Entrega) OR
+                                (f.Fecha_Estimada_Entrega IS NULL AND DATEDIFF(CURDATE(), f.Fecha_Envio) > 3)
+                            ) THEN 7
+                            WHEN f.Estado = 'Enviado' THEN 8
+                            WHEN f.Estado = 'Devuelto' THEN 9
+                            WHEN f.Estado = 'Entregado' THEN 10
+                            WHEN f.Estado = 'Anulado' THEN 11
+                            ELSE 12
                         END as prioridad_orden
                       FROM " . $this->table_name . " f
                       LEFT JOIN usuario u ON f.ID_Usuario = u.ID_Usuario
@@ -254,29 +378,62 @@ class Pedido
             $stmt->execute([$termino]);
             $resultadosPorId = $stmt->fetchAll(PDO::FETCH_ASSOC);
             
-            // Si encontramos por ID, devolver solo esos resultados
             if (!empty($resultadosPorId)) {
                 return $resultadosPorId;
             }
         }
 
-        // Si no se encontró por ID exacto o el término no es numérico, buscar por otros campos
+        // Si no se encontró por ID exacto, buscar por otros campos
         $query = "SELECT 
                     f.*, 
                     u.Nombre, 
                     u.Apellido, 
                     u.Correo,
                     mp.T_Pago as MetodoPago,
-                    -- Prioridad para ordenamiento
+                    -- Calcular horas desde la creación
+                    CASE 
+                        WHEN f.Estado IN ('Entregado', 'Anulado') THEN 0
+                        ELSE TIMESTAMPDIFF(HOUR, f.Fecha_Factura, NOW())
+                    END as horas_desde_creacion,
+                    -- Calcular días de retraso
+                    CASE 
+                        WHEN f.Estado = 'Enviado' AND f.Fecha_Estimada_Entrega IS NOT NULL AND CURDATE() > f.Fecha_Estimada_Entrega THEN 
+                            DATEDIFF(CURDATE(), f.Fecha_Estimada_Entrega)
+                        ELSE 0
+                    END as dias_retraso,
+                    -- Calcular días desde el envío
+                    CASE 
+                        WHEN f.Estado IN ('Enviado', 'Retrasado') AND f.Fecha_Envio IS NOT NULL THEN 
+                            DATEDIFF(CURDATE(), f.Fecha_Envio)
+                        ELSE 0
+                    END as dias_desde_envio,
+                    -- Lógica de alertas
+                    CASE 
+                        WHEN f.Estado IN ('Entregado', 'Anulado') THEN 'normal'
+                        WHEN f.Estado = 'Confirmado' AND TIMESTAMPDIFF(HOUR, f.Fecha_Factura, NOW()) >= 5 THEN 'mega_alerta'
+                        WHEN f.Estado = 'Confirmado' AND TIMESTAMPDIFF(HOUR, f.Fecha_Factura, NOW()) >= 3 THEN 'alerta'
+                        WHEN f.Estado = 'Preparando' AND TIMESTAMPDIFF(HOUR, f.Fecha_Factura, NOW()) >= 72 THEN 'alerta'
+                        WHEN f.Estado = 'Enviado' AND f.Fecha_Estimada_Entrega IS NOT NULL AND CURDATE() > f.Fecha_Estimada_Entrega THEN 'alerta'
+                        WHEN f.Estado = 'Enviado' AND f.Fecha_Estimada_Entrega IS NULL AND DATEDIFF(CURDATE(), f.Fecha_Envio) > 3 THEN 'alerta'
+                        ELSE 'normal'
+                    END as estado_alerta,
+                    -- Orden de prioridad
                     CASE 
                         WHEN f.Estado = 'Retrasado' THEN 1
-                        WHEN f.Estado = 'Devuelto' THEN 2
-                        WHEN f.Estado = 'Confirmado' THEN 3
-                        WHEN f.Estado = 'Preparando' THEN 4
-                        WHEN f.Estado = 'Enviado' THEN 5
-                        WHEN f.Estado = 'Entregado' THEN 6
-                        WHEN f.Estado = 'Anulado' THEN 7
-                        ELSE 8
+                        WHEN f.Estado = 'Confirmado' AND TIMESTAMPDIFF(HOUR, f.Fecha_Factura, NOW()) >= 5 THEN 2
+                        WHEN f.Estado = 'Confirmado' AND TIMESTAMPDIFF(HOUR, f.Fecha_Factura, NOW()) >= 3 THEN 3
+                        WHEN f.Estado = 'Confirmado' THEN 4
+                        WHEN f.Estado = 'Preparando' AND TIMESTAMPDIFF(HOUR, f.Fecha_Factura, NOW()) >= 72 THEN 5
+                        WHEN f.Estado = 'Preparando' THEN 6
+                        WHEN f.Estado = 'Enviado' AND (
+                            (f.Fecha_Estimada_Entrega IS NOT NULL AND CURDATE() > f.Fecha_Estimada_Entrega) OR
+                            (f.Fecha_Estimada_Entrega IS NULL AND DATEDIFF(CURDATE(), f.Fecha_Envio) > 3)
+                        ) THEN 7
+                        WHEN f.Estado = 'Enviado' THEN 8
+                        WHEN f.Estado = 'Devuelto' THEN 9
+                        WHEN f.Estado = 'Entregado' THEN 10
+                        WHEN f.Estado = 'Anulado' THEN 11
+                        ELSE 12
                     END as prioridad_orden
                   FROM " . $this->table_name . " f
                   LEFT JOIN usuario u ON f.ID_Usuario = u.ID_Usuario
@@ -303,16 +460,50 @@ class Pedido
                     u.Apellido, 
                     u.Correo,
                     mp.T_Pago as MetodoPago,
-                    -- Prioridad para ordenamiento
+                    -- Calcular horas desde la creación del pedido
+                    CASE 
+                        WHEN f.Estado IN ('Entregado', 'Anulado') THEN 0
+                        ELSE TIMESTAMPDIFF(HOUR, f.Fecha_Factura, NOW())
+                    END as horas_desde_creacion,
+                    -- Calcular días de retraso
+                    CASE 
+                        WHEN f.Estado = 'Enviado' AND f.Fecha_Estimada_Entrega IS NOT NULL AND CURDATE() > f.Fecha_Estimada_Entrega THEN 
+                            DATEDIFF(CURDATE(), f.Fecha_Estimada_Entrega)
+                        ELSE 0
+                    END as dias_retraso,
+                    -- Calcular días desde el envío
+                    CASE 
+                        WHEN f.Estado IN ('Enviado', 'Retrasado') AND f.Fecha_Envio IS NOT NULL THEN 
+                            DATEDIFF(CURDATE(), f.Fecha_Envio)
+                        ELSE 0
+                    END as dias_desde_envio,
+                    -- Lógica de alertas
+                    CASE 
+                        WHEN f.Estado IN ('Entregado', 'Anulado') THEN 'normal'
+                        WHEN f.Estado = 'Confirmado' AND TIMESTAMPDIFF(HOUR, f.Fecha_Factura, NOW()) >= 5 THEN 'mega_alerta'
+                        WHEN f.Estado = 'Confirmado' AND TIMESTAMPDIFF(HOUR, f.Fecha_Factura, NOW()) >= 3 THEN 'alerta'
+                        WHEN f.Estado = 'Preparando' AND TIMESTAMPDIFF(HOUR, f.Fecha_Factura, NOW()) >= 72 THEN 'alerta'
+                        WHEN f.Estado = 'Enviado' AND f.Fecha_Estimada_Entrega IS NOT NULL AND CURDATE() > f.Fecha_Estimada_Entrega THEN 'alerta'
+                        WHEN f.Estado = 'Enviado' AND f.Fecha_Estimada_Entrega IS NULL AND DATEDIFF(CURDATE(), f.Fecha_Envio) > 3 THEN 'alerta'
+                        ELSE 'normal'
+                    END as estado_alerta,
+                    -- Orden de prioridad
                     CASE 
                         WHEN f.Estado = 'Retrasado' THEN 1
-                        WHEN f.Estado = 'Devuelto' THEN 2
-                        WHEN f.Estado = 'Confirmado' THEN 3
-                        WHEN f.Estado = 'Preparando' THEN 4
-                        WHEN f.Estado = 'Enviado' THEN 5
-                        WHEN f.Estado = 'Entregado' THEN 6
-                        WHEN f.Estado = 'Anulado' THEN 7
-                        ELSE 8
+                        WHEN f.Estado = 'Confirmado' AND TIMESTAMPDIFF(HOUR, f.Fecha_Factura, NOW()) >= 5 THEN 2
+                        WHEN f.Estado = 'Confirmado' AND TIMESTAMPDIFF(HOUR, f.Fecha_Factura, NOW()) >= 3 THEN 3
+                        WHEN f.Estado = 'Confirmado' THEN 4
+                        WHEN f.Estado = 'Preparando' AND TIMESTAMPDIFF(HOUR, f.Fecha_Factura, NOW()) >= 72 THEN 5
+                        WHEN f.Estado = 'Preparando' THEN 6
+                        WHEN f.Estado = 'Enviado' AND (
+                            (f.Fecha_Estimada_Entrega IS NOT NULL AND CURDATE() > f.Fecha_Estimada_Entrega) OR
+                            (f.Fecha_Estimada_Entrega IS NULL AND DATEDIFF(CURDATE(), f.Fecha_Envio) > 3)
+                        ) THEN 7
+                        WHEN f.Estado = 'Enviado' THEN 8
+                        WHEN f.Estado = 'Devuelto' THEN 9
+                        WHEN f.Estado = 'Entregado' THEN 10
+                        WHEN f.Estado = 'Anulado' THEN 11
+                        ELSE 12
                     END as prioridad_orden
                   FROM " . $this->table_name . " f
                   LEFT JOIN usuario u ON f.ID_Usuario = u.ID_Usuario
@@ -325,7 +516,6 @@ class Pedido
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
     }
 
-    // ACTUALIZAR ESTADO DEL PEDIDO CON SEGUIMIENTO - ACTUALIZADO PARA FECHA ESTIMADA
     public function actualizarEstado($id, $estado, $descripcion, $usuarioId, $datosAdicionales = [])
     {
         // Iniciar transacción
@@ -361,6 +551,10 @@ class Pedido
                     $query .= ", Motivo_Anulacion = ?, Usuario_Anulacion = ?, Fecha_Anulacion = NOW()";
                     $params[] = $descripcion;
                     $params[] = $usuarioId;
+                    // Para anulación desde Enviado, limpiar datos de envío
+                    if (isset($datosAdicionales['limpiar_envio']) && $datosAdicionales['limpiar_envio']) {
+                        $query .= ", Fecha_Envio = NULL, Usuario_Envio = NULL, Numero_Guia = NULL, Transportadora = NULL, Notas_Envio = NULL, Fecha_Estimada_Entrega = NULL";
+                    }
                     break;
 
                 case 'Retrasado':
@@ -372,6 +566,13 @@ class Pedido
                 case 'Devuelto':
                     $query .= ", Notas_Envio = ?";
                     $params[] = $descripcion;
+                    break;
+
+                case 'Preparando':
+                    // Si viene desde Enviado, limpiar datos de envío
+                    if (isset($datosAdicionales['limpiar_envio']) && $datosAdicionales['limpiar_envio']) {
+                        $query .= ", Fecha_Envio = NULL, Usuario_Envio = NULL, Numero_Guia = NULL, Transportadora = NULL, Notas_Envio = NULL, Fecha_Estimada_Entrega = NULL";
+                    }
                     break;
             }
 
@@ -445,7 +646,7 @@ class Pedido
         }
     }
 
-    // VERIFICAR SI UN PEDIDO PUEDE CAMBIAR DE ESTADO
+    // VERIFICAR SI UN PEDIDO PUEDE CAMBIAR DE ESTADO - MODIFICADO PARA PERMITIR MÁS TRANSICIONES
     public function puedeCambiarEstado($id, $nuevoEstado)
     {
         $query = "SELECT Estado FROM " . $this->table_name . " WHERE ID_Factura = ?";
@@ -453,7 +654,7 @@ class Pedido
         $stmt->execute([$id]);
         $estadoActual = $stmt->fetchColumn();
 
-        // Si está anulado, no se puede cambiar
+        // Si está anulado, no se puede cambiar (excepto casos especiales)
         if ($estadoActual === 'Anulado') {
             return false;
         }
@@ -468,12 +669,12 @@ class Pedido
             return false;
         }
 
-        // Definir transiciones permitidas
+        // Definir transiciones permitidas - MODIFICADO PARA PERMITIR MÁS FLEXIBILIDAD
         $transicionesPermitidas = [
             'Confirmado' => ['Preparando', 'Anulado'],
-            'Preparando' => ['Enviado', 'Anulado'],
-            'Enviado' => ['Entregado', 'Retrasado', 'Devuelto'],
-            'Retrasado' => ['Entregado', 'Devuelto'],
+            'Preparando' => ['Enviado', 'Confirmado', 'Anulado'], // Puede regresar a Confirmado
+            'Enviado' => ['Entregado', 'Retrasado', 'Devuelto', 'Preparando', 'Anulado'], // MODIFICADO: Puede regresar a Preparando o Anular
+            'Retrasado' => ['Entregado', 'Devuelto', 'Enviado', 'Preparando', 'Anulado'], // MODIFICADO: Puede regresar a Enviado o Preparando
             'Devuelto' => ['Preparando', 'Anulado'],
             'Entregado' => ['Devuelto'] // Solo devuelto después de entregado
         ];
@@ -563,7 +764,7 @@ class Pedido
         $query = "SELECT 
                     COUNT(*) as total_retrasados,
                     AVG(DATEDIFF(CURDATE(), Fecha_Estimada_Entrega)) as promedio_dias_retraso,
-                    MAX(DATEDIFF(CURDATE(), Fecha_Estimada_Entrega)) as max_dias_retraso,
+                    MAX(DATEDIff(CURDATE(), Fecha_Estimada_Entrega)) as max_dias_retraso,
                     MIN(DATEDIff(CURDATE(), Fecha_Estimada_Entrega)) as min_dias_retraso
                   FROM " . $this->table_name . "
                   WHERE Estado = 'Retrasado'
@@ -730,4 +931,21 @@ class Pedido
         $stmt->execute();
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
     }
+
+    // NUEVO MÉTODO: REGRESAR A PREPARANDO DESDE ENVIADO
+    public function regresarAPreparando($id, $descripcion, $usuarioId)
+    {
+        return $this->actualizarEstado($id, 'Preparando', $descripcion, $usuarioId, [
+            'limpiar_envio' => true
+        ]);
+    }
+
+    // NUEVO MÉTODO: ANULAR PEDIDO ENVIADO
+    public function anularPedidoEnviado($id, $descripcion, $usuarioId)
+    {
+        return $this->actualizarEstado($id, 'Anulado', $descripcion, $usuarioId, [
+            'limpiar_envio' => true
+        ]);
+    }
 }
+?>

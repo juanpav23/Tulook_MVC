@@ -201,7 +201,7 @@ class UsuarioManager {
                 btnConfirmar.classList.remove('btn-primary-dark');
                 btnConfirmar.classList.add('btn-secondary');
             } else {
-                estadoCaracteres.innerHTML = `<span class="text-success">✓ ${500 - longitud} caracteres disponibles</span>`;
+                estadoCaracteres.innerHTML = `<span class="text-secondary">✓ ${500 - longitud} caracteres disponibles</span>`;
                 btnConfirmar.disabled = false;
                 btnConfirmar.classList.remove('btn-secondary');
                 btnConfirmar.classList.add('btn-primary-dark');

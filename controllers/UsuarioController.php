@@ -32,6 +32,424 @@ class UsuarioController extends BaseController {
         exit;
     }
 
+    // Nuevo método para obtener motivo de desactivación usando las columnas correctas
+    public function getMotivoDesactivacion() {
+        header('Content-Type: application/json');
+        
+        try {
+            $correo = $_GET['correo'] ?? '';
+            
+            if (empty($correo)) {
+                echo json_encode([
+                    'success' => false,
+                    'message' => 'Correo no proporcionado'
+                ]);
+                exit;
+            }
+            
+            $stmt = $this->db->prepare("
+                SELECT 
+                    u.Motivo_Desactivacion,
+                    u.Fecha_Desactivacion,
+                    u.ID_Admin_Desactiva,
+                    u.Activo,
+                    admin.Nombre as Admin_Nombre,
+                    admin.Apellido as Admin_Apellido
+                FROM usuario u
+                LEFT JOIN usuario admin ON u.ID_Admin_Desactiva = admin.ID_Usuario
+                WHERE u.Correo = ? AND u.Activo = 0
+                LIMIT 1
+            ");
+            $stmt->execute([$correo]);
+            $resultado = $stmt->fetch(PDO::FETCH_ASSOC);
+            
+            if ($resultado) {
+                $adminNombre = 'Administrador del sistema';
+                if (!empty($resultado['Admin_Nombre']) && !empty($resultado['Admin_Apellido'])) {
+                    $adminNombre = $resultado['Admin_Nombre'] . ' ' . $resultado['Admin_Apellido'];
+                }
+                
+                // 🔴 VERIFICAR SI EL MOTIVO CONTIENE HISTORIAL
+                $motivo = $resultado['Motivo_Desactivacion'] ?? 'Sin motivo especificado';
+                $tieneHistorial = (strpos($motivo, '=== DESACTIVACIÓN ANTERIOR ===') !== false);
+                
+                echo json_encode([
+                    'success' => true,
+                    'motivo' => $motivo,
+                    'fecha' => $resultado['Fecha_Desactivacion'],
+                    'admin' => $adminNombre,
+                    'admin_id' => $resultado['ID_Admin_Desactiva'],
+                    'activo' => $resultado['Activo'],
+                    'tiene_historial' => $tieneHistorial  // 🔴 NUEVO: Indicar si hay historial
+                ]);
+            } else {
+                echo json_encode([
+                    'success' => false,
+                    'message' => 'No se encontró información de desactivación para este usuario'
+                ]);
+            }
+        } catch (Exception $e) {
+            echo json_encode([
+                'success' => false,
+                'message' => 'Error al obtener información: ' . $e->getMessage()
+            ]);
+        }
+        exit;
+    }
+
+    public function verificarEstadoSolicitud() {
+        header('Content-Type: application/json');
+        
+        try {
+            $correo = $_GET['correo'] ?? '';
+            
+            if (empty($correo)) {
+                echo json_encode([
+                    'success' => false,
+                    'message' => 'Correo no proporcionado'
+                ]);
+                exit;
+            }
+            
+            // 🔴 CORREGIDO: Quitar límite de 24 horas para solicitudes procesadas/rechazadas
+            $stmt = $this->db->prepare("
+                SELECT ID_Solicitud, Estado, Fecha_Solicitud, Notas
+                FROM solicitudes_reactivacion 
+                WHERE Correo = ? 
+                ORDER BY Fecha_Solicitud DESC
+                LIMIT 1
+            ");
+            $stmt->execute([$correo]);
+            $solicitud = $stmt->fetch(PDO::FETCH_ASSOC);
+            
+            if ($solicitud) {
+                echo json_encode([
+                    'success' => true,
+                    'tiene_solicitud' => true,
+                    'estado' => $solicitud['Estado'],
+                    'id_solicitud' => $solicitud['ID_Solicitud'],
+                    'fecha' => $solicitud['Fecha_Solicitud'],
+                    'notas' => $solicitud['Notas']
+                ]);
+            } else {
+                echo json_encode([
+                    'success' => true,
+                    'tiene_solicitud' => false,
+                    'mensaje' => 'No hay solicitudes previas'
+                ]);
+            }
+            
+        } catch (Exception $e) {
+            error_log("Error en verificarEstadoSolicitud: " . $e->getMessage());
+            echo json_encode([
+                'success' => false,
+                'message' => 'Error al verificar estado'
+            ]);
+        }
+        exit;
+    }
+
+    // Método para enviar solicitud de reactivación
+    public function enviarSolicitudReactivacion() {
+        header('Content-Type: application/json');
+        
+        try {
+            if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+                echo json_encode([
+                    'success' => false,
+                    'message' => 'Método no permitido'
+                ]);
+                exit;
+            }
+            
+            $correo = $_POST['correo'] ?? '';
+            $motivo_reactivacion = trim($_POST['motivo_reactivacion'] ?? '');
+            
+            if (empty($correo)) {
+                echo json_encode([
+                    'success' => false,
+                    'message' => 'Correo no proporcionado'
+                ]);
+                exit;
+            }
+            
+            // VALIDACIÓN: El motivo de reactivación es OBLIGATORIO
+            if (empty($motivo_reactivacion)) {
+                echo json_encode([
+                    'success' => false,
+                    'message' => 'Debes explicar el motivo por el cual deseas reactivar tu cuenta'
+                ]);
+                exit;
+            }
+            
+            // Validar longitud mínima del motivo
+            if (strlen($motivo_reactivacion) < 20) {
+                echo json_encode([
+                    'success' => false,
+                    'message' => 'El motivo debe tener al menos 20 caracteres. Explica tu situación.'
+                ]);
+                exit;
+            }
+            
+            // Validar que no sea solo espacios o caracteres repetitivos
+            $motivoLimpio = preg_replace('/\s+/', '', $motivo_reactivacion);
+            if (strlen($motivoLimpio) < 15) {
+                echo json_encode([
+                    'success' => false,
+                    'message' => 'Por favor, escribe un motivo más específico y detallado'
+                ]);
+                exit;
+            }
+            
+            // Verificar si ya hay una solicitud PENDIENTE en las últimas 24 horas
+            $stmt = $this->db->prepare("
+                SELECT ID_Solicitud, Fecha_Solicitud, Fecha_Expiracion
+                FROM solicitudes_reactivacion 
+                WHERE Correo = ? 
+                AND Estado = 'pendiente'
+                AND (Fecha_Expiracion IS NULL OR Fecha_Expiracion > NOW())
+                ORDER BY Fecha_Solicitud DESC
+                LIMIT 1
+            ");
+            $stmt->execute([$correo]);
+            $solicitudPendiente = $stmt->fetch(PDO::FETCH_ASSOC);
+            
+            if ($solicitudPendiente) {
+                // Calcular tiempo restante
+                $fechaExpiracion = new DateTime($solicitudPendiente['Fecha_Expiracion']);
+                $ahora = new DateTime();
+                $intervalo = $ahora->diff($fechaExpiracion);
+                
+                $horasRestantes = $intervalo->h + ($intervalo->days * 24);
+                $minutosRestantes = $intervalo->i;
+                
+                $tiempoRestante = '';
+                if ($horasRestantes > 0) {
+                    $tiempoRestante .= $horasRestantes . ' hora' . ($horasRestantes != 1 ? 's' : '');
+                    if ($minutosRestantes > 0) {
+                        $tiempoRestante .= ' y ';
+                    }
+                }
+                if ($minutosRestantes > 0 || $horasRestantes == 0) {
+                    $tiempoRestante .= $minutosRestantes . ' minuto' . ($minutosRestantes != 1 ? 's' : '');
+                }
+                
+                echo json_encode([
+                    'success' => false,
+                    'message' => "Ya tienes una solicitud PENDIENTE (ID: {$solicitudPendiente['ID_Solicitud']}). Debes esperar {$tiempoRestante} antes de enviar otra solicitud. Por favor, espera a que un administrador procese tu solicitud actual."
+                ]);
+                exit;
+            }
+            
+            // Verificar solicitudes recientes RECHAZADAS (máximo 2 en 7 días)
+            $stmt = $this->db->prepare("
+                SELECT COUNT(*) as total_rechazadas
+                FROM solicitudes_reactivacion 
+                WHERE Correo = ? 
+                AND Estado = 'rechazada'
+                AND Fecha_Solicitud >= DATE_SUB(NOW(), INTERVAL 7 DAY)
+            ");
+            $stmt->execute([$correo]);
+            $rechazadas = $stmt->fetch(PDO::FETCH_ASSOC);
+            
+            if ($rechazadas['total_rechazadas'] >= 2) {
+                echo json_encode([
+                    'success' => false,
+                    'message' => 'Has alcanzado el límite de solicitudes rechazadas (2 máx. en 7 días). Por favor, contacta directamente al administrador del sistema.'
+                ]);
+                exit;
+            }
+            
+            // Obtener información del usuario
+            $stmt = $this->db->prepare("
+                SELECT ID_Usuario, Nombre, Apellido, Activo 
+                FROM usuario 
+                WHERE Correo = ? 
+                LIMIT 1
+            ");
+            $stmt->execute([$correo]);
+            $usuario = $stmt->fetch(PDO::FETCH_ASSOC);
+            
+            if (!$usuario) {
+                echo json_encode([
+                    'success' => false,
+                    'message' => 'Usuario no encontrado'
+                ]);
+                exit;
+            }
+            
+            if ($usuario['Activo'] == 1) {
+                echo json_encode([
+                    'success' => false,
+                    'message' => 'Tu cuenta ya está activa. Si tienes problemas para iniciar sesión, usa la opción "¿Olvidaste tu contraseña?"'
+                ]);
+                exit;
+            }
+            
+            // Fecha de expiración: 24 horas después
+            $fechaExpiracion = date('Y-m-d H:i:s', strtotime('+24 hours'));
+            
+            // Registrar la solicitud en la base de datos
+            $stmt = $this->db->prepare("
+                INSERT INTO solicitudes_reactivacion 
+                (ID_Usuario, Correo, Estado, Notas, Motivo_Reactivacion, Fecha_Expiracion)
+                VALUES (?, ?, 'pendiente', ?, ?, ?)
+            ");
+            
+            $notas = "Solicitud creada desde el login el " . date('d/m/Y H:i:s');
+            
+            $registroExitoso = $stmt->execute([
+                $usuario['ID_Usuario'],
+                $correo,
+                $notas,
+                $motivo_reactivacion,
+                $fechaExpiracion
+            ]);
+            
+            if (!$registroExitoso) {
+                throw new Exception("Error al registrar la solicitud en la base de datos");
+            }
+            
+            $idSolicitud = $this->db->lastInsertId();
+            
+            // Registrar en log del sistema
+            error_log("✅ NUEVA SOLICITUD REACTIVACIÓN #{$idSolicitud} - Usuario: {$usuario['Nombre']} {$usuario['Apellido']} ({$correo})");
+            
+            // Mensaje de éxito personalizado
+            $nombreUsuario = $usuario['Nombre'] . ' ' . $usuario['Apellido'];
+            $fechaExpiracionFormateada = date('d/m/Y H:i', strtotime($fechaExpiracion));
+            
+            echo json_encode([
+                'success' => true,
+                'message' => "¡Solicitud enviada con éxito!\n\n" .
+                            "Hola {$usuario['Nombre']}, hemos registrado tu solicitud de reactivación.\n\n" .
+                            "DETALLES:\n" .
+                            "• Fecha: " . date('d/m/Y H:i') . "\n" .
+                            "• Válida hasta: {$fechaExpiracionFormateada}\n\n" .
+                            "¿QUÉ SIGUE?\n" .
+                            "Un administrador revisará tu solicitud en las próximas 24-48 horas.\n" .
+                            "Recibirás una notificación cuando tu cuenta sea reactivada.\n\n" .
+                            "IMPORTANTE:\n" .
+                            "• No puedes enviar otra solicitud hasta que esta sea procesada\n" .
+                            "• Esta solicitud expirará en 24 horas si no es atendida\n\n" .
+                            "Gracias por tu paciencia.",
+                'id_solicitud' => $idSolicitud,
+                'fecha_expiracion' => $fechaExpiracionFormateada
+            ]);
+            
+        } catch (Exception $e) {
+            error_log("❌ Error en enviarSolicitudReactivacion: " . $e->getMessage());
+            echo json_encode([
+                'success' => false,
+                'message' => 'Error al procesar la solicitud. Por favor, intenta nuevamente más tarde.'
+            ]);
+        }
+        exit;
+    }
+
+    public function verificarLimiteRechazos() {
+        header('Content-Type: application/json');
+        
+        try {
+            $correo = $_GET['correo'] ?? '';
+            
+            if (empty($correo)) {
+                echo json_encode([
+                    'success' => false,
+                    'limite_alcanzado' => false
+                ]);
+                exit;
+            }
+            
+            // Verificar solicitudes RECHAZADAS en los últimos 7 días
+            $stmt = $this->db->prepare("
+                SELECT COUNT(*) as total_rechazadas
+                FROM solicitudes_reactivacion 
+                WHERE Correo = ? 
+                AND Estado = 'rechazada'
+                AND Fecha_Solicitud >= DATE_SUB(NOW(), INTERVAL 7 DAY)
+            ");
+            $stmt->execute([$correo]);
+            $resultado = $stmt->fetch(PDO::FETCH_ASSOC);
+            
+            $totalRechazadas = (int)$resultado['total_rechazadas'];
+            $limiteAlcanzado = ($totalRechazadas >= 2);
+            
+            echo json_encode([
+                'success' => true,
+                'limite_alcanzado' => $limiteAlcanzado,
+                'total_rechazadas' => $totalRechazadas,
+                'limite' => 2
+            ]);
+            
+        } catch (Exception $e) {
+            error_log("Error verificando límite de rechazos: " . $e->getMessage());
+            echo json_encode([
+                'success' => false,
+                'limite_alcanzado' => false,
+                'error' => $e->getMessage()
+            ]);
+        }
+        exit;
+    }
+
+    public function terminos() {
+        // HEADERS PARA PREVENIR CACHE
+        header("Cache-Control: no-cache, no-store, must-revalidate");
+        header("Pragma: no-cache");
+        header("Expires: 0");
+        
+        include "views/Usuario/terminos.php";
+    }
+
+
+
+    public function verificarEstadoUsuario() {
+        header('Content-Type: application/json');
+        
+        try {
+            $correo = $_GET['correo'] ?? '';
+            
+            if (empty($correo)) {
+                echo json_encode([
+                    'success' => false,
+                    'error' => true,
+                    'activo' => false,
+                    'message' => 'Correo no proporcionado'
+                ]);
+                exit;
+            }
+            
+            $stmt = $this->db->prepare("SELECT Activo FROM usuario WHERE Correo = ? LIMIT 1");
+            $stmt->execute([$correo]);
+            $usuario = $stmt->fetch(PDO::FETCH_ASSOC);
+            
+            if ($usuario) {
+                echo json_encode([
+                    'success' => true,
+                    'activo' => (bool)$usuario['Activo'],
+                    'error' => false
+                ]);
+            } else {
+                echo json_encode([
+                    'success' => false,
+                    'activo' => false,
+                    'error' => true,
+                    'message' => 'Usuario no encontrado'
+                ]);
+            }
+            
+        } catch (Exception $e) {
+            echo json_encode([
+                'success' => false,
+                'activo' => false,
+                'error' => true,
+                'message' => 'Error al verificar estado'
+            ]);
+        }
+        exit;
+    }
+
     // Validaciones mejoradas
     private function validarNombre($nombre) {
         // Solo letras, espacios y acentos, entre 2 y 50 caracteres
@@ -130,6 +548,19 @@ class UsuarioController extends BaseController {
 
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             try {
+                // 🔴 NUEVO: VERIFICAR QUE ACEPTÓ TÉRMINOS Y CONDICIONES
+                $acepto_terminos = $_POST['acepto_terminos'] ?? '0';
+                
+                if ($acepto_terminos !== '1') {
+                    $this->mostrarError(
+                        "Debes aceptar los Términos y Condiciones para registrarte.", 
+                        [], 
+                        'registro', 
+                        true
+                    );
+                    exit;
+                }
+
                 // Sanitizar y validar datos
                 $nombre = $this->sanitizarTexto($_POST['Nombre'] ?? '');
                 $apellido = $this->sanitizarTexto($_POST['Apellido'] ?? '');
@@ -183,14 +614,19 @@ class UsuarioController extends BaseController {
                 // Si hay errores de validación básica, mostrarlos
                 if (!empty($errores_validacion)) {
                     $this->mostrarError("Errores en el formulario:", $errores_validacion, 'registro', true);
+                    exit;
                 }
 
                 // Verificar si los datos ya existen
                 $datos_existentes = $this->verificarDatosExistentes($correo, $n_documento, $celular);
                 if (!empty($datos_existentes)) {
                     $this->mostrarError("Datos ya registrados en el sistema:", $datos_existentes, 'registro', true);
+                    exit;
                 }
 
+                // Obtener IP del usuario para registro de aceptación de términos
+                $ip_address = $_SERVER['REMOTE_ADDR'] ?? null;
+                
                 // Preparar datos para inserción
                 $data = [
                     'Nombre' => $nombre,
@@ -203,24 +639,87 @@ class UsuarioController extends BaseController {
                     'ID_Rol' => 3 // cliente por defecto
                 ];
 
-                // Registrar usuario
-                if ($this->usuario->registrar($data)) {
-                    $_SESSION['success_registro'] = "Usuario registrado con éxito. Ahora inicia sesión.";
+                // 🔴 NUEVO: Usar método de registro con términos
+                if ($this->usuario->registrarConTerminos($data, $ip_address)) {
+                    $_SESSION['success_registro'] = "¡Registro exitoso! Has aceptado los Términos y Condiciones. Ahora puedes iniciar sesión.";
                     header("Location: " . BASE_URL . "?c=Usuario&a=login");
                     exit;
                 } else {
                     $this->mostrarError("Error al registrar usuario en la base de datos. Intente nuevamente.", [], 'registro', true);
+                    exit;
                 }
 
             } catch (Exception $e) {
+                error_log("Error en registro: " . $e->getMessage());
                 $this->mostrarError("Error interno del sistema: " . $e->getMessage(), [], 'registro', true);
+                exit;
             }
         } else {
             $this->mostrarError("Método no permitido. Use el formulario de registro.", [], 'registro', true);
+            exit;
         }
     }
 
-    // Login
+    public function verificarTerminosUsuario() {
+        header('Content-Type: application/json');
+        
+        if (!isset($_SESSION['ID_Usuario'])) {
+            echo json_encode([
+                'success' => false,
+                'acepto' => false,
+                'message' => 'Usuario no autenticado'
+            ]);
+            exit;
+        }
+        
+        $terminos = $this->usuario->verificarAceptacionTerminos($_SESSION['ID_Usuario']);
+        
+        echo json_encode([
+            'success' => true,
+            'acepto' => (bool)($terminos['Acepto_Terminos'] ?? false),
+            'fecha_aceptacion' => $terminos['Fecha_Aceptacion_Terminos'] ?? null,
+            'ip_aceptacion' => $terminos['IP_Aceptacion_Terminos'] ?? null
+        ]);
+        exit;
+    }
+
+    public function reaceptarTerminos() {
+        if (!isset($_SESSION['ID_Usuario'])) {
+            header("Location: " . BASE_URL . "?c=Usuario&a=login");
+            exit;
+        }
+        
+        if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+            $acepto = $_POST['acepto'] ?? '0';
+            
+            if ($acepto === '1') {
+                $ip_address = $_SERVER['REMOTE_ADDR'] ?? null;
+                
+                if ($this->usuario->actualizarAceptacionTerminos($_SESSION['ID_Usuario'], $ip_address)) {
+                    $_SESSION['success_message'] = "Gracias por aceptar los nuevos Términos y Condiciones.";
+                } else {
+                    $_SESSION['error_message'] = "Error al actualizar tu aceptación. Intenta nuevamente.";
+                }
+            }
+        }
+        
+        header("Location: " . BASE_URL . "?c=Usuario&a=perfil");
+        exit;
+    }
+
+    public function getEstadisticasTerminos() {
+        if (!isset($_SESSION['usuario']) || $_SESSION['rol'] != 1) {
+            header("Location: " . BASE_URL);
+            exit;
+        }
+        
+        header('Content-Type: application/json');
+        $estadisticas = $this->usuario->getEstadisticasTerminos();
+        echo json_encode($estadisticas);
+        exit;
+    }
+
+    // Login actualizado con botón para ver motivo
     public function login() {
         // NUEVA VERIFICACIÓN: Si el usuario ya está logueado, redirigir
         if (isset($_SESSION['usuario'])) {
@@ -263,12 +762,21 @@ class UsuarioController extends BaseController {
                 }
 
                 // Verificar si el usuario está activo
-                $stmt = $this->db->prepare("SELECT * FROM usuario WHERE Correo = ? AND activo = 0 LIMIT 1");
+                $stmt = $this->db->prepare("SELECT * FROM usuario WHERE Correo = ? AND Activo = 0 LIMIT 1");
                 $stmt->execute([$correo]);
                 $userInactivo = $stmt->fetch(PDO::FETCH_ASSOC);
                 
                 if ($userInactivo) {
-                    $this->mostrarError("Su cuenta está desactivada. Por favor, contacte al administrador para más información.");
+                    // Crear mensaje con botón para ver motivo
+                    $mensajeError = "Su cuenta está desactivada. 
+                    <button type='button' class='btn-ver-motivo' onclick='mostrarMotivoDesactivacion(\"$correo\")' style='margin-left: 10px;'>
+                        <i class='bi bi-info-circle'></i> Ver motivo
+                    </button>";
+                    
+                    // Guardar el correo en sesión para poder consultar el motivo
+                    $_SESSION['correo_inactivo'] = $correo;
+                    
+                    $this->mostrarError($mensajeError, [], 'login', false);
                 }
 
                 // Intentar login
@@ -390,265 +898,237 @@ class UsuarioController extends BaseController {
             // Incluir la vista
             include "views/usuario/cambiar_contrasena.php";
         }
-// controllers/UsuarioController.php - Agregar estos métodos después del método actualizarContrasena()
 
-// =============================
-// MÉTODOS PARA GESTIONAR DIRECCIONES
-// =============================
-
-/**
- * Guardar o actualizar una dirección
- */
-public function guardarDireccion() {
-    if (!isset($_SESSION['usuario'])) {
-        header("Location: " . BASE_URL . "?c=Usuario&a=login");
-        exit;
-    }
-
-    if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-        try {
-            require_once "models/Direccion.php";
-            $dirModel = new Direccion($this->db);
-            
-            $data = [
-                'ID_Usuario' => $_SESSION['ID_Usuario'],
-                'Direccion' => trim($_POST['Direccion'] ?? ''),
-                'Ciudad' => trim($_POST['Ciudad'] ?? ''),
-                'Departamento' => trim($_POST['Departamento'] ?? ''),
-                'CodigoPostal' => trim($_POST['CodigoPostal'] ?? '')
-            ];
-
-            // Validaciones básicas
-            if (empty($data['Direccion']) || empty($data['Ciudad']) || empty($data['Departamento'])) {
-                $_SESSION['error_message'] = "Todos los campos son obligatorios";
-                header("Location: " . BASE_URL . "?c=Usuario&a=perfil");
-                exit;
-            }
-
-            $id_direccion = $_POST['ID_Direccion'] ?? null;
-
-            if ($id_direccion) {
-                // Actualizar dirección existente
-                $data['ID_Direccion'] = $id_direccion;
-                if ($dirModel->actualizar($data)) {
-                    $_SESSION['success_message'] = "Dirección actualizada correctamente";
-                }
-            } else {
-                // Crear nueva dirección
-                if ($dirModel->crear($data)) {
-                    $_SESSION['success_message'] = "Dirección guardada correctamente";
-                }
-            }
-
-        } catch (Exception $e) {
-            $_SESSION['error_message'] = "Error al guardar la dirección: " . $e->getMessage();
+    public function guardarDireccion() {
+        if (!isset($_SESSION['usuario'])) {
+            header("Location: " . BASE_URL . "?c=Usuario&a=login");
+            exit;
         }
-    }
 
-    header("Location: " . BASE_URL . "?c=Usuario&a=perfil");
-    exit;
-}
+        if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+            try {
+                require_once "models/Direccion.php";
+                $dirModel = new Direccion($this->db);
+                
+                $data = [
+                    'ID_Usuario' => $_SESSION['ID_Usuario'],
+                    'Direccion' => trim($_POST['Direccion'] ?? ''),
+                    'Ciudad' => trim($_POST['Ciudad'] ?? ''),
+                    'Departamento' => trim($_POST['Departamento'] ?? ''),
+                    'CodigoPostal' => trim($_POST['CodigoPostal'] ?? '')
+                ];
 
-/**
- * Eliminar una dirección
- */
-public function eliminarDireccion() {
-    if (!isset($_SESSION['usuario'])) {
-        header("Location: " . BASE_URL . "?c=Usuario&a=login");
-        exit;
-    }
+                // Validaciones básicas
+                if (empty($data['Direccion']) || empty($data['Ciudad']) || empty($data['Departamento'])) {
+                    $_SESSION['error_message'] = "Todos los campos son obligatorios";
+                    header("Location: " . BASE_URL . "?c=Usuario&a=perfil");
+                    exit;
+                }
 
-    $id_direccion = $_GET['id'] ?? null;
+                $id_direccion = $_POST['ID_Direccion'] ?? null;
 
-    if ($id_direccion) {
-        try {
-            require_once "models/Direccion.php";
-            $dirModel = new Direccion($this->db);
-            
-            // Verificar que la dirección pertenece al usuario
-            if ($dirModel->perteneceAUsuario($id_direccion, $_SESSION['ID_Usuario'])) {
-                if ($dirModel->eliminar($id_direccion)) {
-                    $_SESSION['success_message'] = "Dirección eliminada correctamente";
+                if ($id_direccion) {
+                    // Actualizar dirección existente
+                    $data['ID_Direccion'] = $id_direccion;
+                    if ($dirModel->actualizar($data)) {
+                        $_SESSION['success_message'] = "Dirección actualizada correctamente";
+                    }
                 } else {
-                    $_SESSION['error_message'] = "Error al eliminar la dirección";
+                    // Crear nueva dirección
+                    if ($dirModel->crear($data)) {
+                        $_SESSION['success_message'] = "Dirección guardada correctamente";
+                    }
                 }
-            } else {
-                $_SESSION['error_message'] = "No tienes permisos para eliminar esta dirección";
+
+            } catch (Exception $e) {
+                $_SESSION['error_message'] = "Error al guardar la dirección: " . $e->getMessage();
             }
-
-        } catch (Exception $e) {
-            $_SESSION['error_message'] = "Error al eliminar la dirección: " . $e->getMessage();
         }
-    }
 
-    header("Location: " . BASE_URL . "?c=Usuario&a=perfil");
-    exit;
-}
-
-/**
- * Establecer dirección como predeterminada
- */
-public function predeterminada() {
-    if (!isset($_SESSION['usuario'])) {
-        header("Location: " . BASE_URL . "?c=Usuario&a=login");
+        header("Location: " . BASE_URL . "?c=Usuario&a=perfil");
         exit;
     }
 
-    $id_direccion = $_GET['id'] ?? null;
-
-    if ($id_direccion) {
-        try {
-            require_once "models/Direccion.php";
-            $dirModel = new Direccion($this->db);
-            
-            // Verificar que la dirección pertenece al usuario
-            if ($dirModel->perteneceAUsuario($id_direccion, $_SESSION['ID_Usuario'])) {
-                if ($dirModel->establecerPredeterminada($id_direccion, $_SESSION['ID_Usuario'])) {
-                    $_SESSION['success_message'] = "Dirección establecida como predeterminada";
-                } else {
-                    $_SESSION['error_message'] = "Error al establecer dirección predeterminada";
-                }
-            } else {
-                $_SESSION['error_message'] = "No tienes permisos para modificar esta dirección";
-            }
-
-        } catch (Exception $e) {
-            $_SESSION['error_message'] = "Error al establecer dirección predeterminada: " . $e->getMessage();
+    public function eliminarDireccion() {
+        if (!isset($_SESSION['usuario'])) {
+            header("Location: " . BASE_URL . "?c=Usuario&a=login");
+            exit;
         }
-    }
 
-    header("Location: " . BASE_URL . "?c=Usuario&a=perfil");
-    exit;
-}
+        $id_direccion = $_GET['id'] ?? null;
 
-// =============================
-// MÉTODO INDEX FALTANTE
-// =============================
-
-/**
- * Método index - Redirige al perfil del usuario
- */
-public function index() {
-    if (!isset($_SESSION['usuario'])) {
-        header("Location: " . BASE_URL . "?c=Usuario&a=login");
-        exit;
-    }
-    
-    // Redirigir al perfil del usuario
-    header("Location: " . BASE_URL . "?c=Usuario&a=perfil");
-    exit;
-}
-
-// =============================
-// MÉTODO PARA MOSTRAR MENSAJES EN EL PERFIL
-// =============================
-
-/**
- * Obtener mensajes de éxito/error para mostrar en el perfil
- */
-private function obtenerMensajes() {
-    $mensajes = [];
-    
-    if (isset($_SESSION['success_message'])) {
-        $mensajes['success'] = $_SESSION['success_message'];
-        unset($_SESSION['success_message']);
-    }
-    
-    if (isset($_SESSION['error_message'])) {
-        $mensajes['error'] = $_SESSION['error_message'];
-        unset($_SESSION['error_message']);
-    }
-    
-    return $mensajes;
-}
-        // Procesar cambio de contraseña
-        public function actualizarContrasena() {
-            if (!isset($_SESSION['usuario'])) {
-                header("Location: " . BASE_URL . "?c=Usuario&a=login");
-                exit;
-            }
-
-            if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-                try {
-                    $id_usuario = $_SESSION['ID_Usuario'];
-                    $contrasena_actual = $_POST['contrasena_actual'] ?? '';
-                    $nueva_contrasena = $_POST['nueva_contrasena'] ?? '';
-                    $confirmar_contrasena = $_POST['confirmar_contrasena'] ?? '';
-
-                    $errores = [];
-
-                    // Validaciones
-                    if (empty($contrasena_actual)) {
-                        $errores[] = "La contraseña actual es obligatoria";
-                    }
-
-                    if (empty($nueva_contrasena)) {
-                        $errores[] = "La nueva contraseña es obligatoria";
-                    }
-
-                    if (empty($confirmar_contrasena)) {
-                        $errores[] = "Confirmar contraseña es obligatorio";
-                    }
-
-                    if ($nueva_contrasena !== $confirmar_contrasena) {
-                        $errores[] = "Las nuevas contraseñas no coinciden";
-                    }
-
-                    // Validar fortaleza de la nueva contraseña
-                    $validacion_contrasena = $this->validarContrasena($nueva_contrasena);
-                    if ($validacion_contrasena !== true) {
-                        $errores[] = "La nueva contraseña no cumple con los requisitos de seguridad:";
-                        foreach ($validacion_contrasena as $error_contra) {
-                            $errores[] = "• " . $error_contra;
-                        }
-                    }
-
-                    // Si hay errores, mostrar formulario con errores
-                    if (!empty($errores)) {
-                        $_SESSION['cambio_contrasena_mensaje'] = implode("<br>", $errores);
-                        $_SESSION['cambio_contrasena_tipo'] = 'error';
-                        header("Location: " . BASE_URL . "?c=Usuario&a=cambiarContrasena");
-                        exit;
-                    }
-
-                    // Verificar contraseña actual
-                    $stmt = $this->db->prepare("SELECT Contrasena FROM usuario WHERE ID_Usuario = ?");
-                    $stmt->execute([$id_usuario]);
-                    $usuario = $stmt->fetch(PDO::FETCH_ASSOC);
-
-                    if (!$usuario || !password_verify($contrasena_actual, $usuario['Contrasena'])) {
-                        $_SESSION['cambio_contrasena_mensaje'] = "La contraseña actual es incorrecta";
-                        $_SESSION['cambio_contrasena_tipo'] = 'error';
-                        header("Location: " . BASE_URL . "?c=Usuario&a=cambiarContrasena");
-                        exit;
-                    }
-
-                    // Verificar que la nueva contraseña no sea igual a la actual
-                    if (password_verify($nueva_contrasena, $usuario['Contrasena'])) {
-                        $_SESSION['cambio_contrasena_mensaje'] = "La nueva contraseña debe ser diferente a la actual";
-                        $_SESSION['cambio_contrasena_tipo'] = 'error';
-                        header("Location: " . BASE_URL . "?c=Usuario&a=cambiarContrasena");
-                        exit;
-                    }
-
-                    // Actualizar contraseña
-                    $nueva_contrasena_hash = password_hash($nueva_contrasena, PASSWORD_BCRYPT);
-
-                    if ($this->usuario->actualizarContrasena($id_usuario, $nueva_contrasena_hash)) {
-                        $_SESSION['cambio_contrasena_mensaje'] = "Contraseña actualizada correctamente";
-                        $_SESSION['cambio_contrasena_tipo'] = 'success';
-                        
-                        //Redirigir al formulario de cambio de contraseña, no al perfil
-                        header("Location: " . BASE_URL . "?c=Usuario&a=cambiarContrasena");
-                        exit;
+        if ($id_direccion) {
+            try {
+                require_once "models/Direccion.php";
+                $dirModel = new Direccion($this->db);
+                
+                // Verificar que la dirección pertenece al usuario
+                if ($dirModel->perteneceAUsuario($id_direccion, $_SESSION['ID_Usuario'])) {
+                    if ($dirModel->eliminar($id_direccion)) {
+                        $_SESSION['success_message'] = "Dirección eliminada correctamente";
                     } else {
-                        throw new Exception("Error al actualizar la contraseña en la base de datos");
+                        $_SESSION['error_message'] = "Error al eliminar la dirección";
                     }
+                } else {
+                    $_SESSION['error_message'] = "No tienes permisos para eliminar esta dirección";
+                }
 
-                } catch (Exception $e) {
-                    $_SESSION['cambio_contrasena_mensaje'] = "Error interno del sistema: " . $e->getMessage();
+            } catch (Exception $e) {
+                $_SESSION['error_message'] = "Error al eliminar la dirección: " . $e->getMessage();
+            }
+        }
+
+        header("Location: " . BASE_URL . "?c=Usuario&a=perfil");
+        exit;
+    }
+
+    public function predeterminada() {
+        if (!isset($_SESSION['usuario'])) {
+            header("Location: " . BASE_URL . "?c=Usuario&a=login");
+            exit;
+        }
+
+        $id_direccion = $_GET['id'] ?? null;
+
+        if ($id_direccion) {
+            try {
+                require_once "models/Direccion.php";
+                $dirModel = new Direccion($this->db);
+                
+                // Verificar que la dirección pertenece al usuario
+                if ($dirModel->perteneceAUsuario($id_direccion, $_SESSION['ID_Usuario'])) {
+                    if ($dirModel->establecerPredeterminada($id_direccion, $_SESSION['ID_Usuario'])) {
+                        $_SESSION['success_message'] = "Dirección establecida como predeterminada";
+                    } else {
+                        $_SESSION['error_message'] = "Error al establecer dirección predeterminada";
+                    }
+                } else {
+                    $_SESSION['error_message'] = "No tienes permisos para modificar esta dirección";
+                }
+
+            } catch (Exception $e) {
+                $_SESSION['error_message'] = "Error al establecer dirección predeterminada: " . $e->getMessage();
+            }
+        }
+
+        header("Location: " . BASE_URL . "?c=Usuario&a=perfil");
+        exit;
+    }
+
+    public function index() {
+        if (!isset($_SESSION['usuario'])) {
+            header("Location: " . BASE_URL . "?c=Usuario&a=login");
+            exit;
+        }
+        
+        // Redirigir al perfil del usuario
+        header("Location: " . BASE_URL . "?c=Usuario&a=perfil");
+        exit;
+    }
+
+    private function obtenerMensajes() {
+        $mensajes = [];
+        
+        if (isset($_SESSION['success_message'])) {
+            $mensajes['success'] = $_SESSION['success_message'];
+            unset($_SESSION['success_message']);
+        }
+        
+        if (isset($_SESSION['error_message'])) {
+            $mensajes['error'] = $_SESSION['error_message'];
+            unset($_SESSION['error_message']);
+        }
+        
+        return $mensajes;
+    }
+
+    public function actualizarContrasena() {
+        if (!isset($_SESSION['usuario'])) {
+            header("Location: " . BASE_URL . "?c=Usuario&a=login");
+            exit;
+        }
+
+        if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+            try {
+                $id_usuario = $_SESSION['ID_Usuario'];
+                $contrasena_actual = $_POST['contrasena_actual'] ?? '';
+                $nueva_contrasena = $_POST['nueva_contrasena'] ?? '';
+                $confirmar_contrasena = $_POST['confirmar_contrasena'] ?? '';
+
+                $errores = [];
+
+                // Validaciones
+                if (empty($contrasena_actual)) {
+                    $errores[] = "La contraseña actual es obligatoria";
+                }
+
+                if (empty($nueva_contrasena)) {
+                    $errores[] = "La nueva contraseña es obligatoria";
+                }
+
+                if (empty($confirmar_contrasena)) {
+                    $errores[] = "Confirmar contraseña es obligatorio";
+                }
+
+                if ($nueva_contrasena !== $confirmar_contrasena) {
+                    $errores[] = "Las nuevas contraseñas no coinciden";
+                }
+
+                // Validar fortaleza de la nueva contraseña
+                $validacion_contrasena = $this->validarContrasena($nueva_contrasena);
+                if ($validacion_contrasena !== true) {
+                    $errores[] = "La nueva contraseña no cumple con los requisitos de seguridad:";
+                    foreach ($validacion_contrasena as $error_contra) {
+                        $errores[] = "• " . $error_contra;
+                    }
+                }
+
+                // Si hay errores, mostrar formulario con errores
+                if (!empty($errores)) {
+                    $_SESSION['cambio_contrasena_mensaje'] = implode("<br>", $errores);
                     $_SESSION['cambio_contrasena_tipo'] = 'error';
                     header("Location: " . BASE_URL . "?c=Usuario&a=cambiarContrasena");
+                    exit;
+                }
+
+                // Verificar contraseña actual
+                $stmt = $this->db->prepare("SELECT Contrasena FROM usuario WHERE ID_Usuario = ?");
+                $stmt->execute([$id_usuario]);
+                $usuario = $stmt->fetch(PDO::FETCH_ASSOC);
+
+                if (!$usuario || !password_verify($contrasena_actual, $usuario['Contrasena'])) {
+                    $_SESSION['cambio_contrasena_mensaje'] = "La contraseña actual es incorrecta";
+                    $_SESSION['cambio_contrasena_tipo'] = 'error';
+                    header("Location: " . BASE_URL . "?c=Usuario&a=cambiarContrasena");
+                    exit;
+                }
+
+                // Verificar que la nueva contraseña no sea igual a la actual
+                if (password_verify($nueva_contrasena, $usuario['Contrasena'])) {
+                    $_SESSION['cambio_contrasena_mensaje'] = "La nueva contraseña debe ser diferente a la actual";
+                    $_SESSION['cambio_contrasena_tipo'] = 'error';
+                    header("Location: " . BASE_URL . "?c=Usuario&a=cambiarContrasena");
+                    exit;
+                }
+
+                // Actualizar contraseña
+                $nueva_contrasena_hash = password_hash($nueva_contrasena, PASSWORD_BCRYPT);
+
+                if ($this->usuario->actualizarContrasena($id_usuario, $nueva_contrasena_hash)) {
+                    $_SESSION['cambio_contrasena_mensaje'] = "Contraseña actualizada correctamente";
+                    $_SESSION['cambio_contrasena_tipo'] = 'success';
+                    
+                    //Redirigir al formulario de cambio de contraseña, no al perfil
+                    header("Location: " . BASE_URL . "?c=Usuario&a=cambiarContrasena");
+                    exit;
+                } else {
+                    throw new Exception("Error al actualizar la contraseña en la base de datos");
+                }
+
+            } catch (Exception $e) {
+                $_SESSION['cambio_contrasena_mensaje'] = "Error interno del sistema: " . $e->getMessage();
+                $_SESSION['cambio_contrasena_tipo'] = 'error';
+                header("Location: " . BASE_URL . "?c=Usuario&a=cambiarContrasena");
                     exit;
                 }
             } else {
@@ -677,7 +1157,6 @@ private function obtenerMensajes() {
             exit;
         }
 
-        // Mostrar formulario de olvido de contraseña
         public function olvidoContrasena() {
             if (isset($_SESSION['usuario'])) {
                 header("Location: " . BASE_URL);
@@ -692,7 +1171,6 @@ private function obtenerMensajes() {
             include "views/usuario/olvido_contrasena.php";
         }
 
-        // Solicitar reset de contraseña
         public function requestPasswordReset() {
             if (isset($_SESSION['usuario'])) {
                 header("Location: " . BASE_URL);
@@ -761,7 +1239,6 @@ private function obtenerMensajes() {
             }
         }
 
-        // Resetear contraseña
         public function resetPassword() {
             if (isset($_SESSION['usuario'])) {
                 header("Location: " . BASE_URL);
@@ -830,7 +1307,7 @@ private function obtenerMensajes() {
                     }
                     
                     // Verificar que el usuario existe
-                    $stmt = $this->db->prepare("SELECT ID_Usuario FROM usuario WHERE Correo = ? AND activo = 1");
+                    $stmt = $this->db->prepare("SELECT ID_Usuario FROM usuario WHERE Correo = ? AND Activo = 1");
                     $stmt->execute([$email]);
                     $user = $stmt->fetch(PDO::FETCH_ASSOC);
                     
@@ -876,7 +1353,6 @@ private function obtenerMensajes() {
             }
         }
 
-        // Método para enviar email (usando PHPMailer)
         private function enviarEmailRecuperacion($email, $nombre, $resetLink) {
             try {
                 // Incluir PHPMailer y usar tu clase Mailer

@@ -154,6 +154,16 @@
     border-left-color: var(--warning) !important;
 }
 
+.estado-activo {
+    background: linear-gradient(135deg, var(--primary), var(--primary-light)) !important;
+    color: white !important;
+}
+
+.estado-inactivo {
+    background: linear-gradient(135deg, var(--primary-dark), var(--primary)) !important;
+    color: white !important;
+}
+
 /* Tabla */
 .table-primary-dark {
     background: linear-gradient(135deg, var(--primary-dark), var(--primary)) !important;

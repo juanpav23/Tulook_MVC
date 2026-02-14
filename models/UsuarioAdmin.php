@@ -155,6 +155,26 @@ class UsuarioAdmin {
         ]);
     }
 
+    private function obtenerNombreAdmin($adminId) {
+        if (!$adminId) return 'Sistema';
+        if ($adminId == 'Sistema' || $adminId == 0) return 'Sistema';
+        
+        try {
+            $query = "SELECT Nombre, Apellido FROM usuario WHERE ID_Usuario = ? LIMIT 1";
+            $stmt = $this->conn->prepare($query);
+            $stmt->execute([$adminId]);
+            $admin = $stmt->fetch(PDO::FETCH_ASSOC);
+            
+            if ($admin) {
+                return $admin['Nombre'] . ' ' . $admin['Apellido'] . ' (ID: ' . $adminId . ')';
+            }
+        } catch (Exception $e) {
+            error_log("Error obteniendo nombre de admin: " . $e->getMessage());
+        }
+        
+        return 'Administrador ID: ' . $adminId;
+    }
+
     // CAMBIAR ESTADO (ACTIVAR/DESACTIVAR) CON REGISTRO DE MOTIVO
     public function cambiarEstado($id, $estado, $motivo = '', $adminId = null) {
         // Obtener usuario actual
@@ -168,40 +188,27 @@ class UsuarioAdmin {
             return false;
         }
         
-        // Preparar datos para actualización
-        $datosUpdate = [
-            'Activo' => $estado
-        ];
-        
-        // Si es desactivación, guardar motivo, fecha y admin
         if ($estado == 0) {
-            $datosUpdate['Motivo_Desactivacion'] = $motivo;
-            $datosUpdate['Fecha_Desactivacion'] = date('Y-m-d H:i:s');
-            $datosUpdate['ID_Admin_Desactiva'] = $adminId;
+            // 🔴 DESACTIVACIÓN: Actualizar TODO (SOBREESCRIBE el motivo anterior)
+            $query = "UPDATE " . $this->table_name . " 
+                    SET Activo = 0, 
+                        Motivo_Desactivacion = ?, 
+                        Fecha_Desactivacion = ?, 
+                        ID_Admin_Desactiva = ? 
+                    WHERE ID_Usuario = ?";
+            
+            $stmt = $this->conn->prepare($query);
+            return $stmt->execute([$motivo, date('Y-m-d H:i:s'), $adminId, $id]);
+            
         } else {
-            // Si es activación, limpiar motivo, fecha y admin
-            $datosUpdate['Motivo_Desactivacion'] = NULL;
-            $datosUpdate['Fecha_Desactivacion'] = NULL;
-            $datosUpdate['ID_Admin_Desactiva'] = NULL;
+            // 🟢 ACTIVACIÓN: SOLO cambiar Activo, NO tocar motivo, fecha ni admin
+            $query = "UPDATE " . $this->table_name . " 
+                    SET Activo = 1 
+                    WHERE ID_Usuario = ?";
+            
+            $stmt = $this->conn->prepare($query);
+            return $stmt->execute([$id]);
         }
-        
-        // Construir query dinámica
-        $setParts = [];
-        $params = [];
-        
-        foreach ($datosUpdate as $campo => $valor) {
-            $setParts[] = "`$campo` = ?";
-            $params[] = $valor;
-        }
-        
-        $params[] = $id; // Para el WHERE
-        
-        $query = "UPDATE " . $this->table_name . " 
-                  SET " . implode(', ', $setParts) . "
-                  WHERE ID_Usuario = ?";
-        
-        $stmt = $this->conn->prepare($query);
-        return $stmt->execute($params);
     }
 
     // CAMBIAR ROL
