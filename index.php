@@ -81,7 +81,7 @@ $database = new Database();
 $db = $database->getConnection();
 
 // =============================================
-// 🔹 Controladores existentes
+// 🔹 Controladores existentes (FUSIÓN COMPLETA)
 // =============================================
 require_once "controllers/ProductoController.php";
 require_once "controllers/CarritoController.php";
@@ -98,6 +98,8 @@ require_once "controllers/CheckoutController.php";
 require_once "controllers/FacturaPDFController.php";
 require_once "controllers/AtributoController.php";
 require_once "controllers/ColorController.php";
+require_once "controllers/ResenaController.php";
+require_once "controllers/ReporteVentaController.php";
 
 // =============================================
 // 🔹 Determinar controlador y acción por URL
@@ -154,10 +156,15 @@ switch ($controlador) {
     case 'Color':
         $controller = new ColorController($db);
         break;
+    case 'Resena':
+        $controller = new ResenaController($db);
+        break;
+    case 'ReporteVenta':
+        $controller = new ReporteVentaController($db);
+        break;
     default:
         $controller = new ProductoController($db);
         break;
-    
 }
 
 // =============================================
@@ -174,22 +181,44 @@ if (!method_exists($controller, $accion)) {
 }
 
 // =============================================
-// 🔹 Manejo global de errores
+// 🔹 Manejo global de errores (VERSIÓN MEJORADA CON SOPORTE AJAX)
 // =============================================
 try {
     $controller->$accion();
 } catch (Throwable $e) {
-    $isAjax = (isset($_REQUEST['ajax']) && $_REQUEST['ajax'] == '1') || (!empty($_SERVER['HTTP_X_REQUESTED_WITH']) && strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) === 'xmlhttprequest');
+    $isAjax = (isset($_REQUEST['ajax']) && $_REQUEST['ajax'] == '1') || 
+              (!empty($_SERVER['HTTP_X_REQUESTED_WITH']) && 
+               strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) === 'xmlhttprequest');
     
     if ($isAjax) {
         http_response_code(500);
         header('Content-Type: application/json; charset=utf-8');
-        echo json_encode(['success' => false, 'error' => $e->getMessage()]);
+        echo json_encode([
+            'success' => false, 
+            'error' => $e->getMessage(),
+            'file' => $e->getFile(),
+            'line' => $e->getLine()
+        ]);
     } else {
         http_response_code(500);
-        echo "<h2 style='color:red;text-align:center;margin-top:50px;'>⚠ Error interno del servidor</h2>";
-        echo "<pre style='color:#333;text-align:center;font-size:14px;'>
-" . $e->getMessage() . "
-</pre>";
+        echo "<!DOCTYPE html>
+        <html>
+        <head>
+            <title>Error interno del servidor</title>
+            <style>
+                body { font-family: Arial, sans-serif; background: #f5f5f5; text-align: center; padding: 50px; }
+                .error-container { background: white; border-radius: 10px; padding: 30px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); max-width: 600px; margin: 0 auto; }
+                h2 { color: #dc3545; }
+                pre { background: #f8f9fa; padding: 15px; border-radius: 5px; text-align: left; overflow-x: auto; }
+            </style>
+        </head>
+        <body>
+            <div class='error-container'>
+                <h2>⚠ Error interno del servidor</h2>
+                <pre>" . $e->getMessage() . "\n\n" . $e->getFile() . ":" . $e->getLine() . "</pre>
+            </div>
+        </body>
+        </html>";
     }
 }
+?>

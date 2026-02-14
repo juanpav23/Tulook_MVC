@@ -61,11 +61,21 @@ class ResenaController {
             exit;
         }
 
-        $ok = $this->resenaModel->reportar($idResena, (int)$_SESSION['ID_Usuario'], $motivo, $descripcion);
-        if($isAjax){ 
-            header('Content-Type: application/json'); 
-            echo json_encode(['success'=> (bool)$ok]); 
-            exit; 
+        try {
+            $ok = $this->resenaModel->reportar($idResena, (int)$_SESSION['ID_Usuario'], $motivo, $descripcion);
+            if($isAjax){ 
+                header('Content-Type: application/json'); 
+                echo json_encode(['success'=> (bool)$ok]); 
+                exit; 
+            }
+        } catch (Exception $e) {
+            if($isAjax){ 
+                header('Content-Type: application/json'); 
+                http_response_code(400);
+                echo json_encode(['success'=> false, 'error' => $e->getMessage()]); 
+                exit; 
+            }
+            $_SESSION['error_message'] = $e->getMessage();
         }
         header('Location: ' . ($_SERVER['HTTP_REFERER'] ?? BASE_URL));
     }
@@ -88,7 +98,7 @@ class ResenaController {
                     exit; 
                 }
                 $_SESSION['error_message'] = 'Debes iniciar sesión para dejar una reseña.';
-                header('Location: ' . $_SERVER['HTTP_REFERER'] ?? BASE_URL);
+                header('Location: ' . ($_SERVER['HTTP_REFERER'] ?? BASE_URL));
                 exit;
             }
 
@@ -110,11 +120,23 @@ class ResenaController {
                 exit;
             }
 
+            if(empty($comentario)){
+                if($isAjax){ 
+                    header('Content-Type: application/json'); 
+                    http_response_code(400); 
+                    echo json_encode(['success' => false, 'error' => 'El comentario es obligatorio']); 
+                    exit; 
+                }
+                $_SESSION['error_message'] = 'El comentario es obligatorio.';
+                header('Location: ' . BASE_URL . '?c=Producto&a=ver&id=' . $idArticulo);
+                exit;
+            }
+
             if(!$this->resenaModel->usuarioCompro($idUsuario, $idArticulo)){
                 if($isAjax){ 
                     header('Content-Type: application/json'); 
                     http_response_code(403); 
-                    echo json_encode(['success' => false, 'error' => 'primero debes comprar el producto para dejar una reseña']); 
+                    echo json_encode(['success' => false, 'error' => 'Debes comprar el producto para dejar una reseña']); 
                     exit; 
                 }
                 $_SESSION['error_message'] = 'Solo compradores pueden dejar reseñas.';
@@ -127,7 +149,7 @@ class ResenaController {
                 if($isAjax){ 
                     header('Content-Type: application/json'); 
                     http_response_code(409); 
-                    echo json_encode(['success' => false, 'error' => 'exists']); 
+                    echo json_encode(['success' => false, 'error' => 'Ya dejaste una reseña en este producto']); 
                     exit; 
                 }
                 $_SESSION['info_message'] = 'Ya dejaste una reseña en este producto. Puedes editarla o eliminarla.';
@@ -146,7 +168,7 @@ class ResenaController {
                 if($isAjax){ 
                     header('Content-Type: application/json'); 
                     http_response_code(400); 
-                    echo json_encode(['success' => false, 'error' => 'no_product_available']); 
+                    echo json_encode(['success' => false, 'error' => 'No hay productos disponibles']); 
                     exit; 
                 }
                 $_SESSION['error_message'] = 'No hay productos disponibles para este artículo.';
@@ -159,7 +181,7 @@ class ResenaController {
                 if($isAjax){ 
                     header('Content-Type: application/json'); 
                     http_response_code(409); 
-                    echo json_encode(['success' => false, 'error' => 'exists']); 
+                    echo json_encode(['success' => false, 'error' => 'Ya dejaste una reseña en este producto']); 
                     exit; 
                 }
                 $_SESSION['info_message'] = 'Ya dejaste una reseña en este producto. Puedes editarla o eliminarla.';
@@ -170,62 +192,41 @@ class ResenaController {
             $idResena = $this->resenaModel->crearResena($idUsuario, $idArticulo, $idProducto, $calificacion, $titulo, $comentario);
             
             if ($idResena && isset($_FILES['fotos']) && !empty($_FILES['fotos']['name'][0])) {
-                $uploadDir = 'uploads/resenas/';
-                if (!is_dir($uploadDir)) {
-                    mkdir($uploadDir, 0755, true);
-                }
-
-                $files = $_FILES['fotos'];
-                $maxFotos = 5;
-
-                for ($i = 0; $i < count($files['name']) && $i < $maxFotos; $i++) {
-                    if ($files['error'][$i] === UPLOAD_ERR_OK && !empty($files['name'][$i])) {
-                        $tmpFile = $files['tmp_name'][$i];
-                        $fileName = $files['name'][$i];
-                        
-                        $ext = strtolower(pathinfo($fileName, PATHINFO_EXTENSION));
-                        if (!in_array($ext, ['jpg', 'jpeg', 'png', 'gif', 'webp'])) {
-                            continue;
-                        }
-
-                        $newFileName = uniqid('resena_' . $idResena . '_') . '.' . $ext;
-                        $uploadPath = $uploadDir . $newFileName;
-
-                        if (move_uploaded_file($tmpFile, $uploadPath)) {
-                            $this->resenaModel->agregarFoto($idResena, $uploadPath);
-                        }
-                    }
-                }
+                $this->procesarSubidaFotos($idResena, $_FILES['fotos']);
             }
             
             if($isAjax){ 
                 header('Content-Type: application/json'); 
-                echo json_encode(['success' => true, 'id_resena' => $idResena]); 
+                echo json_encode([
+                    'success' => true, 
+                    'id_resena' => $idResena,
+                    'message' => 'Reseña creada exitosamente'
+                ]); 
                 exit; 
             }
-            header('Location: ' . BASE_URL . '?c=Producto&a=ver&id=' . $idArticulo);
             
-        } catch (Throwable $e) {
+            $_SESSION['success_message'] = 'Reseña creada exitosamente.';
+            header('Location: ' . BASE_URL . '?c=Producto&a=ver&id=' . $idArticulo . '#resenas');
+            
+        } catch (Exception $e) {
             $isAjax = (isset($_REQUEST['ajax']) && $_REQUEST['ajax'] == '1') || (!empty($_SERVER['HTTP_X_REQUESTED_WITH']) && strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) === 'xmlhttprequest');
             
             $errorMsg = $e->getMessage();
-            if (strpos($errorMsg, 'unique_resena_usuario_producto') !== false || 
-                (strpos($errorMsg, 'Integrity constraint violation') !== false && strpos($errorMsg, 'Duplicate entry') !== false)) {
+            
+            if (strpos($errorMsg, 'Duplicate entry') !== false || 
+                strpos($errorMsg, 'unique_resena_usuario_producto') !== false) {
                 $errorMsg = 'Ya dejaste una reseña en este producto. Puedes editarla o eliminarla.';
-                $httpCode = 409;
-            } else {
-                $errorMsg = 'Error al crear la reseña. Intenta nuevamente.';
-                $httpCode = 500;
             }
             
             if($isAjax){ 
                 header('Content-Type: application/json'); 
-                http_response_code($httpCode); 
+                http_response_code(400); 
                 echo json_encode(['success' => false, 'error' => $errorMsg]); 
                 exit; 
             }
-            error_log('Error en ResenaController::crear: ' . $e->getMessage());
-            throw $e;
+            $_SESSION['error_message'] = $errorMsg;
+            header('Location: ' . BASE_URL . '?c=Producto&a=ver&id=' . ($idArticulo ?? ''));
+            exit;
         }
     }
 
@@ -235,18 +236,58 @@ class ResenaController {
             header('Location: ' . BASE_URL);
             exit;
         }
+        
+        $isAjax = (isset($_REQUEST['ajax']) && $_REQUEST['ajax'] == '1') || (!empty($_SERVER['HTTP_X_REQUESTED_WITH']) && strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) === 'xmlhttprequest');
+        
         if(!isset($_SESSION['ID_Usuario']) || ($_SESSION['ID_Rol'] ?? 3) == 3){
+            if($isAjax){
+                http_response_code(403);
+                header('Content-Type: application/json');
+                echo json_encode(['success' => false, 'error' => 'No autorizado']);
+                exit;
+            }
             die('No autorizado');
         }
+        
         $idResena = (int)($_POST['id_resena'] ?? 0);
         $respuesta = trim($_POST['respuesta'] ?? '');
-        if($idResena && $respuesta !== ''){
-            $this->resenaModel->responderResena($idResena, (int)$_SESSION['ID_Usuario'], $respuesta);
+        
+        if(!$idResena || empty($respuesta)){
+            if($isAjax){
+                http_response_code(400);
+                header('Content-Type: application/json');
+                echo json_encode(['success' => false, 'error' => 'Parámetros inválidos']);
+                exit;
+            }
+            header('Location: ' . ($_SERVER['HTTP_REFERER'] ?? BASE_URL));
+            exit;
         }
-        header('Location: ' . ($_SERVER['HTTP_REFERER'] ?? BASE_URL));
+        
+        try {
+            $this->resenaModel->responderResena($idResena, (int)$_SESSION['ID_Usuario'], $respuesta);
+            
+            if($isAjax){
+                header('Content-Type: application/json');
+                echo json_encode(['success' => true, 'message' => 'Respuesta publicada exitosamente']);
+                exit;
+            }
+            
+            $_SESSION['success_message'] = 'Respuesta publicada exitosamente.';
+            header('Location: ' . ($_SERVER['HTTP_REFERER'] ?? BASE_URL));
+            
+        } catch (Exception $e) {
+            if($isAjax){
+                http_response_code(400);
+                header('Content-Type: application/json');
+                echo json_encode(['success' => false, 'error' => $e->getMessage()]);
+                exit;
+            }
+            $_SESSION['error_message'] = $e->getMessage();
+            header('Location: ' . ($_SERVER['HTTP_REFERER'] ?? BASE_URL));
+        }
     }
 
-    // POST: votar - VERSIÓN CORREGIDA
+    // POST: votar
     public function votar(){
         $isAjax = (isset($_REQUEST['ajax']) && $_REQUEST['ajax'] == '1') || (!empty($_SERVER['HTTP_X_REQUESTED_WITH']) && strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) === 'xmlhttprequest');
 
@@ -359,6 +400,18 @@ class ResenaController {
             exit; 
         }
 
+        if(empty($comentario)){
+            if($isAjax){ 
+                header('Content-Type: application/json'); 
+                http_response_code(400); 
+                echo json_encode(['success' => false, 'error' => 'El comentario es obligatorio']); 
+                exit; 
+            }
+            $_SESSION['error_message'] = 'El comentario es obligatorio.';
+            header('Location: ' . ($_SERVER['HTTP_REFERER'] ?? BASE_URL));
+            exit;
+        }
+
         $r = $this->resenaModel->obtenerPorIdResena($idResena);
         if(!$r){ 
             if($isAjax){ 
@@ -383,14 +436,28 @@ class ResenaController {
             die('No autorizado'); 
         }
 
-        $this->resenaModel->editarResena($idResena, $titulo, $comentario, $calificacion);
-        
-        if($isAjax){ 
-            header('Content-Type: application/json'); 
-            echo json_encode(['success' => true]); 
-            exit; 
+        try {
+            $this->resenaModel->editarResena($idResena, $titulo, $comentario, $calificacion);
+            
+            if($isAjax){ 
+                header('Content-Type: application/json'); 
+                echo json_encode(['success' => true, 'message' => 'Reseña actualizada exitosamente']); 
+                exit; 
+            }
+            
+            $_SESSION['success_message'] = 'Reseña actualizada exitosamente.';
+            header('Location: ' . ($_SERVER['HTTP_REFERER'] ?? BASE_URL));
+            
+        } catch (Exception $e) {
+            if($isAjax){ 
+                header('Content-Type: application/json'); 
+                http_response_code(400); 
+                echo json_encode(['success' => false, 'error' => $e->getMessage()]); 
+                exit; 
+            }
+            $_SESSION['error_message'] = $e->getMessage();
+            header('Location: ' . ($_SERVER['HTTP_REFERER'] ?? BASE_URL));
         }
-        header('Location: ' . ($_SERVER['HTTP_REFERER'] ?? BASE_URL));
     }
 
     // POST: eliminar reseña
@@ -448,14 +515,28 @@ class ResenaController {
             die('No autorizado'); 
         }
 
-        $this->resenaModel->eliminarResena($idResena);
-        
-        if($isAjax){ 
-            header('Content-Type: application/json'); 
-            echo json_encode(['success' => true]); 
-            exit; 
+        try {
+            $this->resenaModel->eliminarResena($idResena);
+            
+            if($isAjax){ 
+                header('Content-Type: application/json'); 
+                echo json_encode(['success' => true, 'message' => 'Reseña eliminada exitosamente']); 
+                exit; 
+            }
+            
+            $_SESSION['success_message'] = 'Reseña eliminada exitosamente.';
+            header('Location: ' . ($_SERVER['HTTP_REFERER'] ?? BASE_URL));
+            
+        } catch (Exception $e) {
+            if($isAjax){ 
+                header('Content-Type: application/json'); 
+                http_response_code(500); 
+                echo json_encode(['success' => false, 'error' => $e->getMessage()]); 
+                exit; 
+            }
+            $_SESSION['error_message'] = $e->getMessage();
+            header('Location: ' . ($_SERVER['HTTP_REFERER'] ?? BASE_URL));
         }
-        header('Location: ' . ($_SERVER['HTTP_REFERER'] ?? BASE_URL));
     }
 
     // POST: subir foto
@@ -526,30 +607,18 @@ class ResenaController {
             exit;
         }
 
-        $dir = __DIR__ . '/../uploads/resenas/';
-        if(!is_dir($dir)) mkdir($dir, 0755, true);
-
-        $f = $_FILES['foto'];
-        $ext = pathinfo($f['name'], PATHINFO_EXTENSION);
-        $nombre = uniqid('resena_') . '.' . $ext;
-        $dest = $dir . $nombre;
+        $resultado = $this->procesarUnaFoto($idResena, $_FILES['foto']);
         
-        if(move_uploaded_file($f['tmp_name'], $dest)){
-            $rutaRel = 'uploads/resenas/' . $nombre;
-            $this->resenaModel->agregarFoto($idResena, $rutaRel);
-            
-            if($isAjax){
-                header('Content-Type: application/json');
-                echo json_encode(['success' => true, 'foto_url' => $rutaRel]);
-                exit;
-            }
+        if($isAjax){
+            header('Content-Type: application/json');
+            echo json_encode($resultado);
+            exit;
+        }
+        
+        if($resultado['success']){
+            $_SESSION['success_message'] = 'Foto subida exitosamente.';
         } else {
-            if($isAjax){
-                http_response_code(500);
-                header('Content-Type: application/json');
-                echo json_encode(['success' => false, 'error' => 'move_failed']);
-                exit;
-            }
+            $_SESSION['error_message'] = $resultado['error'];
         }
         
         header('Location: ' . ($_SERVER['HTTP_REFERER'] ?? BASE_URL));
@@ -621,13 +690,125 @@ class ResenaController {
             die('No autorizado'); 
         }
         
+        if(file_exists($foto['Foto'])){
+            @unlink($foto['Foto']);
+        }
+        
         $this->resenaModel->eliminarFoto($idFoto);
         
         if($isAjax){ 
             header('Content-Type: application/json'); 
-            echo json_encode(['success' => true]); 
+            echo json_encode(['success' => true, 'message' => 'Foto eliminada exitosamente']); 
             exit; 
         }
+        
+        $_SESSION['success_message'] = 'Foto eliminada exitosamente.';
+        header('Location: ' . ($_SERVER['HTTP_REFERER'] ?? BASE_URL));
+    }
+
+    // =============== MÉTODOS AUXILIARES ===============
+
+    private function procesarSubidaFotos($idResena, $files){
+        $uploadDir = 'uploads/resenas/';
+        if (!is_dir($uploadDir)) {
+            mkdir($uploadDir, 0755, true);
+        }
+
+        $maxFotos = 5;
+        $contador = 0;
+
+        for ($i = 0; $i < count($files['name']) && $contador < $maxFotos; $i++) {
+            if ($files['error'][$i] === UPLOAD_ERR_OK && !empty($files['name'][$i])) {
+                $this->procesarArchivoFoto($idResena, $files['tmp_name'][$i], $files['name'][$i]);
+                $contador++;
+            }
+        }
+    }
+
+    private function procesarUnaFoto($idResena, $file){
+        $uploadDir = 'uploads/resenas/';
+        if (!is_dir($uploadDir)) {
+            mkdir($uploadDir, 0755, true);
+        }
+
+        if ($file['error'] !== UPLOAD_ERR_OK) {
+            return ['success' => false, 'error' => 'Error al subir el archivo'];
+        }
+
+        $resultado = $this->procesarArchivoFoto($idResena, $file['tmp_name'], $file['name']);
+        
+        if($resultado){
+            return ['success' => true, 'foto_url' => $resultado];
+        } else {
+            return ['success' => false, 'error' => 'Error al procesar la imagen'];
+        }
+    }
+
+    private function procesarArchivoFoto($idResena, $tmpFile, $originalName){
+        $ext = strtolower(pathinfo($originalName, PATHINFO_EXTENSION));
+        $extPermitidas = ['jpg', 'jpeg', 'png', 'gif', 'webp'];
+        
+        if (!in_array($ext, $extPermitidas)) {
+            return false;
+        }
+
+        if (filesize($tmpFile) > 5 * 1024 * 1024) {
+            return false;
+        }
+
+        $newFileName = uniqid('resena_' . $idResena . '_') . '.' . $ext;
+        $uploadPath = 'uploads/resenas/' . $newFileName;
+
+        if (move_uploaded_file($tmpFile, $uploadPath)) {
+            $this->resenaModel->agregarFoto($idResena, $uploadPath);
+            return $uploadPath;
+        }
+
+        return false;
+    }
+
+    public function reportesPendientes(){
+        if(!isset($_SESSION['ID_Usuario']) || ($_SESSION['ID_Rol'] ?? 3) == 3){
+            header('Location: ' . BASE_URL);
+            exit;
+        }
+        
+        $reportes = $this->resenaModel->obtenerReportesPendientes();
+        header('Content-Type: application/json');
+        echo json_encode(['success' => true, 'data' => $reportes]);
+    }
+
+    public function procesarReporte(){
+        if($_SERVER['REQUEST_METHOD'] !== 'POST' || !isset($_SESSION['ID_Usuario']) || 
+           ($_SESSION['ID_Rol'] ?? 3) == 3){
+            header('Location: ' . BASE_URL);
+            exit;
+        }
+        
+        $isAjax = (isset($_REQUEST['ajax']) && $_REQUEST['ajax'] == '1') || (!empty($_SERVER['HTTP_X_REQUESTED_WITH']) && strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) === 'xmlhttprequest');
+        
+        $idReporte = (int)($_POST['id_reporte'] ?? 0);
+        $estado = $_POST['estado'] ?? '';
+        
+        if(!$idReporte || !in_array($estado, ['Revisado', 'Descartado'])){
+            if($isAjax){
+                http_response_code(400);
+                echo json_encode(['success' => false, 'error' => 'Parámetros inválidos']);
+                exit;
+            }
+            $_SESSION['error_message'] = 'Parámetros inválidos';
+            header('Location: ' . ($_SERVER['HTTP_REFERER'] ?? BASE_URL));
+            exit;
+        }
+        
+        $this->resenaModel->procesarReporte($idReporte, $estado, $_SESSION['ID_Usuario']);
+        
+        if($isAjax){
+            echo json_encode(['success' => true, 'message' => 'Reporte procesado exitosamente']);
+            exit;
+        }
+        
+        $_SESSION['success_message'] = 'Reporte procesado exitosamente.';
         header('Location: ' . ($_SERVER['HTTP_REFERER'] ?? BASE_URL));
     }
 }

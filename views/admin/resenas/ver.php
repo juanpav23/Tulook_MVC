@@ -14,9 +14,9 @@ if (!isset($resena) || !$resena) {
     --text-dark: #2c3e50;
     --text-light: #6c757d;
     --border-radius: 12px;
-    --card-shadow: 0 6px 20px rgba(10, 20, 30, 0.08);
-    --card-shadow-hover: 0 12px 36px rgba(10, 20, 30, 0.12);
-    --transition: all 0.28s cubic-bezier(.2,.9,.2,1);
+    --card-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+    --card-shadow-hover: 0 8px 20px rgba(0, 0, 0, 0.12);
+    --transition: all 0.3s ease;
   }
 
   .resena-detail-header {
@@ -251,6 +251,11 @@ if (!isset($resena) || !$resena) {
     background: #6c757d;
   }
 
+  .badge.bg-info {
+    background: var(--accent-blue) !important;
+    color: white !important;
+  }
+
   @media (max-width: 768px) {
     .resena-main-content {
       flex-direction: column;
@@ -287,7 +292,21 @@ if (!isset($resena) || !$resena) {
     <div class="resena-main-content">
       <div class="resena-avatar"><?= strtoupper(substr($resena['Nombre'] ?? 'U',0,1)) ?></div>
       <div class="resena-info-block">
-        <h5><?= htmlspecialchars($resena['Nombre'] . ' ' . ($resena['Apellido'] ?? '')) ?></h5>
+        <div class="d-flex align-items-center gap-2 flex-wrap">
+          <h5><?= htmlspecialchars($resena['Nombre'] . ' ' . ($resena['Apellido'] ?? '')) ?></h5>
+          
+          <?php if (isset($resena['Modificado']) && $resena['Modificado'] == 1): ?>
+            <span class="badge bg-info" style="font-size:0.8rem;">
+              <i class="fas fa-edit me-1"></i>Editada
+            </span>
+          <?php endif; ?>
+          
+          <?php if (isset($resena['palabras_filtradas']) && $resena['palabras_filtradas'] > 0): ?>
+            <span class="badge bg-warning text-dark" style="font-size:0.8rem;" title="Esta reseña contenía palabras bloqueadas que fueron filtradas">
+              <i class="fas fa-filter me-1"></i>Contenido filtrado
+            </span>
+          <?php endif; ?>
+        </div>
         
         <div class="resena-meta">
           <div class="resena-meta-item">
@@ -298,6 +317,12 @@ if (!isset($resena) || !$resena) {
             <i class="fas fa-calendar"></i>
             <?= date('d/m/Y H:i', strtotime($resena['Fecha_Resena'])) ?>
           </div>
+          <?php if (!empty($resena['Fecha_Actualizacion']) && $resena['Fecha_Actualizacion'] != $resena['Fecha_Resena']): ?>
+          <div class="resena-meta-item">
+            <i class="fas fa-pen"></i>
+            Editada: <?= date('d/m/Y H:i', strtotime($resena['Fecha_Actualizacion'])) ?>
+          </div>
+          <?php endif; ?>
           <div class="resena-meta-item" style="margin-left: auto;">
             <span class="badge" style="background: linear-gradient(135deg, #ffc107, #ff9800); color: white; font-size: 0.85rem; padding: 8px 14px;">
               <i class="fas fa-star me-1"></i><?= (int)$resena['Calificacion'] ?> Estrellas
@@ -312,6 +337,14 @@ if (!isset($resena) || !$resena) {
 
         <div class="resena-title"><?= htmlspecialchars($resena['Titulo'] ?? '(Sin título)') ?></div>
         <div class="resena-body"><?= nl2br(htmlspecialchars($resena['Comentario'])) ?></div>
+        
+        <?php if (isset($resena['texto_original']) && $resena['texto_original'] != $resena['Comentario']): ?>
+        <div class="alert alert-warning mt-3 py-2" style="font-size:0.9rem;">
+          <i class="fas fa-info-circle me-1"></i>
+          <strong>Texto original contenía palabras filtradas:</strong>
+          <div class="text-muted small mt-1"><?= htmlspecialchars($resena['texto_original']) ?></div>
+        </div>
+        <?php endif; ?>
       </div>
     </div>
   </div>
@@ -424,7 +457,4 @@ if (!isset($resena) || !$resena) {
       </div>
     <?php endif; ?>
   </div>
-
 </div>
-
-

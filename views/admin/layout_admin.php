@@ -99,14 +99,23 @@ $fechaHoraActual = date('d/m/Y H:i:s');
                   </a>
               </li>
 
-              <!-- Gestión de Atributos -->
+              <!-- Gestión de Reseñas -->
               <li class="nav-item mb-1">
                   <a class="nav-link <?php echo (($_GET['c'] ?? '') === 'Admin' && ($_GET['a'] ?? '') === 'resenas') ? 'active' : ''; ?>" 
                     href="<?php echo BASE_URL; ?>?c=Admin&a=resenas">
-                      <i class="fas fa-comments me-2"></i> Reseñas
+                      <i class="fas fa-star me-2"></i> Reseñas
                   </a>
               </li>
 
+              <!-- NUEVO: Gestión de Palabras Bloqueadas (al mismo nivel) -->
+              <li class="nav-item mb-1">
+                  <a class="nav-link <?php echo (($_GET['c'] ?? '') === 'Admin' && ($_GET['a'] ?? '') === 'palabrasBloqueadas') ? 'active' : ''; ?>" 
+                    href="<?php echo BASE_URL; ?>?c=Admin&a=palabrasBloqueadas">
+                      <i class="fas fa-ban me-2"></i> Palabras bloqueadas
+                  </a>
+              </li>
+
+              <!-- Gestión de Atributos -->
               <li class="nav-item mb-1">
                   <a class="nav-link <?php echo ($_GET['c'] ?? '') === 'Atributo' ? 'active' : ''; ?>" 
                     href="<?php echo BASE_URL; ?>?c=Atributo&a=index">
@@ -253,6 +262,11 @@ $fechaHoraActual = date('d/m/Y H:i:s');
                   'resenaVer' => 'resenas/ver.php',
                   'resenaEliminar' => 'resenas/index.php',
                   'resenaMarcarReporte' => 'resenas/ver.php',
+                  'palabrasBloqueadas' => 'resenas/palabras.php',
+                  'palabraForm' => 'resenas/palabra_form.php',
+                  'palabraGuardar' => 'resenas/index.php',
+                  'palabraEliminar' => 'resenas/palabras.php',
+                  'usuarioAdvertencias' => 'resenas/usuario_advertencias.php',
                   'productos' => 'productos.php', 
                   'productoForm' => 'producto_form.php',
                   'detalleProducto' => 'detalle_producto.php',

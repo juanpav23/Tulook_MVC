@@ -776,6 +776,7 @@ const BASE_URL = '<?= BASE_URL ?>';
 const USUARIO_ID = <?= $usuarioLogueadoId ?? 0 ?>;
 
 // =============== VOTOS - ACTUALIZACIÓN INSTANTÁNEA ===============
+// =============== VOTOS - ACTUALIZACIÓN INSTANTÁNEA CON SCROLL FIJO ===============
 async function votarResena(idResena, esPositivo) {
     // Verificar si el usuario está logueado
     if (!USUARIO_ID) {
@@ -791,7 +792,9 @@ async function votarResena(idResena, esPositivo) {
         return;
     }
 
-    // 🔴🔴🔴 CORREGIDO: SELECCIONAR POR DATA-TIPO, NO POR :first-child 🔴🔴🔴
+    // Guardar la posición actual del scroll
+    const scrollPos = window.scrollY;
+    
     const btnLike = document.querySelector(`.vote-btn[data-id="${idResena}"][data-tipo="positivo"]`);
     const btnDislike = document.querySelector(`.vote-btn[data-id="${idResena}"][data-tipo="negativo"]`);
     
@@ -827,44 +830,48 @@ async function votarResena(idResena, esPositivo) {
         const data = await response.json();
 
         if (data.success) {
-            // 🔴🔴🔴 ACTUALIZACIÓN DIRECTA POR ID - ESTO SIEMPRE FUNCIONA 🔴🔴🔴
+            // Actualizar contadores
             const likeSpan = document.getElementById(`like-count-${idResena}`);
             const dislikeSpan = document.getElementById(`dislike-count-${idResena}`);
             
-            // Actualizar contador de likes
             if (likeSpan) {
                 likeSpan.textContent = data.util_positivo;
                 likeSpan.classList.add('vote-count-update');
                 setTimeout(() => likeSpan.classList.remove('vote-count-update'), 300);
             }
             
-            // Actualizar contador de dislikes
             if (dislikeSpan) {
                 dislikeSpan.textContent = data.util_negativo;
                 dislikeSpan.classList.add('vote-count-update');
                 setTimeout(() => dislikeSpan.classList.remove('vote-count-update'), 300);
             }
             
-            // 🔴🔴🔴 ACTUALIZAR ESTADOS DE LOS BOTONES 🔴🔴🔴
-            // Remover clase active de AMBOS botones
+            // Actualizar estados de los botones
             if (btnLike) btnLike.classList.remove('active');
             if (btnDislike) btnDislike.classList.remove('active');
             
-            // Agregar clase active al botón correspondiente
             if (data.user_vote === 'positivo' && btnLike) {
                 btnLike.classList.add('active');
             } else if (data.user_vote === 'negativo' && btnDislike) {
                 btnDislike.classList.add('active');
             }
             
-            // Mostrar notificación de éxito
+            // Restaurar la posición del scroll
+            window.scrollTo({
+                top: scrollPos,
+                behavior: 'auto' // 'auto' para que sea instantáneo, 'smooth' para suave
+            });
+            
+            // Mostrar notificación flotante pequeña
             Swal.fire({ 
                 icon: 'success', 
                 title: '¡Voto registrado!', 
-                timer: 1200, 
+                timer: 1000, 
                 showConfirmButton: false, 
                 toast: true, 
-                position: 'top-end' 
+                position: 'top-end',
+                background: '#fff',
+                iconColor: '#3A4A6B'
             });
         }
     } catch (error) {
@@ -872,7 +879,7 @@ async function votarResena(idResena, esPositivo) {
         Swal.fire({ 
             icon: 'error', 
             title: 'Error al votar', 
-            timer: 2000, 
+            timer: 1500, 
             showConfirmButton: false, 
             toast: true, 
             position: 'top-end' 

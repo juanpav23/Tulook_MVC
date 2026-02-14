@@ -1889,4 +1889,284 @@ class AdminController {
         echo 'OK';
         exit;
     }
+        // ==============================================
+    // GESTIÓN DE PALABRAS BLOQUEADAS
+    // ==============================================
+
+    /**
+     * Listado de palabras bloqueadas
+     */
+    public function palabrasBloqueadas() {
+        // Obtener todas las palabras bloqueadas
+        $sql = "SELECT * FROM palabras_bloqueadas ORDER BY 
+                CASE Gravedad 
+                    WHEN 'Grave' THEN 1 
+                    WHEN 'Media' THEN 2 
+                    WHEN 'Leve' THEN 3 
+                    ELSE 4 
+                END, Palabra ASC";
+        $palabras = $this->db->query($sql)->fetchAll(PDO::FETCH_ASSOC);
+        
+        include "views/admin/layout_admin.php";
+    }
+
+    /**
+     * Formulario para agregar/editar palabra bloqueada
+     */
+    public function palabraForm() {
+        $id = isset($_GET['id']) ? (int)$_GET['id'] : null;
+        $palabra = null;
+        
+        if ($id) {
+            $stmt = $this->db->prepare("SELECT * FROM palabras_bloqueadas WHERE ID_Palabra = ?");
+            $stmt->execute([$id]);
+            $palabra = $stmt->fetch(PDO::FETCH_ASSOC);
+            
+            if (!$palabra) {
+                $_SESSION['msg'] = "❌ Palabra no encontrada";
+                $_SESSION['msg_type'] = "danger";
+                header("Location: " . BASE_URL . "?c=Admin&a=palabrasBloqueadas");
+                exit;
+            }
+        }
+        
+        include "views/admin/layout_admin.php";
+    }
+
+    /**
+     * Guardar palabra bloqueada (nueva o editada)
+     */
+    public function palabraGuardar() {
+        if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+            header('Location: ' . BASE_URL . '?c=Admin&a=palabrasBloqueadas');
+            exit;
+        }
+        
+        $id = isset($_POST['ID_Palabra']) ? (int)$_POST['ID_Palabra'] : null;
+        $palabra = trim($_POST['Palabra'] ?? '');
+        $gravedad = $_POST['Gravedad'] ?? 'Leve';
+        $activo = isset($_POST['Activo']) ? 1 : 0;
+        
+        if (empty($palabra)) {
+            $_SESSION['msg'] = "❌ La palabra no puede estar vacía";
+            $_SESSION['msg_type'] = "danger";
+            header('Location: ' . BASE_URL . '?c=Admin&a=palabraForm' . ($id ? "&id=$id" : ""));
+            exit;
+        }
+        
+        // Verificar si ya existe (solo para nuevas)
+        if (!$id) {
+            $stmt = $this->db->prepare("SELECT ID_Palabra FROM palabras_bloqueadas WHERE Palabra = ?");
+            $stmt->execute([$palabra]);
+            if ($stmt->fetch()) {
+                $_SESSION['msg'] = "❌ Esta palabra ya está registrada";
+                $_SESSION['msg_type'] = "danger";
+                header('Location: ' . BASE_URL . '?c=Admin&a=palabraForm');
+                exit;
+            }
+        }
+        
+        try {
+            if ($id) {
+                // Actualizar
+                $stmt = $this->db->prepare("UPDATE palabras_bloqueadas SET Palabra = ?, Gravedad = ?, Activo = ? WHERE ID_Palabra = ?");
+                $stmt->execute([$palabra, $gravedad, $activo, $id]);
+                $_SESSION['msg'] = "✅ Palabra actualizada correctamente";
+            } else {
+                // Insertar
+                $stmt = $this->db->prepare("INSERT INTO palabras_bloqueadas (Palabra, Gravedad, Activo, Fecha_Creacion) VALUES (?, ?, ?, NOW())");
+                $stmt->execute([$palabra, $gravedad, $activo]);
+                $_SESSION['msg'] = "✅ Palabra agregada correctamente";
+            }
+            $_SESSION['msg_type'] = "success";
+            
+        } catch (Exception $e) {
+            $_SESSION['msg'] = "❌ Error al guardar: " . $e->getMessage();
+            $_SESSION['msg_type'] = "danger";
+        }
+        
+        header('Location: ' . BASE_URL . '?c=Admin&a=palabrasBloqueadas');
+        exit;
+    }
+
+    /**
+     * Eliminar palabra bloqueada
+     */
+    public function palabraEliminar() {
+        $id = (int)($_GET['id'] ?? 0);
+        
+        if ($id > 0) {
+            try {
+                $stmt = $this->db->prepare("DELETE FROM palabras_bloqueadas WHERE ID_Palabra = ?");
+                $stmt->execute([$id]);
+                
+                $_SESSION['msg'] = "✅ Palabra eliminada correctamente";
+                $_SESSION['msg_type'] = "success";
+            } catch (Exception $e) {
+                $_SESSION['msg'] = "❌ Error al eliminar: " . $e->getMessage();
+                $_SESSION['msg_type'] = "danger";
+            }
+        }
+        
+        header('Location: ' . BASE_URL . '?c=Admin&a=palabrasBloqueadas');
+        exit;
+    }
+
+    /**
+     * Cambiar estado de palabra (activar/desactivar) vía AJAX
+     */
+    public function palabraToggleEstado() {
+        $id = (int)($_POST['id'] ?? 0);
+        $estado = (int)($_POST['estado'] ?? 0);
+        
+        header('Content-Type: application/json');
+        
+        if ($id > 0) {
+            try {
+                $stmt = $this->db->prepare("UPDATE palabras_bloqueadas SET Activo = ? WHERE ID_Palabra = ?");
+                $stmt->execute([$estado, $id]);
+                
+                echo json_encode([
+                    'success' => true,
+                    'message' => $estado ? 'Palabra activada' : 'Palabra desactivada'
+                ]);
+            } catch (Exception $e) {
+                echo json_encode([
+                    'success' => false,
+                    'message' => 'Error: ' . $e->getMessage()
+                ]);
+            }
+        } else {
+            echo json_encode([
+                'success' => false,
+                'message' => 'ID no válido'
+            ]);
+        }
+        exit;
+    }
+ /**
+ * Crear advertencia manual para un usuario
+ */
+public function crearAdvertencia() {
+    if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+        header('Location: ' . BASE_URL . '?c=Admin&a=resenas');
+        exit;
+    }
+    
+    // Verificar permisos (solo admin o editor)
+    if (!isset($_SESSION['rol']) || ($_SESSION['rol'] != 1 && $_SESSION['rol'] != 2)) {
+        $_SESSION['msg'] = "No tienes permisos para crear advertencias";
+        $_SESSION['msg_type'] = "danger";
+        header('Location: ' . ($_SERVER['HTTP_REFERER'] ?? BASE_URL . '?c=Admin&a=resenas'));
+        exit;
+    }
+    
+    $idUsuario = (int)($_POST['id_usuario'] ?? 0);
+    $tipo = $_POST['tipo'] ?? 'Leve';
+    $motivo = trim($_POST['motivo'] ?? '');
+    $descripcion = trim($_POST['descripcion'] ?? '');
+    
+    if (!$idUsuario || !$motivo) {
+        $_SESSION['msg'] = "Faltan datos para crear la advertencia";
+        $_SESSION['msg_type'] = "danger";
+        header('Location: ' . ($_SERVER['HTTP_REFERER'] ?? BASE_URL . '?c=Admin&a=resenas'));
+        exit;
+    }
+    
+    try {
+        // Verificar que el usuario existe
+        $stmt = $this->db->prepare("SELECT ID_Usuario FROM usuario WHERE ID_Usuario = ?");
+        $stmt->execute([$idUsuario]);
+        if (!$stmt->fetch()) {
+            throw new Exception("Usuario no encontrado");
+        }
+        
+        // Insertar advertencia directamente (sin usar el modelo Resena para evitar dependencias)
+        $sql = "INSERT INTO advertencias_usuario (ID_Usuario, ID_Admin, Motivo, Descripcion, Tipo, Fecha_Advertencia, Estado)
+                VALUES (?, ?, ?, ?, ?, NOW(), 'Activa')";
+        $stmt = $this->db->prepare($sql);
+        $stmt->execute([$idUsuario, $_SESSION['ID_Usuario'] ?? null, $motivo, $descripcion, $tipo]);
+        
+        // Incrementar contador de advertencias del usuario
+        $sql = "UPDATE usuario SET Num_Advertencias = IFNULL(Num_Advertencias, 0) + 1 WHERE ID_Usuario = ?";
+        $stmt = $this->db->prepare($sql);
+        $stmt->execute([$idUsuario]);
+        
+        // Verificar si el usuario debe ser desactivado (3 advertencias)
+        $sql = "SELECT Num_Advertencias FROM usuario WHERE ID_Usuario = ?";
+        $stmt = $this->db->prepare($sql);
+        $stmt->execute([$idUsuario]);
+        $numAdvertencias = $stmt->fetchColumn();
+        
+        if ($numAdvertencias >= 3) {
+            $sql = "UPDATE usuario SET Activo = 0, Motivo_Desactivacion = 'Acumuló 3 advertencias', 
+                    Fecha_Desactivacion = NOW(), ID_Admin_Desactiva = ? 
+                    WHERE ID_Usuario = ?";
+            $stmt = $this->db->prepare($sql);
+            $stmt->execute([$_SESSION['ID_Usuario'] ?? null, $idUsuario]);
+            
+            $_SESSION['msg'] = "⚠️ Usuario desactivado automáticamente por acumular 3 advertencias";
+        } else {
+            $_SESSION['msg'] = "✅ Advertencia creada correctamente";
+        }
+        
+        $_SESSION['msg_type'] = "success";
+        
+    } catch (Exception $e) {
+        $_SESSION['msg'] = "❌ Error: " . $e->getMessage();
+        $_SESSION['msg_type'] = "danger";
+    }
+    
+    // Redirigir de vuelta a donde vino
+    header('Location: ' . ($_SERVER['HTTP_REFERER'] ?? BASE_URL . '?c=Admin&a=resenas'));
+    exit;
+}
+/**
+ * Ver historial de advertencias de un usuario
+ */
+public function usuarioAdvertencias() {
+    $idUsuario = (int)($_GET['id'] ?? 0);
+    
+    if (!$idUsuario) {
+        $_SESSION['msg'] = "ID de usuario no válido";
+        $_SESSION['msg_type'] = "danger";
+        header('Location: ' . BASE_URL . '?c=Admin&a=resenas');
+        exit;
+    }
+    
+    // Obtener información del usuario
+    $stmt = $this->db->prepare("SELECT ID_Usuario, Nombre, Apellido, Correo, Num_Advertencias, Activo, Motivo_Desactivacion FROM usuario WHERE ID_Usuario = ?");
+    $stmt->execute([$idUsuario]);
+    $usuario = $stmt->fetch(PDO::FETCH_ASSOC);
+    
+    if (!$usuario) {
+        $_SESSION['msg'] = "Usuario no encontrado";
+        $_SESSION['msg_type'] = "danger";
+        header('Location: ' . BASE_URL . '?c=Admin&a=resenas');
+        exit;
+    }
+    
+    // Obtener advertencias del usuario - CORREGIDO: sin ID_Resena
+    $sql = "SELECT a.*, u.Nombre as AdminNombre, u.Apellido as AdminApellido
+            FROM advertencias_usuario a
+            LEFT JOIN usuario u ON a.ID_Admin = u.ID_Usuario
+            WHERE a.ID_Usuario = ?
+            ORDER BY a.Fecha_Advertencia DESC";
+    $stmt = $this->db->prepare($sql);
+    $stmt->execute([$idUsuario]);
+    $advertencias = $stmt->fetchAll(PDO::FETCH_ASSOC);
+    
+    // Obtener reseñas del usuario
+    $sqlResenas = "SELECT r.ID_Resena, r.Comentario, r.Calificacion, r.Fecha_Resena, a.N_Articulo
+                  FROM resena r
+                  INNER JOIN articulo a ON r.ID_Articulo = a.ID_Articulo
+                  WHERE r.ID_Usuario = ? AND r.Activo = 1
+                  ORDER BY r.Fecha_Resena DESC
+                  LIMIT 10";
+    $stmtResenas = $this->db->prepare($sqlResenas);
+    $stmtResenas->execute([$idUsuario]);
+    $resenas = $stmtResenas->fetchAll(PDO::FETCH_ASSOC);
+    
+    include "views/admin/layout_admin.php";
+}
 }
